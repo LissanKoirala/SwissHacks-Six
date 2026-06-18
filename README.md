@@ -99,6 +99,8 @@ Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follo
 
 ## Prize
 
-The winning team members will each receive:
+Thank you for choosing the SIX challenge! We offer all SIX Challenge Teams the chance to receive a pitch coaching session from our expert on Saturday or Sunday, prior to the evaluations. 
+The Top Two SIX challenge teams will also receive a SIX Summer Goodie Bag...
+...and the opportunity to pitch to the SIX Management!
 
-[Describe the prize, for example an opportunity to present the solution to management.]
+
