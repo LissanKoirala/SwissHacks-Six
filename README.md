@@ -44,12 +44,12 @@ The solution brings together four core capabilities:
 
 The challenge provides four client personas to build and test against, each with a distinct trigger event:
 
-| Persona | Profile | Strategy | CRM Tab | Trigger |
-|---|---|---|---|---|
-| Schneider — The Personal Connection | Emotional and purpose-driven; family foundation supporting a specific chronic-illness research field | Balanced | `Schneider` | Pharma company shuts down its research division for that disease |
-| Huber — The Purpose-Driven Investor | Environmentalist financing South American reforestation; holds global consumer staples | Defensive | `Huber` | Consumer goods company announces historic palm oil deforestation cut-off |
-| Räber — The Defensive Value Investor | Conservative Swiss couple; precision-engineering background; averse to US tech | Defensive | `Raeber` | CIO suggests rebalancing from blue chips into US AI stocks |
-| Ammann — The Corporate Reputation Case | Prominent Swiss entrepreneur; reputational risk equals financial risk | Growth | `Ammann` | Labour exploitation scandal hits a consumer brand in the portfolio |
+| Persona | Profile | Strategy | CRM Tab | Portfolio Tab | Trigger |
+|---|---|---|---|---|---|
+| Schneider — The Personal Connection | Emotional and purpose-driven; family foundation supporting a specific chronic-illness research field | Balanced | `CRM Schneider` | `Sample Portfolio Balanced` | Pharma company shuts down its research division for that disease |
+| Huber — The Purpose-Driven Investor | Environmentalist financing South American reforestation; holds global consumer staples | Defensive | `CRM Huber` | `Sample Portfolio Defensive` | Consumer goods company announces historic palm oil deforestation cut-off |
+| Räber — The Defensive Value Investor | Conservative Swiss couple; precision-engineering background; averse to US tech | Defensive | `CRM Raeber` | `Sample Portfolio Defensive` | CIO suggests rebalancing from blue chips into US AI stocks |
+| Ammann — The Corporate Reputation Case | Prominent Swiss entrepreneur; reputational risk equals financial risk | Growth | `CRM Ammann` | `Sample Portfolio Growth` | Labour exploitation scandal hits a consumer brand in the portfolio |
 
 ## Expected Outcome
 
@@ -66,8 +66,8 @@ Expected deliverables include an end-to-end clickable prototype or working front
 
 | Workbook | Contents |
 |---|---|
-| `SwissHacks_CRM.xlsx` | Three-year relationship-manager interaction logs for four sample clients (Räber, Schneider, Huber, Ammann), capturing financial behaviour, preferences, and evolving signals over time. One tab per client. |
-| `SwissHacks Portfolio Construction V3.xlsx` | Three model mandates (Defensive, Balanced, Growth; each summing to CHF 10M): CIO sub-asset-class targets (`Portfolio Strategies`), current positions with target and drifted market values, a CIO recommendation list with BUY/HOLD/SELL ratings and swap candidates, three-year transaction history, and cash flows (deposits, withdrawals, fees, coupons). Includes SIX (Valor + MIC) and Yahoo ticker identifiers. The Balanced and Growth portfolios carry deliberate post-rebalance mandate-drift breaches for use in rebalancing scenarios. |
+| `data/SwissHacks CRM.xlsx` | Three-year relationship-manager interaction logs for four sample clients (Räber, Schneider, Huber, Ammann), capturing financial behaviour, preferences, and evolving signals over time. One tab per client. |
+| `data/SwissHacks Portfolio Construction.xlsx` | Three model mandates (Defensive, Balanced, Growth; each summing to CHF 10M): CIO sub-asset-class targets (`Portfolio Strategies`), current positions with target and drifted market values, a CIO recommendation list with BUY/HOLD/SELL ratings and swap candidates, three-year transaction history, and cash flows (deposits, withdrawals, fees, coupons). Includes SIX (Valor + MIC) and Yahoo ticker identifiers. The Balanced and Growth portfolios carry deliberate post-rebalance mandate-drift breaches for use in rebalancing scenarios. |
 
 - **Noumena Digital:** domain models, knowledge graphs, and AI-ready financial abstractions.
 - **NTT DATA:** reference architectures and AI / cloud / trust-by-design assets, including Azure OpenAI–based patterns for explainable AI, retrieval-augmented generation, and multi-agent decision support.
@@ -113,8 +113,8 @@ Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follo
 | SIX | Laurent Lefevre | laurent.lefevre@six-group.com | webAPI, MCP |
 | SIX | Jennifer Chang | jennifer.chang@six-group.com | Coordination |
 | SIX | Magdalena Tuta | magdalena.tuta@six-group.com | Coordination, Pitch Training |
-| NTT DATA | Thomas Geiger | thomas.geiger@nttdata.com |
-| Noumena Digital | [To be added] | [To be added] |
+| NTT DATA | Thomas Geiger | thomas.geiger@nttdata.com | |
+| Noumena Digital | Sandra Daub | sandra@noumenadigital.com | Business case |
 
 ### Availability
 
@@ -122,10 +122,9 @@ Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follo
 
 ## Prize
 
-Thank you for choosing the SIX challenge! 
+Thank you for choosing the SIX challenge!
 
 The Top Two SIX challenge teams will receive the opportunity to pitch to SIX Management + receive SIX Goodie Bags.
 
-Plus - all our hackers have the chance to receive a 1-1 pitch coaching session from our expert (Saturday or Sunday, prior to the evaluations). Sign up at the SIX Booth!
-
+Plus — all our hackers have the chance to receive a 1-1 pitch coaching session from our expert (Saturday or Sunday, prior to the evaluations). Sign up at the SIX Booth!
 
