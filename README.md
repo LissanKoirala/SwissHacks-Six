@@ -2,7 +2,7 @@
 
 ## Challenge Title
 
-**AI-Powered Wealth Management Workbench**
+**The Next Generation of Wealth Advisory**
 
 ## Introduction
 
