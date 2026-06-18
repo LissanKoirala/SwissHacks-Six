@@ -84,7 +84,7 @@ Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follo
 
 ### Contact Person(s)
 
-| Company | Name | Contact | Role |
+| Company | Name | Contact | Support |
 |---|---|---|---|
 | SIX | Ramiro Lopez Cento | ramiro.lopez@six-group.com | MCP |
 | SIX | Laurent Lefevre | laurent.lefevre@six-group.com | webAPI, MCP |
