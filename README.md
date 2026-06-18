@@ -2,7 +2,7 @@
 
 ## Challenge Title
 
-##**The Next Generation of Wealth Advisory**
+##The Next Generation of Wealth Advisory
 
 ## Introduction
 
