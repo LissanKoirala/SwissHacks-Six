@@ -118,7 +118,7 @@ Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follo
 
 ### Availability
 
-[Add availability during the event, for example agenda if in person, or email/contact details if remote support is available throughout the weekend.]
+In person throughout the event (SwissHacks, Zurich, 19 to 21 June 2026). Mentors will be on-site on the evening of 19 June after the presentations, and on 20 June throughout the day. The contacts above are also reachable by email for any questions during the event.
 
 ## Prize
 
