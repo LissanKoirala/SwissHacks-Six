@@ -113,8 +113,8 @@ Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follo
 | SIX | Laurent Lefevre | laurent.lefevre@six-group.com | webAPI, MCP |
 | SIX | Jennifer Chang | jennifer.chang@six-group.com | Coordination |
 | SIX | Magdalena Tuta | magdalena.tuta@six-group.com | Coordination, Pitch Training |
-| NTT DATA | Thomas Geiger | thomas.geiger@nttdata.com | |
-| Noumena Digital | Sandra Daub | sandra@noumenadigital.com | Business case |
+| NTT DATA | Thomas Geiger | thomas.geiger@nttdata.com | Wealth Management Expert, Personas, Business Case |
+| Noumena Digital | Sandra Daub | sandra@noumenadigital.com | Wealth Management Expert, Personas, Business Case |
 
 ### Availability
 
