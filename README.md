@@ -8,69 +8,92 @@
 
 ### Problem Description
 
-Asset management faces the challenge of making well-founded investment decisions under time pressure in a highly dynamic market environment. Wealth managers operate between increasing market volatility, growing regulatory requirements, and an ever-expanding number of heterogeneous data sources, and investment decisions increasingly rely on the consolidated analysis of market, reference, tax, and regulatory data rather than individual signals. At the same time, demanding client segments — especially high-net-worth and ultra-high-net-worth individuals — expect personalized, transparent, and comprehensible advice. Classic user interfaces and manual analysis processes reach their limits, and the need for AI-supported, trustworthy recommendation and support systems is correspondingly high.
+Hyper-personalised wealth advice is today reserved for a handful of ultra-high-net-worth clients. The best relationship managers know their UHNWI clients inside out — values, life events, and business context shape every proposal — but this level of care does not scale past a handful of clients. Tailoring proposals to each client's full personal context, monitoring news across every holding, and drafting individual narratives takes more time than any relationship manager has.
+
+AI changes the equation. With the right workbench, every client receives the same proactive, hyper-personalised care — 24/7 — while the relationship manager stays in the loop and the client always decides.
 
 ### Case Introduction
 
-The task is to design and prototype an AI-powered wealth management workbench that automatically composes an interactive, intuitive interface for each individual user (e.g. relationship manager, investment specialist, compliance) and guides them through decisions with the right information at the right time. The interface should be assembled dynamically from role, context, portfolio situation, customer profile, and interaction intent (e.g. preparing a client meeting, explaining a recommendation, handling an event-driven alert), while keeping the experience simple: a single place to ask questions, compare options, see rationales, and trigger next actions. In addition, the system should identify how a client's behavior changes over time (risk appetite, trading frequency, channel preference, responsiveness, product interests), infer plausible drivers, and translate them into implications for the bank–client relationship (retention risk, advisory approach, suitability constraints, opportunity signals).
+The task is to build the next-generation advisor dashboard in 48 hours: a single place where a relationship manager can understand a client's investment identity, monitor their portfolio against live news and CIO signals, and act on the right insight at the right time.
+
+The core insight is that the investment strategy stays unchanged. Personalisation happens at the asset level: within a client's chosen mandate (Defensive, Balanced, or Growth), AI identifies holdings that conflict with the client's personal DNA and proposes a replacement from the same sector that fits both the strategy and the client personally.
+
+The dashboard is built around four steps:
+
+1. **Read and Interpret CRM Notes** — parse raw conversation logs and build each client's investment identity: values, business context, and personal priorities.
+2. **Connect to Portfolio and News** — link the client profile to their current holdings and a live news feed.
+3. **Surface Relevant Alerts** — match each client's profile against the portfolio and incoming news to flag potential conflicts or opportunities.
+4. **Generate a Tailored Message** — draft the RM's advisory note in the client's preferred style: data-driven and precise, or values-led and inspiring.
+
+**Human in the loop:** AI equips the relationship manager with insights and draft proposals. It never advises the client directly. The RM recommends, the client always decides and places the orders.
+
+One suggested architecture is a multi-agent approach — an orchestrator coordinating a CRM Agent, Portfolio Agent, News Agent, and Message Agent, with a consolidated dashboard — but teams are free to innovate.
 
 ## Potential Users
 
-Client advisors in wealth management — relationship managers, investment specialists, and compliance — who act as trusted partners in helping clients grow and protect their wealth while minimizing financial uncertainty.
+Relationship managers in wealth management who act as trusted partners in helping high-net-worth and ultra-high-net-worth clients grow and protect their wealth.
 
 ## Use Cases
 
-The solution should bring together several capabilities:
+The solution brings together four core capabilities:
 
-- **Personalized interaction layer:** generate user-specific dashboards and workflows (widgets, summaries, alerts, drill-downs) from user role and current context.
-- **Natural-language & guided UX:** a chat/command experience plus guided steps (what to do next, what to ask, what to verify) to reduce cognitive load.
-- **Explainability by default:** show the "why" behind recommendations and detected behavior changes (key signals, confidence, constraints, assumptions).
-- **Behavior-change detection:** detect deviations and trends versus the client's own baseline and versus peer/reference segments where available.
-- **Reasoning on drivers:** connect observed changes to potential causes (market events, life events, portfolio drawdown, news sentiment, advisor interaction patterns, product performance).
-- **Business implications:** recommend relationship actions (proactive outreach, content/offer, meeting agenda, risk review, escalation) and highlight risks and opportunities.
+- **Build the Client DNA:** AI reads all raw CRM conversation logs and maps each client's personal profile — values, business interests, family context, and individual preferences — automatically, without manual data entry.
+- **Monitor Global News 24/7:** News relevant to a client's holdings or personal profile is flagged the moment it breaks: a pharma pivot, a governance scandal, a sustainability milestone.
+- **Suggest Personal Asset Swaps Within the Strategy:** Within the client's existing mandate, AI identifies holdings that conflict with their DNA and proposes a replacement from the same sector that fits both the strategy and the client personally. The CIO recommendation list constrains the swap universe.
+- **Personalise the Advisory Message:** Every proposal comes with a draft message for the RM, written in the client's preferred communication style — analytical and data-driven for one, purpose-led and inspiring for another.
+
+The challenge provides four client personas to build and test against, each with a distinct trigger event:
+
+| Persona | Profile | Strategy | CRM Tab | Trigger |
+|---|---|---|---|---|
+| Schneider — The Personal Connection | Emotional and purpose-driven; family foundation supporting a specific chronic-illness research field | Balanced | `Schneider` | Pharma company shuts down its research division for that disease |
+| Huber — The Purpose-Driven Investor | Environmentalist financing South American reforestation; holds global consumer staples | Defensive | `Huber` | Consumer goods company announces historic palm oil deforestation cut-off |
+| Räber — The Defensive Value Investor | Conservative Swiss couple; precision-engineering background; averse to US tech | Defensive | `Raeber` | CIO suggests rebalancing from blue chips into US AI stocks |
+| Ammann — The Corporate Reputation Case | Prominent Swiss entrepreneur; reputational risk equals financial risk | Growth | `Ammann` | Labour exploitation scandal hits a consumer brand in the portfolio |
 
 ## Expected Outcome
 
-Expected deliverables include an end-to-end clickable prototype or working front-end; a minimal back-end/agent flow that demonstrates personalization and reasoning; and a short demo story showing how a relationship manager uses the UI to understand a client change, explain it, and decide on the next best action for the bank–client relationship.
+Expected deliverables include an end-to-end clickable prototype or working front-end; a minimal back-end or agent flow demonstrating personalisation and reasoning; and a short demo story showing how a relationship manager uses the dashboard to understand a client change, explain it, and decide on the next best action.
 
-## Technology 
+## Technology
 
 ### Available Technology
 
-- **SIX Financial Information (MCP server + Web API):** market and financial data including real-time and historical prices (equities, funds, ETFs, bonds), macroeconomic indicators (rates, inflation, FX), fundamentals, and estimates. Each sample-portfolio position carries a Valor and MIC (combine as `{Valor}_{MIC}` for SIX MCP listing tools such as `end_of_day_snapshot`, `intraday_snapshot`, `end_of_day_history`; use the Valor alone for instrument tools). For bonds, use SIX `instrument_symbology` with the ISIN directly. A small number of ISINs are outside SIX's data subscription (see the workbook README for the list).
-- **Tenity MCP-News Server:** news and sentiment feed for event- and news-driven signals.
+- **SIX Financial Information (MCP server + Web API):** market and financial data including real-time and historical prices (equities, funds, ETFs, bonds), macroeconomic indicators (rates, inflation, FX), fundamentals, and estimates. The MCP server exposes 23 tools (reference data, symbology, venues, issuers, prices); 6 tools are outside the hackathon token's subscription. Configure via `mcp.json` (streamable-http, bearer token provided by the SIX Group contact) — the same file configures both the data pipeline and any participant's tooling. Each sample-portfolio position carries a Valor and MIC (combine as `{Valor}_{MIC}` for SIX MCP listing tools such as `end_of_day_snapshot`, `intraday_snapshot`, `end_of_day_history`; use the Valor alone for instrument tools). For bonds, use SIX `instrument_symbology` with the ISIN directly.
+- **Event Registry / Tenity MCP-News Server:** live news and sentiment feed for event- and news-driven signals. [Event Registry API](https://newsapi.ai/) access is provided; Yahoo Finance and Google News also work.
+- **LLM API Credits:** credits for large language model APIs are provided via [Phoeniqs](https://console.phoeniqs.com/) — no need to bring your own key.
 - **Provided datasets (two workbooks):**
 
 | Workbook | Contents |
 |---|---|
-| `SwissHacks_CRM.xlsx` | Three-year relationship-manager interaction logs for four sample clients (Räber, Schneider, Huber, Ammann), capturing financial behavior, preferences, and evolving signals over time. |
-| `SwissHacks_Portfolio_Construction_final.xlsx` | Three model mandates (Defensive, Balanced, Growth; each summing to CHF 10M): CIO sub-asset-class targets, current positions, three-year transaction history, and cash flows (deposits, withdrawals, fees, coupons). Includes SIX (Valor + MIC) and Yahoo identifiers to speed up instrument lookup. |
+| `SwissHacks_CRM.xlsx` | Three-year relationship-manager interaction logs for four sample clients (Räber, Schneider, Huber, Ammann), capturing financial behaviour, preferences, and evolving signals over time. One tab per client. |
+| `SwissHacks Portfolio Construction V3.xlsx` | Three model mandates (Defensive, Balanced, Growth; each summing to CHF 10M): CIO sub-asset-class targets (`Portfolio Strategies`), current positions with target and drifted market values, a CIO recommendation list with BUY/HOLD/SELL ratings and swap candidates, three-year transaction history, and cash flows (deposits, withdrawals, fees, coupons). Includes SIX (Valor + MIC) and Yahoo ticker identifiers. The Balanced and Growth portfolios carry deliberate post-rebalance mandate-drift breaches for use in rebalancing scenarios. |
 
-- **Noumena Digital:** domain models, knowledge graphs, and AI-ready financial abstractions. _[Noumena Cloud and related capabilities carried over from the earlier challenge statement — Noumena to confirm and complete.]_
-- **NTT DATA:** reference architectures and AI / cloud / trust-by-design assets. _[Details such as Azure OpenAI–based XAI, RAG, and multi-agent patterns carried over from the earlier challenge statement — NTT DATA to confirm and complete.]_
+- **Noumena Digital:** domain models, knowledge graphs, and AI-ready financial abstractions.
+- **NTT DATA:** reference architectures and AI / cloud / trust-by-design assets, including Azure OpenAI–based patterns for explainable AI, retrieval-augmented generation, and multi-agent decision support.
 
 ### Expected or Suggested Tech Stack
 
-SIX MCP with the SIX Web API as a REST/JSON alternative (certificate-based authentication); Noumena Cloud (Azure-based) with knowledge graphs and financial abstractions; and Azure OpenAI–based patterns for explainable AI, retrieval-augmented generation, and multi-agent decision support.
+SIX MCP server (streamable-http, bearer token) with the SIX Web API as a REST/JSON alternative (certificate-based authentication); Event Registry API or Tenity MCP-News server for news signals; LLM API of your choice (credits provided); Noumena Cloud (Azure-based) with knowledge graphs and financial abstractions; and Azure OpenAI–based patterns for explainable AI, retrieval-augmented generation, and multi-agent decision support.
 
 ## Challenge Slides
 
-[Add link to the challenge introduction slides.]
+[The Next Generation of Wealth Advisory — challenge pitch deck](docs/The%20Next%20Generation%20of%20Wealth%20Advisory.pdf)
 
 ## Resources & Further Information
 
 ### Relevant Links
 
-- News aggregation API (used by the Tenity MCP-News server): https://www.newsapi.ai/news-aggregation
-- [Add relevant links here.]
+- SIX Financial Information MCP tools reference: see `docs/SIX_MCP.md` for a tested guide to all 23 tools with real example outputs.
+- News aggregation API (used by the Tenity MCP-News server): https://newsapi.ai/
+- LLM API platform (Phoeniqs): https://console.phoeniqs.com/
+- Phoeniqs setup guide (access + OpenCode config): [docs/phoeniqs_ai.md](docs/phoeniqs_ai.md)
 
 ### Additional Information
 
-Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follow ISO 6166; equities are priced at real historical closes and bonds at par (100% of face); for bonds, quantity = face value ÷ 100. Summing BUY − SELL quantities per ISIN gives the current position. The workbook README lists the SIX coverage gaps (12 ISINs) and the Yahoo Ticker fallbacks.
+Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follow ISO 6166; equities are priced at real historical closes and bonds at par (100% of face value); for bonds, quantity = face value ÷ 100. Summing BUY − SELL quantities per ISIN gives the current position. `Current (CHF)` reflects post-rebalance market drift (prices as of approximately 10 days after the April 2026 rebalance); `Target (CHF)` is the rebalance allocation and still sums to CHF 10,000,000 per portfolio. The workbook README sheet lists SIX coverage details and the ±2.0pp mandate-drift rule.
 
 ## Judging Criteria
-
-[Add the judging criteria, including percentages where applicable.]
 
 | Criterion | Description | Weight |
 |---|---|---|
