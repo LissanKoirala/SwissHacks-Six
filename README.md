@@ -100,7 +100,7 @@ Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follo
 ## Prize
 
 Thank you for choosing the SIX challenge! 
-The Top Two SIX challenge teams will receive the opportunity to pitch to SIX Management + a SIX Goodie Bag.
+The Top Two SIX challenge teams will receive the opportunity to pitch to SIX Management + receive SIX Goodie Bags.
 
 + We offer ALL OUR HACKERS the chance to receive a 1-1 pitch coaching session from our expert on Saturday or Sunday, prior to the evaluations. 
 
