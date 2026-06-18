@@ -84,8 +84,8 @@ Data conventions for the portfolio workbook: all amounts are in CHF; ISINs follo
 
 ### Contact Person(s)
 
-| Company | Name | Contact |
-|---|---|---|
+| Company | Name | Contact | Role |
+|---|---|---|---|
 | SIX | Jennifer Chang | jennifer.chang@six-group.com | Coordination |
 | NTT DATA | Thomas Geiger | thomas.geiger@nttdata.com |
 | Noumena Digital | [To be added] | [To be added] |
