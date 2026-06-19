@@ -87,16 +87,27 @@ SIX MCP server (streamable-http, bearer token) with the SIX Web API as a REST/JS
 
 ## Challenge Slides
 
-[The Next Generation of Wealth Advisory — challenge pitch deck](docs/The%20Next%20Generation%20of%20Wealth%20Advisory.pdf)
+- [The Next Generation of Wealth Advisory — challenge pitch deck](docs/The%20Next%20Generation%20of%20Wealth%20Advisory.pdf)
+- [The Next Generation of Wealth Advisory — deep-dive deck](docs/The%20Next%20Generation%20of%20Wealth%20Advisory%20DeepDive.pdf)
 
 ## Resources & Further Information
+
+### Reference Integration Demo
+
+The [`demo/`](demo/) folder contains a runnable starter that wires the three core integrations together end to end — Phoeniqs LLM, the SIX MCP server, and Event Registry news — behind a TypeScript/Express back-end and a single-page front-end. It exposes a stock-analysis endpoint (`POST /api/analysis/analyze`) and an integration health check (`GET /api/analysis/integrations`), so you can confirm your credentials work before building on top.
+
+- **Setup:** copy `demo/.env.example` to `demo/.env` and fill in your Phoeniqs, SIX MCP, and Event Registry keys.
+- **Run:** `cd demo && npm install && npm run dev`, then open `http://localhost:3000`.
+
+Use it as a reference for how to call each provider, or as scaffolding for your own dashboard.
 
 ### Relevant Links
 
 - SIX Financial Information MCP tools reference: see `docs/SIX_MCP.md` for a tested guide to all 23 tools with real example outputs.
 - News aggregation API (used by the Tenity MCP-News server): https://newsapi.ai/
 - LLM API platform (Phoeniqs): https://console.phoeniqs.com/
-- Phoeniqs setup guide (access + OpenCode config): [docs/phoeniqs_ai.md](docs/phoeniqs_ai.md)
+- Phoeniqs setup guide (access + OpenCode config): [Phoeniqs AI — Access & Setup](docs/Phoeniqs_AI.md)
+- SIX MCP Developer Guide (vendor reference): [MCP Developer Guide 2026](docs/MCP%20Developer%20Guide%202026.pdf)
 
 ### Additional Information
 

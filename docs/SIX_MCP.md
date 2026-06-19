@@ -7,9 +7,9 @@ Where a tool is *not* reachable with this token, it says so explicitly — that
 distinction matters, so don't assume a tool works just because it's listed.
 
 > **Server:** `streamable-http` MCP, 23 tools over a SIX GraphQL backend.
-> URL + token live in `mcp.json` at the repo root (see the main README §2).
-> Drop that same `mcp.json` into Claude Code / Copilot / any MCP client to get
-> these tools in your agent.
+> The URL + bearer token are provided by the SIX Group contact (see the main
+> README, "Available Technology"). Put them in an `mcp.json` and drop that file
+> into Claude Code / Copilot / any MCP client to get these tools in your agent.
 
 ---
 
@@ -153,8 +153,7 @@ end_of_day_history(listing_id="645156_XNAS")
 ```
 EOD snapshot carries valuation extras (P/E, market cap, historical vol).
 `end_of_day_history` is the daily OHLCV series — **this is the tool to migrate
-the price layer onto** if you want the dataset 100% SIX-sourced (see main
-README §7).
+the price layer onto** if you want the dataset 100% SIX-sourced.
 
 ### Prices — intraday — `intraday_snapshot` / `intraday_history`
 ```
@@ -177,8 +176,7 @@ query($ids:[UserInputId!]!){
   }
 }
 ```
-(Note the variable type is `[UserInputId!]!`, *not* `[ID!]!`.) See
-`sim/resolve_valors_by_isin.py` for a working batched call.
+(Note the variable type is `[UserInputId!]!`, *not* `[ID!]!`.)
 
 ### Utility — `get_datetime`, `search_schema`, `describe_type`
 ```
