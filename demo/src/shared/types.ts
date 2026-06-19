@@ -66,6 +66,93 @@ export interface AnalysisRequest {
   days?: number;
 }
 
+// ---- CRM agent layer ----
+
+/** One raw CRM contact-note row. */
+export interface CrmInteraction {
+  id: string;
+  date: string;
+  medium: string;
+  rm: string;
+  contact: string;
+  note: string;
+}
+
+/** A client household and its contact history. */
+export interface CrmClient {
+  id: string;
+  name: string;
+  household: string;
+  mandate: "Defensive" | "Balanced" | "Growth" | null;
+  contacts: string[];
+  interactionCount: number;
+  firstContact: string | null;
+  lastContact: string | null;
+  interactions: CrmInteraction[];
+}
+
+/** Where a derived fact came from, so an agent can cite it. */
+export interface Provenance {
+  interactionId: string;
+  date: string;
+  quote: string;
+}
+
+/** A structured, grounded preference/constraint extracted from the notes. */
+export interface Constraint {
+  id: string;
+  /** EXCLUSION: must avoid · INCLUSION: must favour · RISK: posture · PREFERENCE: soft. */
+  kind: "EXCLUSION" | "INCLUSION" | "RISK" | "PREFERENCE";
+  text: string;
+  /** Concrete signals (industries, asset classes, keywords) this constraint screens on. */
+  signals: string[];
+  severity: "HARD" | "SOFT";
+  source: "rule" | "llm";
+  provenance: Provenance[];
+}
+
+/** The agent-facing structured view of a client, assembled from the notes. */
+export interface ClientProfile {
+  clientId: string;
+  name: string;
+  household: string;
+  mandate: CrmClient["mandate"];
+  riskPosture: string;
+  summary: string;
+  constraints: Constraint[];
+  preferences: string[];
+  themes: string[];
+  liquidityEvents: { date: string; text: string; provenance: Provenance }[];
+  keyPeople: string[];
+  /** True when LLM enrichment ran; false when the profile is rules-only. */
+  llmEnriched: boolean;
+}
+
+/** One holding evaluated against a client's constraints. */
+export interface ComplianceFinding {
+  verdict: "VIOLATION" | "WATCH" | "OK";
+  issuer: string;
+  isin: string;
+  industry: string;
+  assetClass: string;
+  currentCHF: number | null;
+  constraintId: string | null;
+  reason: string;
+  provenance: Provenance[];
+}
+
+export interface ComplianceReport {
+  clientId: string;
+  name: string;
+  portfolio: "Defensive" | "Balanced" | "Growth";
+  checkedHoldings: number;
+  violations: number;
+  watches: number;
+  exposureAtRiskCHF: number;
+  findings: ComplianceFinding[];
+  llmAdjudicated: boolean;
+}
+
 export interface AnalysisResult {
   stock: StockData;
   news: NewsArticle[];

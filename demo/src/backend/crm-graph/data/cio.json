@@ -1,0 +1,1550 @@
+[
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Cie Financière Richemont",
+    "isin": "CH0210483332",
+    "view": "Swiss luxury champion; strong balance sheet",
+    "ticker": "CFR.SW"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Nestlé S.A.",
+    "isin": "CH0038863350",
+    "view": "Defensive growth anchor; unmatched brand breadth in staples",
+    "ticker": "NESN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Chocoladefabriken Lindt",
+    "isin": "CH0010570759",
+    "view": "Solid franchise; limited near-term catalysts",
+    "ticker": "LISN.SW"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Partners Group Holding",
+    "isin": "CH0024608827",
+    "view": "Private-markets fee compounding; structural AuM growth",
+    "ticker": "PGHN.SW"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Zurich Insurance Group",
+    "isin": "CH0011075394",
+    "view": "Dividend reliability through cycles; underwriting discipline",
+    "ticker": "ZURN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Swiss Re AG",
+    "isin": "CH0126881561",
+    "view": "Competitive position stable; monitoring margin trajectory",
+    "ticker": "SREN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "UBS Group AG",
+    "isin": "CH0244767585",
+    "view": "Market share steady; sector headwinds already priced",
+    "ticker": "UBSG.SW"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Novartis AG",
+    "isin": "CH0012005267",
+    "view": "Focused medicines model delivering margin expansion",
+    "ticker": "NOVN.SW"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Roche Holding AG",
+    "isin": "CH0012032048",
+    "view": "Diagnostics-pharma flywheel; durable oncology franchises",
+    "ticker": "RO.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Lonza Group AG",
+    "isin": "CH0013841017",
+    "view": "Defensive characteristics intact; hold existing position",
+    "ticker": "LONN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Straumann Holding AG",
+    "isin": "CH1175448666",
+    "view": "Long-term thesis intact; range-bound near term",
+    "ticker": "STMN.SW"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Kühne + Nagel International",
+    "isin": "CH0025238863",
+    "view": "Swiss logistics blue chip; asset-light model",
+    "ticker": "KNIN.SW"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Schindler Holding AG",
+    "isin": "CH0024638212",
+    "view": "Swiss industrial automation; elevator service annuity revenues",
+    "ticker": "SCHP.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "ABB Ltd.",
+    "isin": "CH0012221716",
+    "view": "Balanced risk/reward at the current valuation",
+    "ticker": "ABBN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Geberit AG",
+    "isin": "CH0030170408",
+    "view": "Strong cash generation; valuation looks full",
+    "ticker": "GEBN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Vat Group AG",
+    "isin": "CH0311864901",
+    "view": "Quality compounder; above our entry discipline",
+    "ticker": "VACN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Logitech International",
+    "isin": "CH0025751329",
+    "view": "Execution on track; upside largely priced in",
+    "ticker": "LOGN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Materials",
+    "issuer": "Givaudan SA",
+    "isin": "CH0010645932",
+    "view": "Earnings quality intact; awaiting a better entry point",
+    "ticker": "GIVN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Materials",
+    "issuer": "Holcim AG",
+    "isin": "CH0012214059",
+    "view": "Stable market position; no incremental allocation recommended",
+    "ticker": "HOLN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Materials",
+    "issuer": "Sika AG",
+    "isin": "CH0418792922",
+    "view": "Operating momentum steady; keep the position",
+    "ticker": "SIKA.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Telecommunication",
+    "issuer": "Swisscom AG",
+    "isin": "CH0008742519",
+    "view": "Fairly valued at current levels; maintain existing exposure",
+    "ticker": "SCMN.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Utilities",
+    "issuer": "BKW AG",
+    "isin": "CH0130293662",
+    "view": "Dividend maintained; modest growth outlook",
+    "ticker": "BKW.SW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "MercadoLibre Inc.",
+    "isin": "US58733R1023",
+    "view": "Conservative guidance; hold through the cycle",
+    "ticker": "MELI"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "PDD Holdings Inc.",
+    "isin": "US7223041028",
+    "view": "Defensive characteristics intact; hold existing position",
+    "ticker": "PDD"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Energy",
+    "issuer": "Reliance Industries",
+    "isin": "US7594701077",
+    "view": "Strong cash generation; valuation looks full",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Industrial & Comm Bank",
+    "isin": "CNE1000003G1",
+    "view": "Conservative guidance; hold through the cycle",
+    "ticker": "1398.HK"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "TSMC",
+    "isin": "US8740391003",
+    "view": "Foundry process leadership; AI silicon chokepoint",
+    "ticker": "TSM"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Infosys Ltd.",
+    "isin": "US4567881085",
+    "view": "Market share steady; sector headwinds already priced",
+    "ticker": "INFY"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Samsung Electronics",
+    "isin": "US7960502018",
+    "view": "Market share steady; sector headwinds already priced",
+    "ticker": ""
+  },
+  {
+    "rating": "SELL",
+    "assetClass": "Equities",
+    "industry": "Telecommunication",
+    "issuer": "China Mobile Ltd.",
+    "isin": "HK0941009539",
+    "view": "Downgraded — state-control and regulatory risk profile no longer fits the EM allocation. Replace within Telecommunication.",
+    "ticker": "0941.HK"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Communication Services",
+    "issuer": "Alphabet Inc.",
+    "isin": "US02079K3059",
+    "view": "Search resilience with disciplined AI capital spending",
+    "ticker": "GOOGL"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Communication Services",
+    "issuer": "The Walt Disney Co.",
+    "isin": "US2546871060",
+    "view": "Streaming profitability inflection; parks resilience",
+    "ticker": "DIS"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Communication Services",
+    "issuer": "Meta Platforms Inc.",
+    "isin": "US30303M1027",
+    "view": "Competitive position stable; monitoring margin trajectory",
+    "ticker": "META"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Communication Services",
+    "issuer": "Netflix Inc.",
+    "isin": "US64110L1061",
+    "view": "Fairly valued at current levels; maintain existing exposure",
+    "ticker": "NFLX"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Communication Services",
+    "issuer": "Spotify Technology S.A.",
+    "isin": "LU1778762911",
+    "view": "Strong cash generation; valuation looks full",
+    "ticker": "SPOT"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Amazon.com Inc.",
+    "isin": "US0231351067",
+    "view": "Retail scale with the AWS margin engine",
+    "ticker": "AMZN"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Hermès International",
+    "isin": "FR0000052292",
+    "view": "Unmatched pricing power in absolute luxury; multi-year waiting lists",
+    "ticker": "RMS.PA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Industria de Diseño Textil (Inditex)",
+    "isin": "ES0148396007",
+    "view": "Fast-cycle inventory model; superior full-price sell-through",
+    "ticker": "ITX.MC"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "LVMH Moët Hennessy",
+    "isin": "FR0000121014",
+    "view": "Pricing power in premium segments; portfolio of irreplaceable brands",
+    "ticker": "MC.PA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Nike Inc.",
+    "isin": "US6541061031",
+    "view": "Brand leadership with direct-to-consumer margin lift",
+    "ticker": "NKE"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Adidas AG",
+    "isin": "DE000A1EWWW0",
+    "view": "Brand momentum steady; upside priced in at current levels",
+    "ticker": "ADS.DE"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Booking Holdings Inc.",
+    "isin": "US09857L1089",
+    "view": "Fairly valued at current levels; maintain existing exposure",
+    "ticker": "BKNG"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Ferrari N.V.",
+    "isin": "NL0011585146",
+    "view": "Competitive position stable; monitoring margin trajectory",
+    "ticker": "RACE.MI"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Home Depot Inc.",
+    "isin": "US4370761029",
+    "view": "Dividend maintained; modest growth outlook",
+    "ticker": "HD"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Discretionary",
+    "issuer": "Tesla Inc.",
+    "isin": "US88160R1014",
+    "view": "Long-term thesis intact; range-bound near term",
+    "ticker": "TSLA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Danone S.A.",
+    "isin": "FR0000120644",
+    "view": "Specialised nutrition leadership; margin recovery underway",
+    "ticker": "BN.PA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Henkel AG & Co. (Vz)",
+    "isin": "DE0006048432",
+    "view": "Adhesives technology moat; consumer portfolio streamlining",
+    "ticker": "HEN3.DE"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Kimberly-Clark Corp.",
+    "isin": "US4943681035",
+    "view": "Defensive staples with reliable dividend history",
+    "ticker": "KMB"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Mondelez International",
+    "isin": "US6092071058",
+    "view": "Defensive growth in global snacking; pricing power",
+    "ticker": "MDLZ"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Procter & Gamble Co.",
+    "isin": "US7427181091",
+    "view": "Category leader with durable pricing power and innovation cadence",
+    "ticker": "PG"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Reckitt Benckiser Group",
+    "isin": "GB00B24CGK77",
+    "view": "Hygiene and health portfolio reset; margin-recovery story",
+    "ticker": "RKT.L"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Unilever PLC",
+    "isin": "GB00B10RZP78",
+    "view": "Brand breadth across 190 markets; emerging-market distribution depth",
+    "ticker": "ULVR.L"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Colgate-Palmolive Co.",
+    "isin": "US1941621039",
+    "view": "Stable market position; no incremental allocation recommended",
+    "ticker": "CL"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Costco Wholesale Corp.",
+    "isin": "US22160K1051",
+    "view": "Balanced risk/reward at the current valuation",
+    "ticker": "COST"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "L'Oréal S.A.",
+    "isin": "FR0000120321",
+    "view": "Stable market position; no incremental allocation recommended",
+    "ticker": "OR.PA"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Nestlé S.A. (ADR)",
+    "isin": "US6410694060",
+    "view": "Sound balance sheet; catalysts further out",
+    "ticker": "NSRGY"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "PepsiCo Inc.",
+    "isin": "US7134481081",
+    "view": "Balanced risk/reward at the current valuation",
+    "ticker": "PEP"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "The Coca-Cola Co.",
+    "isin": "US1912161007",
+    "view": "Earnings quality intact; awaiting a better entry point",
+    "ticker": "KO"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Tyson Foods, Inc.",
+    "isin": "US9024941034",
+    "view": "Commodity-cost exposure balanced by scale; maintain",
+    "ticker": "TSN"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Consumer Staples",
+    "issuer": "Walmart Inc.",
+    "isin": "US9311421039",
+    "view": "Sound balance sheet; catalysts further out",
+    "ticker": "WMT"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Diversified ETF",
+    "issuer": "Vanguard S&P 500 UCITS ETF",
+    "isin": "IE00B3XXRP09",
+    "view": "Core US-equity building block, not a tactical recommendation",
+    "ticker": "VUSA.L"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Diversified ETF",
+    "issuer": "iShares Core MSCI World UCITS ETF",
+    "isin": "IE00B4L5Y983",
+    "view": "Core developed-market building block, not a tactical recommendation",
+    "ticker": "EUNL.DE"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Energy",
+    "issuer": "Shell plc",
+    "isin": "GB00BP6MXD84",
+    "view": "Energy-transition optionality with cash-flow discipline",
+    "ticker": "SHEL.L"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Energy",
+    "issuer": "TotalEnergies SE",
+    "isin": "FR0000120271",
+    "view": "Integrated energy with renewables build-out",
+    "ticker": "TTE.PA"
+  },
+  {
+    "rating": "SELL",
+    "assetClass": "Equities",
+    "industry": "Energy",
+    "issuer": "Exxon Mobil Corp.",
+    "isin": "US30231G1022",
+    "view": "Downgraded — least-preferred integrated energy name; capital-allocation concerns vs. European peers. Replace within Energy.",
+    "ticker": "XOM"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "AXA S.A.",
+    "isin": "FR0000120628",
+    "view": "European insurance value; capital-return discipline",
+    "ticker": "CS.PA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Chubb Limited",
+    "isin": "CH0044328745",
+    "view": "Best-in-class P&C underwriting discipline",
+    "ticker": "CB"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "JPMorgan Chase & Co.",
+    "isin": "US46625H1005",
+    "view": "Fortress balance sheet; best-in-class returns through cycles",
+    "ticker": "JPM"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Visa Inc.",
+    "isin": "US92826C8394",
+    "view": "Secular cash-to-card tailwind; pristine unit economics",
+    "ticker": "V"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Allianz SE",
+    "isin": "DE0008404005",
+    "view": "Fairly valued at current levels; maintain existing exposure",
+    "ticker": "ALV.DE"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Bank of America Corp.",
+    "isin": "US0605051046",
+    "view": "Conservative guidance; hold through the cycle",
+    "ticker": "BAC"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Berkshire Hathaway",
+    "isin": "US0846701086",
+    "view": "Sound balance sheet; catalysts further out",
+    "ticker": "BRK-B"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Mastercard Inc.",
+    "isin": "US57636Q1040",
+    "view": "Long-term thesis intact; range-bound near term",
+    "ticker": "MA"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "Muenchener Rueckvers.",
+    "isin": "DE0008430026",
+    "view": "Solid franchise; limited near-term catalysts",
+    "ticker": "MUV2.DE"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Financials",
+    "issuer": "S&P Global Inc.",
+    "isin": "US78409V1044",
+    "view": "Competitive position stable; monitoring margin trajectory",
+    "ticker": "SPGI"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "AbbVie Inc.",
+    "isin": "US00287Y1091",
+    "view": "Immunology franchise resilience; strong dividend cover",
+    "ticker": "ABBV"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Amgen Inc.",
+    "isin": "US0311621009",
+    "view": "Biologics manufacturing scale; reliable cash returns",
+    "ticker": "AMGN"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Eli Lilly & Co.",
+    "isin": "US5324571083",
+    "view": "Metabolic-medicine leadership; unmatched commercial execution",
+    "ticker": "LLY"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "GSK plc",
+    "isin": "GB00BN7SWP63",
+    "view": "Preferred European pharma; vaccines and specialty-medicine momentum",
+    "ticker": "GSK.L"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Gilead Sciences Inc.",
+    "isin": "US3755581036",
+    "view": "Stable antiviral franchise with oncology optionality",
+    "ticker": "GILD"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Novo Nordisk A/S",
+    "isin": "DK0062498333",
+    "view": "GLP-1 category creator; manufacturing capacity scaling",
+    "ticker": "NOVO-B.CO"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Pfizer Inc.",
+    "isin": "US7170811035",
+    "view": "Valuation re-entry point; diversified pharma exposure",
+    "ticker": "PFE"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Vertex Pharmaceuticals",
+    "isin": "US92532F1003",
+    "view": "Durable specialty-pharma franchise with high barriers to entry",
+    "ticker": "VRTX"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Abbott Laboratories",
+    "isin": "US0028241000",
+    "view": "Market share steady; sector headwinds already priced",
+    "ticker": "ABT"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "AstraZeneca PLC",
+    "isin": "GB0009895292",
+    "view": "Defensive characteristics intact; hold existing position",
+    "ticker": "AZN.L"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Biogen Inc.",
+    "isin": "US09062X1037",
+    "view": "Fairly valued within diversified healthcare exposure; maintain",
+    "ticker": "BIIB"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Johnson & Johnson",
+    "isin": "US4781601046",
+    "view": "Operating momentum steady; keep the position",
+    "ticker": "JNJ"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Medtronic PLC",
+    "isin": "IE00BTN1Y115",
+    "view": "Execution on track; upside largely priced in",
+    "ticker": "MDT"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Health Care",
+    "issuer": "Sanofi S.A.",
+    "isin": "FR0000120578",
+    "view": "Balanced risk/reward at the current valuation",
+    "ticker": "SAN.PA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Atlas Copco AB (A)",
+    "isin": "SE0017486889",
+    "view": "Compressors and vacuum technology; automation capex beneficiary",
+    "ticker": "ATCO-A.ST"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Kone Oyj",
+    "isin": "FI0009013403",
+    "view": "European automation leader; service-revenue resilience",
+    "ticker": "KNEBV.HE"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Legrand S.A.",
+    "isin": "FR0010307819",
+    "view": "Electrification and building-automation exposure",
+    "ticker": "LR.PA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Sandvik AB",
+    "isin": "SE0000667891",
+    "view": "Mining and engineering automation; robust order book",
+    "ticker": "SAND.ST"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Schneider Electric SE",
+    "isin": "FR0000121972",
+    "view": "Grid modernisation and datacentre power exposure",
+    "ticker": "SU.PA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Industrials",
+    "issuer": "Siemens AG",
+    "isin": "DE0007236101",
+    "view": "Industrial software and electrification order book",
+    "ticker": "SIE.DE"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "ASML Holding N.V.",
+    "isin": "NL0010273215",
+    "view": "Lithography monopoly at the heart of the node race",
+    "ticker": "ASML.AS"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Accenture plc",
+    "isin": "IE00B4BNMY34",
+    "view": "IT-services bellwether; GenAI bookings growth",
+    "ticker": "ACN"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Apple Inc.",
+    "isin": "US0378331005",
+    "view": "Ecosystem lock-in with rising services margin mix",
+    "ticker": "AAPL"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Microsoft Corp.",
+    "isin": "US5949181045",
+    "view": "Cloud and AI monetisation across the enterprise stack",
+    "ticker": "MSFT"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "NVIDIA Corp.",
+    "isin": "US67066G1040",
+    "view": "Accelerated-computing standard setter; datacentre demand visibility",
+    "ticker": "NVDA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Texas Instruments Inc.",
+    "isin": "US8825081040",
+    "view": "Analog-semiconductor quality compounder; industrial exposure",
+    "ticker": "TXN"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Adobe Inc.",
+    "isin": "US00724F1012",
+    "view": "Quality compounder; above our entry discipline",
+    "ticker": "ADBE"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Adyen N.V.",
+    "isin": "NL0012969182",
+    "view": "Dividend maintained; modest growth outlook",
+    "ticker": "ADYEN.AS"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Applied Materials Inc.",
+    "isin": "US0382221051",
+    "view": "Operating momentum steady; keep the position",
+    "ticker": "AMAT"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Arista Networks Inc.",
+    "isin": "US0404131064",
+    "view": "Long-term thesis intact; range-bound near term",
+    "ticker": "ANET"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Broadcom Inc.",
+    "isin": "US11135F1012",
+    "view": "Solid franchise; limited near-term catalysts",
+    "ticker": "AVGO"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "CrowdStrike Holdings",
+    "isin": "US22788C1053",
+    "view": "Defensive characteristics intact; hold existing position",
+    "ticker": "CRWD"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Datadog Inc.",
+    "isin": "US23804L1035",
+    "view": "Execution on track; upside largely priced in",
+    "ticker": "DDOG"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Entegris Inc.",
+    "isin": "US29362U1043",
+    "view": "Strong cash generation; valuation looks full",
+    "ticker": "ENTG"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Intuit Inc.",
+    "isin": "US4612021034",
+    "view": "Quality compounder; above our entry discipline",
+    "ticker": "INTU"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Palantir Technologies",
+    "isin": "US69608A1088",
+    "view": "Earnings quality intact; awaiting a better entry point",
+    "ticker": "PLTR"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Palo Alto Networks Inc",
+    "isin": "US6974351057",
+    "view": "Stable market position; no incremental allocation recommended",
+    "ticker": "PANW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Qualcomm Inc.",
+    "isin": "US7475251036",
+    "view": "Execution on track; upside largely priced in",
+    "ticker": "QCOM"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "SAP SE",
+    "isin": "DE0007164600",
+    "view": "Sound balance sheet; catalysts further out",
+    "ticker": "SAP.DE"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Salesforce Inc.",
+    "isin": "US79466L3024",
+    "view": "Dividend maintained; modest growth outlook",
+    "ticker": "CRM"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "ServiceNow Inc.",
+    "isin": "US81762P1021",
+    "view": "Quality compounder; above our entry discipline",
+    "ticker": "NOW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Snowflake Inc.",
+    "isin": "US8334451098",
+    "view": "Operating momentum steady; keep the position",
+    "ticker": "SNOW"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Uber Technologies Inc.",
+    "isin": "US90353T1007",
+    "view": "Conservative guidance; hold through the cycle",
+    "ticker": "UBER"
+  },
+  {
+    "rating": "SELL",
+    "assetClass": "Equities",
+    "industry": "Information Technology",
+    "issuer": "Intel Corp.",
+    "isin": "US4581401001",
+    "view": "Downgraded — structural competitive headwinds in foundry economics and AI roadmap. Replace within Information Technology.",
+    "ticker": "INTC"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Materials",
+    "issuer": "Air Liquide S.A.",
+    "isin": "FR0000120073",
+    "view": "Industrial-gases oligopoly; hydrogen optionality",
+    "ticker": "AI.PA"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Materials",
+    "issuer": "Linde PLC",
+    "isin": "IE000S9YS762",
+    "view": "Industrial-gas pricing discipline; hydrogen optionality",
+    "ticker": "LIN"
+  },
+  {
+    "rating": "SELL",
+    "assetClass": "Equities",
+    "industry": "Materials",
+    "issuer": "Albemarle Corp.",
+    "isin": "US0126531013",
+    "view": "Downgraded — prolonged lithium price weakness and oversupply; earnings visibility too low. Replace within Materials.",
+    "ticker": "ALB"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Telecommunication",
+    "issuer": "Deutsche Telekom AG",
+    "isin": "DE0005557508",
+    "view": "European telecom quality; T-Mobile US growth engine",
+    "ticker": "DTE.DE"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Equities",
+    "industry": "Utilities",
+    "issuer": "Enel SpA",
+    "isin": "IT0003128367",
+    "view": "Regulated utility with renewables leadership",
+    "ticker": "ENEL.MI"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Utilities",
+    "issuer": "Iberdrola S.A.",
+    "isin": "ES0144580Y14",
+    "view": "Earnings quality intact; awaiting a better entry point",
+    "ticker": "IBE.MC"
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Equities",
+    "industry": "Utilities",
+    "issuer": "NextEra Energy Inc.",
+    "isin": "US65339F1012",
+    "view": "Solid franchise; limited near-term catalysts",
+    "ticker": "NEE"
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Swiss Confederation",
+    "isin": "CH0127181193",
+    "view": "Core CHF duration anchor; benchmark-quality safety",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Swiss Confederation",
+    "isin": "CH0224397171",
+    "view": "Issuer fundamentals steady; maintain exposure",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Swiss Confederation",
+    "isin": "CH0127181169",
+    "view": "Spread fair for the rating; no action required",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Swiss Confederation",
+    "isin": "CH0009755197",
+    "view": "Attractive carry; duration within mandate limits",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Eurofima",
+    "isin": "CH0020469075",
+    "view": "Credit metrics stable; hold to maturity",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Kanton Zürich",
+    "isin": "CH1346743052",
+    "view": "Stable rating outlook; keep the allocation",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Nestlé S.A.",
+    "isin": "CH1194355116",
+    "view": "Curve positioning appropriate; no change",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Pfandbriefbank",
+    "isin": "CH0419041212",
+    "view": "Yield adequate; no relative-value switch available",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Swisscom AG",
+    "isin": "CH1112455766",
+    "view": "Solid coupon capture; maintain position",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "ZKB Bond",
+    "isin": "CH1498422984",
+    "view": "Attractive carry; duration within mandate limits",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Federative Republic of Brazil",
+    "isin": "US105756BY51",
+    "view": "Issuer fundamentals steady; maintain exposure",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Kingdom of Saudi Arabia",
+    "isin": "XS1508675508",
+    "view": "Curve positioning appropriate; no change",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Republic of Indonesia",
+    "isin": "USY20721BB49",
+    "view": "Yield adequate; no relative-value switch available",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Republic of South Africa",
+    "isin": "US836205BB97",
+    "view": "Curve positioning appropriate; no change",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "United Mexican States",
+    "isin": "US91086QAZ19",
+    "view": "Stable rating outlook; keep the allocation",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "France OAT",
+    "isin": "FR001400PM68",
+    "view": "Stable rating outlook; keep the allocation",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "France OAT",
+    "isin": "FR0011461037",
+    "view": "Solid coupon capture; maintain position",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Germany Bund",
+    "isin": "DE000BU3Z005",
+    "view": "Yield adequate; no relative-value switch available",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Germany Bund",
+    "isin": "DE000BU2Z031",
+    "view": "Issuer fundamentals steady; maintain exposure",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Germany Bund",
+    "isin": "DE0001135432",
+    "view": "Credit metrics stable; hold to maturity",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "US Treasury",
+    "isin": "US91282CLS88",
+    "view": "Credit metrics stable; hold to maturity",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "US Treasury",
+    "isin": "US91282CLW90",
+    "view": "Spread fair for the rating; no action required",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "US Treasury",
+    "isin": "US912810TV08",
+    "view": "Attractive carry; duration within mandate limits",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "Vanguard USD Treasury",
+    "isin": "IE00BMX0B631",
+    "view": "Credit metrics stable; hold to maturity",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Government Bonds",
+    "issuer": "iShares USD Treas. ETF",
+    "isin": "IE00BK7Y2R57",
+    "view": "Attractive carry; duration within mandate limits",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Apple Inc.",
+    "isin": "US037833CX61",
+    "view": "Spread fair for the rating; no action required",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "BASF SE",
+    "isin": "XS2595418679",
+    "view": "Attractive carry; duration within mandate limits",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Coca-Cola Co.",
+    "isin": "US191216DP21",
+    "view": "Yield adequate; no relative-value switch available",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Deutsche Telekom",
+    "isin": "DE000A2TSDE2",
+    "view": "Spread fair for the rating; no action required",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Johnson & Johnson",
+    "isin": "US478160CL64",
+    "view": "Solid coupon capture; maintain position",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Microsoft Corp.",
+    "isin": "XS1001749289",
+    "view": "Solid coupon capture; maintain position",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Sanofi S.A.",
+    "isin": "FR0013409844",
+    "view": "Curve positioning appropriate; no change",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Siemens Fin.",
+    "isin": "XS2118273601",
+    "view": "Stable rating outlook; keep the allocation",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Fixed Income",
+    "industry": "Investment Grade",
+    "issuer": "Walmart Inc.",
+    "isin": "US931142EE96",
+    "view": "Issuer fundamentals steady; maintain exposure",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Real Estate",
+    "industry": "Real Estate (REIT)",
+    "issuer": "Digital Realty Trust",
+    "isin": "US2538681030",
+    "view": "Portfolio quality solid; rate sensitivity priced",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Real Estate",
+    "industry": "Real Estate (REIT)",
+    "issuer": "Equinix Inc.",
+    "isin": "US29444U7000",
+    "view": "Steady rental growth; maintain exposure",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Real Estate",
+    "industry": "Real Estate (REIT)",
+    "issuer": "Prologis Inc.",
+    "isin": "US74340W1036",
+    "view": "Occupancy and rents stable; income profile intact",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Real Estate",
+    "industry": "Real Estate (REIT)",
+    "issuer": "Welltower Inc.",
+    "isin": "US95040Q1040",
+    "view": "NAV discount fair; distribution well covered",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Real Estate",
+    "industry": "Real Estate (Fund)",
+    "issuer": "UBS (CH) Property Fund",
+    "isin": "CH0014420878",
+    "view": "NAV discount fair; distribution well covered",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Real Estate",
+    "industry": "Real Estate (Fund)",
+    "issuer": "UBS (CH) Real Estate Fund Interswiss",
+    "isin": "CH0002769351",
+    "view": "Occupancy and rents stable; income profile intact",
+    "ticker": ""
+  },
+  {
+    "rating": "BUY",
+    "assetClass": "Alternatives",
+    "industry": "Precious Metals",
+    "issuer": "iShares Physical Gold",
+    "isin": "IE00B4ND3602",
+    "view": "Strategic portfolio hedge; allocation underpinned by CIO macro view",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Alternatives",
+    "industry": "Precious Metals",
+    "issuer": "ZKB Gold ETF",
+    "isin": "CH0047533523",
+    "view": "Strategic diversifier; allocation per CIO macro view",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Alternatives",
+    "industry": "Digital Assets",
+    "issuer": "21Shares Bitcoin ETP",
+    "isin": "CH0454664001",
+    "view": "Execution vehicle for the mandate's crypto allocation; not a rated conviction",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Alternatives",
+    "industry": "Digital Assets",
+    "issuer": "21Shares Ethereum ETP",
+    "isin": "CH0454664027",
+    "view": "Execution vehicle for the mandate's crypto allocation; not a rated conviction",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Alternatives",
+    "industry": "Private Markets",
+    "issuer": "Partners Group Listed Investments - Listed PE",
+    "isin": "LU0196152788",
+    "view": "Liquidity terms acceptable; hold current commitment",
+    "ticker": ""
+  },
+  {
+    "rating": "HOLD",
+    "assetClass": "Alternatives",
+    "industry": "Private Markets",
+    "issuer": "iShares Listed Private Eq",
+    "isin": "IE00B1TXHL60",
+    "view": "Uncorrelated return profile; maintain weighting",
+    "ticker": ""
+  }
+]

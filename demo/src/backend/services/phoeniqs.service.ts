@@ -113,6 +113,38 @@ export class PhoeniqsService {
     };
   }
 
+  /**
+   * Generic "return strict JSON" call, reused by the CRM agent layer for
+   * grounded extraction/adjudication. Returns the parsed object, or null when
+   * the LLM is not configured so callers can fall back to rules-only output.
+   */
+  async extractJson<T = unknown>(
+    system: string,
+    user: string,
+    maxTokens = 800
+  ): Promise<T | null> {
+    if (!this.configured) return null;
+
+    let data;
+    try {
+      ({ data } = await this.client.post("/chat/completions", {
+        model: this.model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        temperature: 0,
+        max_tokens: maxTokens,
+      }));
+    } catch (error) {
+      const ax = error as { response?: { data?: { error?: { message?: string } } } };
+      throw new Error(`[Phoeniqs] ${ax.response?.data?.error?.message || (error as Error).message}`);
+    }
+
+    const content: string = data?.choices?.[0]?.message?.content || "";
+    return this.parseJson(content) as unknown as T;
+  }
+
   /** Liveness check that captures the full request/response for the status UI. */
   async ping(): Promise<IntegrationProbe> {
     const started = Date.now();

@@ -7,6 +7,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import analysisRoutes from "./routes/analysis.routes";
+import crmRoutes from "./crm-graph/crm.routes";
 
 const app = express();
 const port = parseInt(process.env.PORT || "3000", 10);
@@ -19,6 +20,7 @@ app.use(morgan("dev"));
 app.use(express.json());
 
 app.use("/api/analysis", analysisRoutes);
+app.use("/api/crm", crmRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -30,6 +32,7 @@ app.listen(port, () => {
   console.log(`[Server] Running on http://localhost:${port}`);
   console.log(`[Server] Frontend at http://localhost:${port}`);
   console.log(`[Server] API at http://localhost:${port}/api/analysis`);
+  console.log(`[Server] CRM agent API at http://localhost:${port}/api/crm`);
 });
 
 export default app;
