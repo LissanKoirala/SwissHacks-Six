@@ -55,6 +55,15 @@ The challenge provides four client personas to build and test against, each with
 
 Expected deliverables include an end-to-end clickable prototype or working front-end; a minimal back-end or agent flow demonstrating personalisation and reasoning; and a short demo story showing how a relationship manager uses the dashboard to understand a client change, explain it, and decide on the next best action.
 
+Expected Presentation: A concise presentation (.pptx) including slides with a clear demo of the developed solution.
+Key elements:
+-   Problem & solution: Clearly define the problem and how your solution addresses it
+-   Demo: Showcase the solution in action within the slides
+-   Core functionalities: Highlight key features and their value
+-   User journey: Illustrate how users interact with the solution
+
+Each hack team is required to **submit their code**; and **complete a short feedback** form on the MCP (what worked, what didn’t, etc.), one submission per team is sufficient and it will take no more than 5 minutes: https://forms.office.com/e/tX2cH5n9Yi 
+
 ## Technology
 
 ### Available Technology
@@ -126,5 +135,5 @@ Thank you for choosing the SIX challenge!
 
 The top two teams will receive the opportunity to pitch to SIX Management + receive SIX Goodie Bags ;-)
 
-Plus — all our hackers have the chance to receive a private pitch coaching session with our expert on Saturday or Sunday, prior to the evaluations. Sign up with Magdalena at the SIX Booth!
+Plus — all our hackers have the chance to receive a private pitch coaching session with our expert on Saturday, in preparation to the Sunday evaluations. Sign up with Magdalena at the SIX Booth!
 
