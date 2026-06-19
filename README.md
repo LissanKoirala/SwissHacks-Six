@@ -125,6 +125,8 @@ Each proposal lists the constraints it checked (CIO-approved universe, same sect
 | `GET /clients/{id}` | profile facets, mandate, log count |
 | `GET /clients/{id}/insights` | **the contract** — matches + strategy proposal + dialogue suggestion (`?refresh=1` to bypass cache) |
 | `GET /clients/{id}/portfolio` | holdings, total CHF, mandate targets |
+| `GET /clients/{id}/analytics` | allocation (asset class / sub-asset class drift / sector), figures, top holdings, per-region exposure + alert-linked risk (for the charts + globe) |
+| `GET /clients/{id}/graph` | the CRM knowledge graph (RM → household → people → interactions → themes) for the Network view |
 | `GET /clients/{id}/log` | the append-only meeting log |
 | `GET /news` | the classified news graph |
 
@@ -162,7 +164,7 @@ Reference payloads for all four personas live in `docs/api_samples/`.
 - **Seed-first by design.** The CRM and Portfolio workbooks, the news fixtures, and the CIO stock labels are the deterministic source of truth. The demo runs end to end with zero keys and zero network calls.
 - **Live behind the same interface.** Each source has a live adapter (Phoeniqs LLM, SIX MCP valuation, Event Registry news) that switches on only when `USE_LIVE=1` and the matching key is set. Swapping mock ↔ live is one flag; nothing downstream changes.
 - **The advisory agent's prose** is deterministic by default; with a Phoeniqs key it upgrades the dialogue draft to LLM-written copy (`llm_used` flips to `true`). The *strategy logic* — swap selection, sector and drift constraints — stays deterministic and rule-bound either way.
-- **The frontend** (`frontend/`, Next.js 14 + Tailwind) renders the insights API — client list, alert cards with "why this surfaced", the dual strategy/dialogue panels, provenance click-through, RM confirm gates, and the mandate-drift view. It builds clean (`npm run build`) and reads the backend at `:8000`; it makes no decisions of its own.
+- **The frontend** (`frontend/`, Next.js 14 + Tailwind) renders the insights API across six tabs: **Advisory** (alert cards with "why this surfaced" + the dual strategy/dialogue panels), **Portfolio** (holdings + drift table), **Analytics** (allocation donut, mandate-drift chart, sector + figure cards — recharts), **Investment Map** (a 3D **cobe** globe of geographic exposure with alert-linked, cited region risks), **CRM Network** (the force-directed knowledge graph), and **Profile**. Provenance click-through and RM confirm gates throughout. It builds clean (`npm run build`) and reads the backend at `:8000`; it makes no decisions of its own. Screenshots in `docs/screenshots/`.
 
 ### Provenance & explainability
 

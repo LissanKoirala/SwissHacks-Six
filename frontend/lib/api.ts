@@ -7,6 +7,8 @@ import type {
   Portfolio,
   ClientDetail,
   IntegrationHealth,
+  Analytics,
+  CrmGraph,
 } from "./types";
 
 export const API_BASE =
@@ -28,5 +30,7 @@ export const api = {
   insights: (id: string) => get<Insights>(`/clients/${id}/insights`),
   portfolio: (id: string) => get<Portfolio>(`/clients/${id}/portfolio`),
   client: (id: string) => get<ClientDetail>(`/clients/${id}`),
+  analytics: (id: string) => get<Analytics>(`/clients/${id}/analytics`),
+  graph: (id: string) => get<CrmGraph>(`/clients/${id}/graph`),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
 };

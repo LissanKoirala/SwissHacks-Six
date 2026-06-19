@@ -10,8 +10,11 @@ import { StrategyPanel } from "./StrategyPanel";
 import { DialoguePanel } from "./DialoguePanel";
 import { PortfolioView } from "./PortfolioView";
 import { ProfileView } from "./ProfileView";
+import { PortfolioCharts } from "./PortfolioCharts";
+import { InvestmentGlobe } from "./InvestmentGlobe";
+import { CrmGraph } from "./CrmGraph";
 
-type Tab = "advisory" | "portfolio" | "profile";
+type Tab = "advisory" | "portfolio" | "analytics" | "map" | "network" | "profile";
 
 export function ClientView({ clientId }: { clientId: string }) {
   const [insights, setInsights] = useState<Insights | null>(null);
@@ -98,6 +101,9 @@ export function ClientView({ clientId }: { clientId: string }) {
           {([
             ["advisory", `Advisory${client.alert_count ? ` · ${client.alert_count}` : ""}`],
             ["portfolio", "Portfolio"],
+            ["analytics", "Analytics"],
+            ["map", "Investment Map"],
+            ["network", "CRM Network"],
             ["profile", "Profile"],
           ] as [Tab, string][]).map(([id, label]) => (
             <button
@@ -142,6 +148,12 @@ export function ClientView({ clientId }: { clientId: string }) {
         {tab === "portfolio" && (
           <PortfolioView clientId={clientId} affectedIsin={affectedIsin} />
         )}
+
+        {tab === "analytics" && <PortfolioCharts clientId={clientId} />}
+
+        {tab === "map" && <InvestmentGlobe clientId={clientId} />}
+
+        {tab === "network" && <CrmGraph clientId={clientId} />}
 
         {tab === "profile" && <ProfileView clientId={clientId} />}
       </div>

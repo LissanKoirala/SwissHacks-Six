@@ -6,7 +6,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..agents.orchestrator import get_insights
+from ..analytics import build_analytics
 from ..config import settings
+from ..graph.crm_graph import build_crm_graph
 from ..seed import build_world
 
 
@@ -82,6 +84,18 @@ def create_app() -> FastAPI:
         if client_id not in world.clients:
             raise HTTPException(404, "unknown client")
         return [e.model_dump() for e in world.meeting_logs.get(client_id, [])]
+
+    @app.get("/clients/{client_id}/analytics")
+    def client_analytics(client_id: str):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        return build_analytics(world, client_id)
+
+    @app.get("/clients/{client_id}/graph")
+    def client_graph(client_id: str):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        return build_crm_graph(world, client_id)
 
     @app.get("/news")
     def news():

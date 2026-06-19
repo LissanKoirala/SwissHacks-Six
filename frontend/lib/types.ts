@@ -190,3 +190,97 @@ export interface IntegrationHealth {
   use_live: boolean;
   probes: IntegrationProbe[];
 }
+
+// --- analytics (charts + 3D investment globe) ---
+
+export interface AnalyticsFigures {
+  total_chf: number;
+  holding_count: number;
+  sub_asset_classes: number;
+  drift_breaches: number;
+  alerts: number;
+  weighted_sentiment: number;
+  regions: number;
+}
+
+export interface AllocationSlice {
+  name: string;
+  current_chf: number;
+  pct: number;
+}
+
+export interface SubAssetClassRow {
+  name: string;
+  asset_class: string;
+  target_pct: number;
+  current_pct: number;
+  current_chf: number;
+  drift_pp: number;
+  breach: boolean;
+}
+
+export interface RegionRisk {
+  kind: Polarity;
+  label: string;
+  detail: string;
+  sentiment: string;
+  issuer?: string | null;
+  provenance: Provenance;
+}
+
+export interface RegionExposure {
+  region: string;
+  current_chf: number;
+  count: number;
+  pct: number;
+  lat: number;
+  lng: number;
+  risk_level: "high" | "positive" | "stable";
+  risks: RegionRisk[];
+}
+
+export interface TopHolding {
+  issuer: string;
+  isin: string;
+  industry_group: string | null;
+  region: string | null;
+  current_chf: number;
+  pct: number;
+  in_alert: boolean;
+}
+
+export interface Analytics {
+  client_id: string;
+  figures: AnalyticsFigures;
+  by_asset_class: AllocationSlice[];
+  by_sub_asset_class: SubAssetClassRow[];
+  by_sector: AllocationSlice[];
+  by_region: RegionExposure[];
+  top_holdings: TopHolding[];
+}
+
+// --- CRM knowledge graph (Network view) ---
+
+export interface CrmNode {
+  id: string;
+  label: string;
+  type: "rm" | "client" | "person" | "medium" | "interaction" | "theme";
+  color: string;
+  degree: number;
+  detail?: string;
+  date?: string;
+  medium?: string;
+  contact?: string;
+  summary?: string;
+}
+
+export interface CrmLink {
+  source: string;
+  target: string;
+}
+
+export interface CrmGraph {
+  client_id: string;
+  nodes: CrmNode[];
+  links: CrmLink[];
+}

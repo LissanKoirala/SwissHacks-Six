@@ -1,0 +1,867 @@
+{
+  "client_id": "schneider",
+  "nodes": [
+    {
+      "id": "rm:Thomas Keller",
+      "label": "Thomas Keller",
+      "type": "rm",
+      "detail": "Relationship manager for the household.",
+      "color": "#e0b3ff",
+      "degree": 1
+    },
+    {
+      "id": "client:Schneider",
+      "label": "Hubertus Schneider",
+      "type": "client",
+      "detail": "Wants core pharma holdings to actively fund Parkinson's research; will divest any name that abandons it.",
+      "color": "#ffd166",
+      "degree": 29
+    },
+    {
+      "id": "person:Hubertus Schneider",
+      "label": "Hubertus Schneider",
+      "type": "person",
+      "detail": "Schneider household member.",
+      "color": "#4cc9f0",
+      "degree": 20
+    },
+    {
+      "id": "medium:Physical Meeting",
+      "label": "Physical Meeting",
+      "type": "medium",
+      "detail": "Contact channel: Physical Meeting.",
+      "color": "#76c893",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:1",
+      "label": "2023-04-10 · Physical Meeting",
+      "type": "interaction",
+      "date": "2023-04-10",
+      "medium": "Physical Meeting",
+      "contact": "Hubertus Schneider",
+      "detail": "Annual portfolio alignment. Hubertus is the active owner and CEO of a major Swiss automotive supply enterprise. Business is highly capital-intensive but performing strongly. Portfolio structured under a standard Global Balanced Growth mandate.",
+      "summary": "Annual portfolio alignment. Hubertus is the active owner and CEO of a…",
+      "color": "#9aa0b5",
+      "degree": 3
+    },
+    {
+      "id": "medium:Phone Call",
+      "label": "Phone Call",
+      "type": "medium",
+      "detail": "Contact channel: Phone Call.",
+      "color": "#76c893",
+      "degree": 12
+    },
+    {
+      "id": "int:schneider:2",
+      "label": "2023-06-15 · Phone Call",
+      "type": "interaction",
+      "date": "2023-06-15",
+      "medium": "Phone Call",
+      "contact": "Hubertus Schneider",
+      "detail": "Cash flow coordination. Hubertus requested optimization of the portfolio's fixed-income sleeve to sit alongside his private corporate liquidity. He values operational precision and steady growth.",
+      "summary": "Cash flow coordination. Hubertus requested optimization of the…",
+      "color": "#9aa0b5",
+      "degree": 4
+    },
+    {
+      "id": "theme:Dividends / Income",
+      "label": "Dividends / Income",
+      "type": "theme",
+      "detail": "Cross-client theme: Dividends / Income.",
+      "color": "#f08080",
+      "degree": 4
+    },
+    {
+      "id": "medium:Lunch",
+      "label": "Lunch",
+      "type": "medium",
+      "detail": "Contact channel: Lunch.",
+      "color": "#76c893",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:3",
+      "label": "2023-09-12 · Lunch",
+      "type": "interaction",
+      "date": "2023-09-12",
+      "medium": "Lunch",
+      "contact": "Hubertus Schneider",
+      "detail": "Meeting in Zurich. Hubertus discussed the challenges of European automotive supply chains. He noted his daughter, Chloe, is currently studying abroad and doing well. General family updates shared; all stable.",
+      "summary": "Meeting in Zurich. Hubertus discussed the challenges of European…",
+      "color": "#9aa0b5",
+      "degree": 5
+    },
+    {
+      "id": "theme:Supply-Chain Governance",
+      "label": "Supply-Chain Governance",
+      "type": "theme",
+      "detail": "Cross-client theme: Supply-Chain Governance.",
+      "color": "#f08080",
+      "degree": 1
+    },
+    {
+      "id": "theme:Health / Family",
+      "label": "Health / Family",
+      "type": "theme",
+      "detail": "Cross-client theme: Health / Family.",
+      "color": "#f08080",
+      "degree": 9
+    },
+    {
+      "id": "person:Carmen Schneider",
+      "label": "Carmen Schneider",
+      "type": "person",
+      "detail": "Schneider household member.",
+      "color": "#4cc9f0",
+      "degree": 10
+    },
+    {
+      "id": "int:schneider:4",
+      "label": "2023-11-04 · Phone Call",
+      "type": "interaction",
+      "date": "2023-11-04",
+      "medium": "Phone Call",
+      "contact": "Carmen Schneider",
+      "detail": "Brief call from Carmen regarding standard credit card limit extensions for a family holiday. Her tone was positive and energetic.",
+      "summary": "Brief call from Carmen regarding standard credit card limit…",
+      "color": "#9aa0b5",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:5",
+      "label": "2024-01-18 · Physical Meeting",
+      "type": "interaction",
+      "date": "2024-01-18",
+      "medium": "Physical Meeting",
+      "contact": "Hubertus & Carmen",
+      "detail": "Review at their residence in Zug. Discussion focused heavily on long-term wealth transmission strategies for their children. Standard global balanced positioning maintained, with a 12% allocation to global healthcare giants.",
+      "summary": "Review at their residence in Zug. Discussion focused heavily on…",
+      "color": "#9aa0b5",
+      "degree": 5
+    },
+    {
+      "id": "theme:Succession Planning",
+      "label": "Succession Planning",
+      "type": "theme",
+      "detail": "Cross-client theme: Succession Planning.",
+      "color": "#f08080",
+      "degree": 1
+    },
+    {
+      "id": "int:schneider:6",
+      "label": "2024-03-22 · Phone Call",
+      "type": "interaction",
+      "date": "2024-03-22",
+      "medium": "Phone Call",
+      "contact": "Hubertus Schneider",
+      "detail": "Hubertus requested a standard dividend statement for his personal tax planning. He mentioned his automotive supply plants are expanding their automation lines. Portfolio running smoothly.",
+      "summary": "Hubertus requested a standard dividend statement for his personal tax…",
+      "color": "#9aa0b5",
+      "degree": 4
+    },
+    {
+      "id": "medium:Email",
+      "label": "Email",
+      "type": "medium",
+      "detail": "Contact channel: Email.",
+      "color": "#76c893",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:7",
+      "label": "2024-05-14 · Email",
+      "type": "interaction",
+      "date": "2024-05-14",
+      "medium": "Email",
+      "contact": "Hubertus Schneider",
+      "detail": "Hubertus requested a breakdown of our core large-cap pharmaceutical holdings, specifically asking about their global neurological research footprints. RM confirmed the core European pharma anchor in our model equity sleeve has a massive neuroscience R&D footprint.",
+      "summary": "Hubertus requested a breakdown of our core large-cap pharmaceutical…",
+      "color": "#9aa0b5",
+      "degree": 4
+    },
+    {
+      "id": "int:schneider:8",
+      "label": "2024-07-09 · Phone Call",
+      "type": "interaction",
+      "date": "2024-07-09",
+      "medium": "Phone Call",
+      "contact": "Carmen Schneider",
+      "detail": "Processed a routine cash transfer to Carmen's account for local art sponsorships. She mentioned the family is doing well and planning an autumn gathering.",
+      "summary": "Processed a routine cash transfer to Carmen's account for local art…",
+      "color": "#9aa0b5",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:9",
+      "label": "2024-09-17 · Lunch",
+      "type": "interaction",
+      "date": "2024-09-17",
+      "medium": "Lunch",
+      "contact": "Hubertus Schneider",
+      "detail": "Hubertus discussed global market dynamics. He noted his corporate capital remains tied up in physical factory assets. He values large-cap equities because they represent stable, operational businesses with heavy research budgets.",
+      "summary": "Hubertus discussed global market dynamics. He noted his corporate…",
+      "color": "#9aa0b5",
+      "degree": 3
+    },
+    {
+      "id": "medium:Video Call",
+      "label": "Video Call",
+      "type": "medium",
+      "detail": "Contact channel: Video Call.",
+      "color": "#76c893",
+      "degree": 2
+    },
+    {
+      "id": "int:schneider:10",
+      "label": "2024-11-20 · Video Call",
+      "type": "interaction",
+      "date": "2024-11-20",
+      "medium": "Video Call",
+      "contact": "Hubertus Schneider",
+      "detail": "Global Balanced strategy review. Fixed income and equity sleeves are performing steadily. Hubertus approved maintaining all current allocations, viewing his blue-chip pharma holdings as resilient long-term capital anchors.",
+      "summary": "Global Balanced strategy review. Fixed income and equity sleeves are…",
+      "color": "#9aa0b5",
+      "degree": 4
+    },
+    {
+      "id": "int:schneider:11",
+      "label": "2025-01-15 · Physical Meeting",
+      "type": "interaction",
+      "date": "2025-01-15",
+      "medium": "Physical Meeting",
+      "contact": "Hubertus & Carmen",
+      "detail": "Annual portfolio review. Normal, stable updates. Hubertus focused entirely on standard asset allocation, corporate tax liabilities, and diversifying his automotive manufacturing exposure.",
+      "summary": "Annual portfolio review. Normal, stable updates. Hubertus focused…",
+      "color": "#9aa0b5",
+      "degree": 4
+    },
+    {
+      "id": "int:schneider:12",
+      "label": "2025-03-11 · Phone Call",
+      "type": "interaction",
+      "date": "2025-03-11",
+      "medium": "Phone Call",
+      "contact": "Hubertus Schneider",
+      "detail": "Routine call. Hubertus noted a minor slowdown in German auto manufacturing orders but stated his Swiss supply entity remains resilient due to long-term contracts. Portfolio untouched.",
+      "summary": "Routine call. Hubertus noted a minor slowdown in German auto…",
+      "color": "#9aa0b5",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:13",
+      "label": "2025-04-29 · Email",
+      "type": "interaction",
+      "date": "2025-04-29",
+      "medium": "Email",
+      "contact": "Carmen Schneider",
+      "detail": "Carmen requested a standard liquidity summary for their property holdings. No strategy changes requested.",
+      "summary": "Carmen requested a standard liquidity summary for their property…",
+      "color": "#9aa0b5",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:14",
+      "label": "2025-06-18 · Phone Call",
+      "type": "interaction",
+      "date": "2025-06-18",
+      "medium": "Phone Call",
+      "contact": "Hubertus Schneider",
+      "detail": "Reinvested global bond coupons back into the core equity sleeve. Hubertus verified that their large-cap pharmaceutical anchors remain the foundation of their defensive equity strategy.",
+      "summary": "Reinvested global bond coupons back into the core equity sleeve.…",
+      "color": "#9aa0b5",
+      "degree": 5
+    },
+    {
+      "id": "theme:Capital Preservation",
+      "label": "Capital Preservation",
+      "type": "theme",
+      "detail": "Cross-client theme: Capital Preservation.",
+      "color": "#f08080",
+      "degree": 1
+    },
+    {
+      "id": "medium:File Note",
+      "label": "File Note",
+      "type": "medium",
+      "detail": "Contact channel: File Note.",
+      "color": "#76c893",
+      "degree": 2
+    },
+    {
+      "id": "int:schneider:15",
+      "label": "2025-08-11 · File Note",
+      "type": "interaction",
+      "date": "2025-08-11",
+      "medium": "File Note",
+      "contact": "None (Internal)",
+      "detail": "File Note: Thomas Keller entering early retirement at year-end. Initiated formal account handover protocol for the Schneider family portfolio, noting Hubertus's profile as an active automotive entrepreneur.",
+      "summary": "File Note: Thomas Keller entering early retirement at year-end.…",
+      "color": "#9aa0b5",
+      "degree": 2
+    },
+    {
+      "id": "int:schneider:16",
+      "label": "2025-09-25 · Phone Call",
+      "type": "interaction",
+      "date": "2025-09-25",
+      "medium": "Phone Call",
+      "contact": "Hubertus Schneider",
+      "detail": "Handover call introducing new RM Sarah Meier. Hubertus was polite and professional, welcoming Sarah and stating he expects rigorous, data-driven execution of his balanced mandate.",
+      "summary": "Handover call introducing new RM Sarah Meier. Hubertus was polite and…",
+      "color": "#9aa0b5",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:17",
+      "label": "2025-11-04 · Lunch",
+      "type": "interaction",
+      "date": "2025-11-04",
+      "medium": "Lunch",
+      "contact": "Hubertus Schneider",
+      "detail": "Final farewell lunch. Hubertus reiterated that he values institutional stability and expects the bank to seamlessly protect his family wealth while he focuses on running his corporate enterprise.",
+      "summary": "Final farewell lunch. Hubertus reiterated that he values…",
+      "color": "#9aa0b5",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:18",
+      "label": "2025-12-11 · File Note",
+      "type": "interaction",
+      "date": "2025-12-11",
+      "medium": "File Note",
+      "contact": "None (Internal)",
+      "detail": "Account officially reassigned to the new RM, Sarah Meier. Global Balanced Growth strategy remains active.",
+      "summary": "Account officially reassigned to the new RM, Sarah Meier. Global…",
+      "color": "#9aa0b5",
+      "degree": 2
+    },
+    {
+      "id": "int:schneider:19",
+      "label": "2026-01-09 · Phone Call",
+      "type": "interaction",
+      "date": "2026-01-09",
+      "medium": "Phone Call",
+      "contact": "Hubertus Schneider",
+      "detail": "Hubertus called Sarah, sounding profoundly distracted and deeply emotional. He cut the routine portfolio talk short, revealing that his 19-year-old daughter, Chloe, was recently diagnosed with a rapidly progressing form of early-onset Parkinson’s Disease. He stated: \"Sarah, my mind is completely wiped. My automotive business means nothing if I cannot save my daughter. Everything has changed.\"",
+      "summary": "Hubertus called Sarah, sounding profoundly distracted and deeply…",
+      "color": "#9aa0b5",
+      "degree": 4
+    },
+    {
+      "id": "int:schneider:20",
+      "label": "2026-01-22 · Video Call",
+      "type": "interaction",
+      "date": "2026-01-22",
+      "medium": "Video Call",
+      "contact": "Hubertus & Carmen",
+      "detail": "Urgent strategy realigned. The family has immediately established a dedicated Venture Philanthropy foundation to fund neurodegenerative research. Hubertus gave a fierce, emotional mandate: \"Our private wealth is now a weapon to save Chloe. I want our core healthcare and pharma holdings to actively support the entities pushing the boundaries of brain disease research. I need our capital fighting on the frontlines alongside the scientists.\"",
+      "summary": "Urgent strategy realigned. The family has immediately established a…",
+      "color": "#9aa0b5",
+      "degree": 6
+    },
+    {
+      "id": "theme:ESG / Sustainability",
+      "label": "ESG / Sustainability",
+      "type": "theme",
+      "detail": "Cross-client theme: ESG / Sustainability.",
+      "color": "#f08080",
+      "degree": 1
+    },
+    {
+      "id": "int:schneider:21",
+      "label": "2026-02-18 · Phone Call",
+      "type": "interaction",
+      "date": "2026-02-18",
+      "medium": "Phone Call",
+      "contact": "Hubertus Schneider",
+      "detail": "Hubertus called to request a meticulous audit of our core European pharmaceutical holding's specific neurodegenerative clinical pipeline. He noted: \"I am comforting Carmen by showing her that our family assets are actively capitalizing the massive labs working day and night on a cure. Please confirm our core large-cap pharma stock is fully funding Parkinson's research.\" Sarah confirmed their massive clinical commitment.",
+      "summary": "Hubertus called to request a meticulous audit of our core European…",
+      "color": "#9aa0b5",
+      "degree": 4
+    },
+    {
+      "id": "int:schneider:22",
+      "label": "2026-03-05 · Email",
+      "type": "interaction",
+      "date": "2026-03-05",
+      "medium": "Email",
+      "contact": "Hubertus Schneider",
+      "detail": "Sarah forwarded a detailed pipeline report on global neurology assets. Hubertus replied with intense purpose, stating: \"If a company we own ever abandons or defunds Parkinson's research to chase cheap lifestyle profits, it would feel like a personal betrayal of my daughter. Flag them immediately for divestment.\"",
+      "summary": "Sarah forwarded a detailed pipeline report on global neurology…",
+      "color": "#9aa0b5",
+      "degree": 4
+    },
+    {
+      "id": "int:schneider:23",
+      "label": "2026-03-24 · Phone Call",
+      "type": "interaction",
+      "date": "2026-03-24",
+      "medium": "Phone Call",
+      "contact": "Carmen Schneider",
+      "detail": "Processed an initial CHF 1 Million endowment transfer from the private portfolio into their family foundation. Carmen was crying on the phone, stating these funds are going as an immediate grant to a specialized neuro-genetics lab in Geneva fighting for Chloe's condition.",
+      "summary": "Processed an initial CHF 1 Million endowment transfer from the…",
+      "color": "#9aa0b5",
+      "degree": 5
+    },
+    {
+      "id": "theme:Liquidity Event",
+      "label": "Liquidity Event",
+      "type": "theme",
+      "detail": "Cross-client theme: Liquidity Event.",
+      "color": "#f08080",
+      "degree": 1
+    },
+    {
+      "id": "medium:Physical Event",
+      "label": "Physical Event",
+      "type": "medium",
+      "detail": "Contact channel: Physical Event.",
+      "color": "#76c893",
+      "degree": 1
+    },
+    {
+      "id": "int:schneider:24",
+      "label": "2026-04-14 · Physical Event",
+      "type": "interaction",
+      "date": "2026-04-14",
+      "medium": "Physical Event",
+      "contact": "Hubertus & Carmen",
+      "detail": "Brief meeting at a medical charity gala sponsored by the bank. Carmen shared that Chloe is fighting bravely but having a difficult month. Hubertus looked deeply pained but whispered to Sarah: \"Seeing these brilliant researchers is our only hope. We must keep our capital flowing to the companies leading the fight against this disease.\"",
+      "summary": "Brief meeting at a medical charity gala sponsored by the bank. Carmen…",
+      "color": "#9aa0b5",
+      "degree": 5
+    },
+    {
+      "id": "int:schneider:25",
+      "label": "2026-05-02 · Phone Call",
+      "type": "interaction",
+      "date": "2026-05-02",
+      "medium": "Phone Call",
+      "contact": "Carmen Schneider",
+      "detail": "Carmen requested an expedited statement for their foundation's clinical audit. She noted Hubertus was currently in Boston visiting a specialized movement disorder research hub to evaluate experimental treatments.",
+      "summary": "Carmen requested an expedited statement for their foundation's…",
+      "color": "#9aa0b5",
+      "degree": 3
+    },
+    {
+      "id": "int:schneider:26",
+      "label": "2026-05-19 · Phone Call",
+      "type": "interaction",
+      "date": "2026-05-19",
+      "medium": "Phone Call",
+      "contact": "Hubertus Schneider",
+      "detail": "Hubertus called from the US. He mentioned meeting a biotech firm working on a breakthrough Parkinson's asset. He reminded Sarah that they want their large-cap holdings to act as their primary financial support system, while their hearts belong to neuroscience breakthroughs.",
+      "summary": "Hubertus called from the US. He mentioned meeting a biotech firm…",
+      "color": "#9aa0b5",
+      "degree": 4
+    }
+  ],
+  "links": [
+    {
+      "source": "rm:Thomas Keller",
+      "target": "client:Schneider"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "person:Hubertus Schneider"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:1"
+    },
+    {
+      "source": "medium:Physical Meeting",
+      "target": "int:schneider:1"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:1"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:2"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:2"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:2"
+    },
+    {
+      "source": "int:schneider:2",
+      "target": "theme:Dividends / Income"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:3"
+    },
+    {
+      "source": "medium:Lunch",
+      "target": "int:schneider:3"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:3"
+    },
+    {
+      "source": "int:schneider:3",
+      "target": "theme:Supply-Chain Governance"
+    },
+    {
+      "source": "int:schneider:3",
+      "target": "theme:Health / Family"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "person:Carmen Schneider"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:4"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:4"
+    },
+    {
+      "source": "person:Carmen Schneider",
+      "target": "int:schneider:4"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:5"
+    },
+    {
+      "source": "medium:Physical Meeting",
+      "target": "int:schneider:5"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:5"
+    },
+    {
+      "source": "person:Carmen Schneider",
+      "target": "int:schneider:5"
+    },
+    {
+      "source": "int:schneider:5",
+      "target": "theme:Succession Planning"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:6"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:6"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:6"
+    },
+    {
+      "source": "int:schneider:6",
+      "target": "theme:Dividends / Income"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:7"
+    },
+    {
+      "source": "medium:Email",
+      "target": "int:schneider:7"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:7"
+    },
+    {
+      "source": "int:schneider:7",
+      "target": "theme:Health / Family"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:8"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:8"
+    },
+    {
+      "source": "person:Carmen Schneider",
+      "target": "int:schneider:8"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:9"
+    },
+    {
+      "source": "medium:Lunch",
+      "target": "int:schneider:9"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:9"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:10"
+    },
+    {
+      "source": "medium:Video Call",
+      "target": "int:schneider:10"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:10"
+    },
+    {
+      "source": "int:schneider:10",
+      "target": "theme:Dividends / Income"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:11"
+    },
+    {
+      "source": "medium:Physical Meeting",
+      "target": "int:schneider:11"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:11"
+    },
+    {
+      "source": "person:Carmen Schneider",
+      "target": "int:schneider:11"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:12"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:12"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:12"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:13"
+    },
+    {
+      "source": "medium:Email",
+      "target": "int:schneider:13"
+    },
+    {
+      "source": "person:Carmen Schneider",
+      "target": "int:schneider:13"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:14"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:14"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:14"
+    },
+    {
+      "source": "int:schneider:14",
+      "target": "theme:Capital Preservation"
+    },
+    {
+      "source": "int:schneider:14",
+      "target": "theme:Dividends / Income"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:15"
+    },
+    {
+      "source": "medium:File Note",
+      "target": "int:schneider:15"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:16"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:16"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:16"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:17"
+    },
+    {
+      "source": "medium:Lunch",
+      "target": "int:schneider:17"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:17"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:18"
+    },
+    {
+      "source": "medium:File Note",
+      "target": "int:schneider:18"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:19"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:19"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:19"
+    },
+    {
+      "source": "int:schneider:19",
+      "target": "theme:Health / Family"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:20"
+    },
+    {
+      "source": "medium:Video Call",
+      "target": "int:schneider:20"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:20"
+    },
+    {
+      "source": "person:Carmen Schneider",
+      "target": "int:schneider:20"
+    },
+    {
+      "source": "int:schneider:20",
+      "target": "theme:ESG / Sustainability"
+    },
+    {
+      "source": "int:schneider:20",
+      "target": "theme:Health / Family"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:21"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:21"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:21"
+    },
+    {
+      "source": "int:schneider:21",
+      "target": "theme:Health / Family"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:22"
+    },
+    {
+      "source": "medium:Email",
+      "target": "int:schneider:22"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:22"
+    },
+    {
+      "source": "int:schneider:22",
+      "target": "theme:Health / Family"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:23"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:23"
+    },
+    {
+      "source": "person:Carmen Schneider",
+      "target": "int:schneider:23"
+    },
+    {
+      "source": "int:schneider:23",
+      "target": "theme:Liquidity Event"
+    },
+    {
+      "source": "int:schneider:23",
+      "target": "theme:Health / Family"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:24"
+    },
+    {
+      "source": "medium:Physical Event",
+      "target": "int:schneider:24"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:24"
+    },
+    {
+      "source": "person:Carmen Schneider",
+      "target": "int:schneider:24"
+    },
+    {
+      "source": "int:schneider:24",
+      "target": "theme:Health / Family"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:25"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:25"
+    },
+    {
+      "source": "person:Carmen Schneider",
+      "target": "int:schneider:25"
+    },
+    {
+      "source": "client:Schneider",
+      "target": "int:schneider:26"
+    },
+    {
+      "source": "medium:Phone Call",
+      "target": "int:schneider:26"
+    },
+    {
+      "source": "person:Hubertus Schneider",
+      "target": "int:schneider:26"
+    },
+    {
+      "source": "int:schneider:26",
+      "target": "theme:Health / Family"
+    }
+  ]
+}
