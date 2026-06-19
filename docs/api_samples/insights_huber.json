@@ -1,0 +1,260 @@
+{
+  "client": {
+    "client_id": "huber",
+    "name": "Marius Huber",
+    "mandate": "Defensive",
+    "headline": "Rewards genuine anti-deforestation leadership; penalises companies that treat nature as a free resource.",
+    "alert_count": 1
+  },
+  "matches": [
+    {
+      "id": "huber:news-unilever-palmoil-cutoff",
+      "client_id": "huber",
+      "polarity": "opportunity",
+      "headline": "Unilever PLC just acted on Deforestation & biodiversity — a values-aligned opportunity to surface.",
+      "news": {
+        "id": "news-unilever-palmoil-cutoff",
+        "title": "Unilever cuts off all palm-oil suppliers tied to deforestation, launches rainforest reforestation foundation",
+        "body": "In a historic corporate policy, Unilever announced it is completely cutting off suppliers linked to palm-oil deforestation and has launched a multi-million dollar corporate foundation dedicated explicitly to reforesting the Brazilian rainforest. Conservation groups praised the absolute stance on supply-chain ecology and biodiversity as an industry first.",
+        "source": "Neue Zürcher Zeitung",
+        "url": "https://example.com/unilever-palmoil",
+        "published_at": "2026-06-15",
+        "topics": [
+          "esg-deforestation"
+        ],
+        "sentiment": {
+          "score": 0.71,
+          "label": "BULLISH"
+        },
+        "issuer_name": "Unilever PLC",
+        "issuer_isin": "GB00B10RZP78",
+        "market_digest": false,
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-unilever-palmoil-cutoff",
+          "excerpt": "In a historic corporate policy, Unilever announced it is completely cutting off suppliers linked to palm-oil deforestation and has launched a multi-million dollar corporate foundation dedicated explicitly to reforesting the Brazilian rainfo",
+          "url": "https://example.com/unilever-palmoil",
+          "timestamp": "2026-06-15"
+        }
+      },
+      "shared_topics": [
+        {
+          "topic": "esg-deforestation",
+          "client_provenance": {
+            "source_type": "crm_log",
+            "source_id": "huber#2026-01-15#16",
+            "excerpt": "If a company takes a brave, absolute stance against palm oil deforestation and actively puts money into reforestation, that is exactly where my money should be. I want you to call me when a company I own actually does something magnificent for the planet.",
+            "url": null,
+            "timestamp": "2026-01-15"
+          },
+          "news_provenance": {
+            "source_type": "news",
+            "source_id": "news-unilever-palmoil-cutoff",
+            "excerpt": "In a historic corporate policy, Unilever announced it is completely cutting off suppliers linked to palm-oil deforestation and has launched a multi-million dollar corporate foundation dedicated explicitly to reforesting the Brazilian rainfo",
+            "url": "https://example.com/unilever-palmoil",
+            "timestamp": "2026-06-15"
+          }
+        }
+      ],
+      "affected_holding": {
+        "portfolio": "Defensive",
+        "asset_class": "Equities",
+        "sub_asset_class": "Foreign (Dev. Markets)",
+        "region": "Europa",
+        "industry_group": "Consumer Staples",
+        "issuer": "Unilever PLC",
+        "security": "Registered Shares",
+        "isin": "GB00B10RZP78",
+        "target_chf": 80000.0,
+        "current_chf": 80491.1,
+        "valor": "2477074",
+        "mic": null,
+        "yahoo": "ULVR.L"
+      },
+      "why": [
+        {
+          "source_type": "crm_log",
+          "source_id": "huber#2026-01-15#16",
+          "excerpt": "If a company takes a brave, absolute stance against palm oil deforestation and actively puts money into reforestation, that is exactly where my money should be. I want you to call me when a company I own actually does something magnificent for the planet.",
+          "url": null,
+          "timestamp": "2026-01-15"
+        },
+        {
+          "source_type": "news",
+          "source_id": "news-unilever-palmoil-cutoff",
+          "excerpt": "In a historic corporate policy, Unilever announced it is completely cutting off suppliers linked to palm-oil deforestation and has launched a multi-million dollar corporate foundation dedicated explicitly to reforesting the Brazilian rainfo",
+          "url": "https://example.com/unilever-palmoil",
+          "timestamp": "2026-06-15"
+        },
+        {
+          "source_type": "portfolio",
+          "source_id": "Defensive:GB00B10RZP78",
+          "excerpt": "Holds Unilever PLC (GB00B10RZP78) — CHF 80,491 in the Defensive mandate.",
+          "url": null,
+          "timestamp": null
+        }
+      ]
+    }
+  ],
+  "strategy_proposal": {
+    "client_id": "huber",
+    "headline": "Unilever PLC just acted on Deforestation & biodiversity — a values-aligned opportunity to surface.",
+    "polarity": "opportunity",
+    "swaps": [
+      {
+        "action": "SWAP",
+        "sell_isin": "US22160K1051",
+        "sell_issuer": "Costco Wholesale Corp.",
+        "buy_isin": "GB00B10RZP78",
+        "buy_issuer": "Unilever PLC",
+        "industry_group": "Consumer Staples",
+        "same_sector": true,
+        "amount_chf": 20122.78,
+        "rationale": "Unilever PLC (CIO: BUY) just demonstrated exactly the leadership this client rewards on Deforestation & biodiversity. Rotate CHF 20,123 from Costco Wholesale Corp. (no comparable leadership signal) into Unilever PLC — same sector, same sleeve, drift-neutral.",
+        "drift_safe": true,
+        "provenance": [
+          {
+            "source_type": "crm_log",
+            "source_id": "huber#2026-01-15#16",
+            "excerpt": "If a company takes a brave, absolute stance against palm oil deforestation and actively puts money into reforestation, that is exactly where my money should be. I want you to call me when a company I own actually does something magnificent for the planet.",
+            "url": null,
+            "timestamp": "2026-01-15"
+          },
+          {
+            "source_type": "news",
+            "source_id": "news-unilever-palmoil-cutoff",
+            "excerpt": "In a historic corporate policy, Unilever announced it is completely cutting off suppliers linked to palm-oil deforestation and has launched a multi-million dollar corporate foundation dedicated explicitly to reforesting the Brazilian rainfo",
+            "url": "https://example.com/unilever-palmoil",
+            "timestamp": "2026-06-15"
+          },
+          {
+            "source_type": "portfolio",
+            "source_id": "Defensive:GB00B10RZP78",
+            "excerpt": "Holds Unilever PLC (GB00B10RZP78) — CHF 80,491 in the Defensive mandate.",
+            "url": null,
+            "timestamp": null
+          },
+          {
+            "source_type": "cio_list",
+            "source_id": "GB00B10RZP78",
+            "excerpt": "BUY · Unilever PLC · Brand breadth across 190 markets; emerging-market distribution depth",
+            "url": null,
+            "timestamp": null
+          }
+        ]
+      }
+    ],
+    "constraints_checked": [
+      "Universe limited to CIO-approved names (BUY-rated targets only).",
+      "Same sector (Consumer Staples); funded by trimming a non-aligned laggard in the same sleeve, so the sleeve total is unchanged.",
+      "Same sub-asset-class (Foreign (Dev. Markets)) — drift-neutral within the ±2.0pp band."
+    ],
+    "provenance": [
+      {
+        "source_type": "crm_log",
+        "source_id": "huber#2026-01-15#16",
+        "excerpt": "If a company takes a brave, absolute stance against palm oil deforestation and actively puts money into reforestation, that is exactly where my money should be. I want you to call me when a company I own actually does something magnificent for the planet.",
+        "url": null,
+        "timestamp": "2026-01-15"
+      },
+      {
+        "source_type": "news",
+        "source_id": "news-unilever-palmoil-cutoff",
+        "excerpt": "In a historic corporate policy, Unilever announced it is completely cutting off suppliers linked to palm-oil deforestation and has launched a multi-million dollar corporate foundation dedicated explicitly to reforesting the Brazilian rainfo",
+        "url": "https://example.com/unilever-palmoil",
+        "timestamp": "2026-06-15"
+      },
+      {
+        "source_type": "portfolio",
+        "source_id": "Defensive:GB00B10RZP78",
+        "excerpt": "Holds Unilever PLC (GB00B10RZP78) — CHF 80,491 in the Defensive mandate.",
+        "url": null,
+        "timestamp": null
+      }
+    ]
+  },
+  "dialogue_suggestion": {
+    "client_id": "huber",
+    "style": "Values-led and proud. Marius funds a reforestation foundation. He explicitly wants to be called to CELEBRATE when a holding does something magnificent for the planet, not only when a stock drops.",
+    "talking_points": [
+      {
+        "text": "Unilever PLC just acted on Deforestation & biodiversity — a values-aligned opportunity to surface.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-unilever-palmoil-cutoff",
+          "excerpt": "In a historic corporate policy, Unilever announced it is completely cutting off suppliers linked to palm-oil deforestation and has launched a multi-million dollar corporate foundation dedicated explicitly to reforesting the Brazilian rainfo",
+          "url": "https://example.com/unilever-palmoil",
+          "timestamp": "2026-06-15"
+        }
+      },
+      {
+        "text": "Connects to what Marius Huber told us about Deforestation & biodiversity.",
+        "provenance": {
+          "source_type": "crm_log",
+          "source_id": "huber#2026-01-15#16",
+          "excerpt": "If a company takes a brave, absolute stance against palm oil deforestation and actively puts money into reforestation, that is exactly where my money should be. I want you to call me when a company I own actually does something magnificent for the planet.",
+          "url": null,
+          "timestamp": "2026-01-15"
+        }
+      },
+      {
+        "text": "Directly affects a current holding: Unilever PLC (CHF 80,491).",
+        "provenance": {
+          "source_type": "portfolio",
+          "source_id": "Defensive:GB00B10RZP78",
+          "excerpt": "Unilever PLC held in the Defensive mandate.",
+          "url": null,
+          "timestamp": null
+        }
+      }
+    ],
+    "draft_message": "Dear Huber, I wanted to call you with good news rather than a market dip: Unilever PLC has just unilever cuts off all palm-oil suppliers tied to deforestation. It is exactly the kind of leadership you asked us to watch for.",
+    "market_context": [
+      {
+        "text": "Swiss Market Index holds steady as defensive names outperform.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-smi-steady",
+          "excerpt": "The SMI was little changed this week, with consumer-staples and healthcare blue chips outperforming amid broader volatility. Swiss franc strength continued to support domestic defensives.",
+          "url": "https://example.com/smi-steady",
+          "timestamp": "2026-06-16"
+        }
+      },
+      {
+        "text": "Global bond yields ease as central banks signal patience.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-global-rates",
+          "excerpt": "Government bond yields edged lower across G7 markets after central banks signalled a patient stance on rate cuts, supporting high-grade fixed income and dividend-paying defensives.",
+          "url": "https://example.com/global-rates",
+          "timestamp": "2026-06-17"
+        }
+      }
+    ],
+    "provenance": [
+      {
+        "source_type": "news",
+        "source_id": "news-unilever-palmoil-cutoff",
+        "excerpt": "In a historic corporate policy, Unilever announced it is completely cutting off suppliers linked to palm-oil deforestation and has launched a multi-million dollar corporate foundation dedicated explicitly to reforesting the Brazilian rainfo",
+        "url": "https://example.com/unilever-palmoil",
+        "timestamp": "2026-06-15"
+      },
+      {
+        "source_type": "crm_log",
+        "source_id": "huber#2026-01-15#16",
+        "excerpt": "If a company takes a brave, absolute stance against palm oil deforestation and actively puts money into reforestation, that is exactly where my money should be. I want you to call me when a company I own actually does something magnificent for the planet.",
+        "url": null,
+        "timestamp": "2026-01-15"
+      },
+      {
+        "source_type": "portfolio",
+        "source_id": "Defensive:GB00B10RZP78",
+        "excerpt": "Unilever PLC held in the Defensive mandate.",
+        "url": null,
+        "timestamp": null
+      }
+    ]
+  },
+  "generated_at": "2026-06-19T22:47:03+00:00",
+  "llm_used": false
+}

@@ -1,0 +1,19 @@
+{
+  "_comment": "Sentiment + ethics/value labels joined onto the CIO approved universe (CLAUDE.md §6/§8). Labelled once, upstream; the advisory agent never re-derives sentiment. Keyed by ISIN.",
+  "labels": {
+    "US09062X1037": {"sentiment": -0.62, "value_tags": ["neuro-research-retreat"], "note": "Winding down neurodegenerative research division."},
+    "CH0012032048": {"sentiment": 0.45, "value_tags": ["neuro-research-commitment", "oncology-leader"], "note": "Durable neuroscience and oncology pipeline; Parkinson's programmes ongoing."},
+    "CH0012005267": {"sentiment": 0.38, "value_tags": ["neuro-research-commitment"], "note": "Active neuroscience R&D footprint."},
+    "US5324571083": {"sentiment": 0.55, "value_tags": ["neuro-research-commitment", "metabolic-leader"], "note": "Heavy CNS and metabolic research investment."},
+    "GB00B10RZP78": {"sentiment": 0.71, "value_tags": ["deforestation-leader", "reforestation-commitment"], "note": "Cut off palm-oil deforestation suppliers; reforestation foundation."},
+    "CH0038863350": {"sentiment": 0.10, "value_tags": [], "note": "Defensive staples anchor; no specific ESG leadership signal."},
+    "US7427181091": {"sentiment": 0.12, "value_tags": [], "note": "Category leader; neutral on deforestation."},
+    "US7223041028": {"sentiment": -0.68, "value_tags": ["labour-risk", "supply-chain-governance-risk"], "note": "Forced-labour allegations across supplier network."},
+    "CH0210483332": {"sentiment": 0.42, "value_tags": ["clean-governance", "swiss-luxury"], "note": "Swiss luxury champion; clean supply-chain governance."},
+    "FR0000052292": {"sentiment": 0.40, "value_tags": ["clean-governance", "absolute-luxury"], "note": "Vertically integrated; strong supply-chain control."},
+    "ES0148396007": {"sentiment": 0.33, "value_tags": ["supply-chain-transparency"], "note": "Audited fast-cycle supply chain."},
+    "NL0010273215": {"sentiment": 0.50, "value_tags": ["tangible-hardware", "ai-infrastructure"], "note": "Physical lithography machinery — the tangible side of AI infrastructure."},
+    "US67066G1040": {"sentiment": 0.60, "value_tags": ["ai-hype-risk", "us-mega-cap"], "note": "Bellwether of the US AI rally; high-beta growth."},
+    "US5949181045": {"sentiment": 0.40, "value_tags": ["us-mega-cap-software"], "note": "Abstract enterprise software/AI exposure."}
+  }
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "client_id": "schneider",
+    "name": "Hubertus Schneider",
+    "mandate": "Balanced",
+    "headline": "Wants core pharma holdings to actively fund Parkinson's research; will divest any name that abandons it.",
+    "alert_count": 1
+  },
+  {
+    "client_id": "huber",
+    "name": "Marius Huber",
+    "mandate": "Defensive",
+    "headline": "Rewards genuine anti-deforestation leadership; penalises companies that treat nature as a free resource.",
+    "alert_count": 1
+  },
+  {
+    "client_id": "raeber",
+    "name": "Eugen Räber",
+    "mandate": "Defensive",
+    "headline": "Capital preservation; deeply averse to speculative US mega-cap tech/AI, but respects tangible hardware (e.g. ASML).",
+    "alert_count": 1
+  },
+  {
+    "client_id": "ammann",
+    "name": "Julian Ammann",
+    "mandate": "Growth",
+    "headline": "Zero tolerance for labour/governance scandals in holdings; dump exposed names before the Swiss press links his name.",
+    "alert_count": 1
+  }
+]

@@ -1,0 +1,249 @@
+{
+  "profile": {
+    "client_id": "schneider",
+    "name": "Hubertus Schneider",
+    "mandate": "Balanced",
+    "headline": "Wants core pharma holdings to actively fund Parkinson's research; will divest any name that abandons it.",
+    "facets": {
+      "professional": [
+        {
+          "text": "Active owner and CEO of a major Swiss automotive-supply enterprise; capital-intensive but performing strongly.",
+          "provenance": {
+            "source_type": "crm_log",
+            "source_id": "schneider#2023-04-10#1",
+            "excerpt": "Active owner and CEO of a major Swiss automotive-supply enterprise; capital-intensive but performing strongly.",
+            "url": null,
+            "timestamp": "2023-04-10"
+          }
+        }
+      ],
+      "interests": [
+        {
+          "text": "Established a Venture Philanthropy foundation to fund neurodegenerative research after his daughter Chloe's early-onset Parkinson's diagnosis.",
+          "provenance": {
+            "source_type": "crm_log",
+            "source_id": "schneider#2026-01-22#20",
+            "excerpt": "Established a Venture Philanthropy foundation to fund neurodegenerative research after his daughter Chloe's early-onset Parkinson's diagnosis.",
+            "url": null,
+            "timestamp": "2026-01-22"
+          }
+        }
+      ],
+      "historical": [
+        {
+          "text": "Transferred an initial CHF 1M endowment from the portfolio into the family foundation as a grant to a Geneva neuro-genetics lab.",
+          "provenance": {
+            "source_type": "crm_log",
+            "source_id": "schneider#2026-03-24#23",
+            "excerpt": "Transferred an initial CHF 1M endowment from the portfolio into the family foundation as a grant to a Geneva neuro-genetics lab.",
+            "url": null,
+            "timestamp": "2026-03-24"
+          }
+        }
+      ],
+      "personality": [
+        {
+          "text": "Since Chloe's diagnosis he is emotionally driven: 'My automotive business means nothing if I cannot save my daughter. Everything has changed.'",
+          "provenance": {
+            "source_type": "crm_log",
+            "source_id": "schneider#2026-01-09#19",
+            "excerpt": "Since Chloe's diagnosis he is emotionally driven: 'My automotive business means nothing if I cannot save my daughter. Everything has changed.'",
+            "url": null,
+            "timestamp": "2026-01-09"
+          }
+        }
+      ]
+    },
+    "interest_edges": [
+      {
+        "client_id": "schneider",
+        "topic": "neuro-research",
+        "facet": "personality",
+        "polarity": "opportunity",
+        "weight": 1.0,
+        "provenance": {
+          "source_type": "crm_log",
+          "source_id": "schneider#2026-01-22#20",
+          "excerpt": "Our private wealth is now a weapon to save Chloe. I want our core healthcare and pharma holdings to actively support the entities pushing the boundaries of brain disease research.",
+          "url": null,
+          "timestamp": "2026-01-22"
+        }
+      },
+      {
+        "client_id": "schneider",
+        "topic": "neuro-research",
+        "facet": "personality",
+        "polarity": "conflict",
+        "weight": 1.0,
+        "provenance": {
+          "source_type": "crm_log",
+          "source_id": "schneider#2026-03-05#22",
+          "excerpt": "If a company we own ever abandons or defunds Parkinson's research to chase cheap lifestyle profits, it would feel like a personal betrayal of my daughter. Flag them immediately for divestment.",
+          "url": null,
+          "timestamp": "2026-03-05"
+        }
+      }
+    ]
+  },
+  "mandate": {
+    "name": "Balanced",
+    "total_chf": 10352327.05,
+    "targets": [
+      {
+        "asset_class": "Equities",
+        "sub_asset_class": "Domestic (CHF)",
+        "benchmark": "SPI (Swiss Performance Index)",
+        "target_pct": 10.0,
+        "target_chf": 1000000.0,
+        "current_chf": 1013917.09,
+        "current_pct": 9.794,
+        "drift_pp": -0.206,
+        "breach": false
+      },
+      {
+        "asset_class": "Equities",
+        "sub_asset_class": "Foreign (Dev. Markets)",
+        "benchmark": "MSCI World ex-CH (USD/EUR)",
+        "target_pct": 34.5,
+        "target_chf": 3450000.0,
+        "current_chf": 3799445.85,
+        "current_pct": 36.701,
+        "drift_pp": 2.201,
+        "breach": true
+      },
+      {
+        "asset_class": "Equities",
+        "sub_asset_class": "Emerging Markets",
+        "benchmark": "MSCI Emerging Markets (USD)",
+        "target_pct": 5.5,
+        "target_chf": 550000.0,
+        "current_chf": 531089.34,
+        "current_pct": 5.13,
+        "drift_pp": -0.37,
+        "breach": false
+      },
+      {
+        "asset_class": "Fixed Income",
+        "sub_asset_class": "Domestic Bonds (CHF)",
+        "benchmark": "SBI Domestic AAA-BBB (CHF)",
+        "target_pct": 11.5,
+        "target_chf": 1150000.0,
+        "current_chf": 1141788.43,
+        "current_pct": 11.029,
+        "drift_pp": -0.471,
+        "breach": false
+      },
+      {
+        "asset_class": "Fixed Income",
+        "sub_asset_class": "Foreign Bonds (G7)",
+        "benchmark": "Bloomberg Global Aggregate Swiss Franc Hedged Index",
+        "target_pct": 20.0,
+        "target_chf": 2000000.0,
+        "current_chf": 1968548.06,
+        "current_pct": 19.016,
+        "drift_pp": -0.984,
+        "breach": false
+      },
+      {
+        "asset_class": "Fixed Income",
+        "sub_asset_class": "Emerging Market Bonds",
+        "benchmark": "JPM EMBI Global Diversified",
+        "target_pct": 2.0,
+        "target_chf": 200000.0,
+        "current_chf": 196792.53,
+        "current_pct": 1.901,
+        "drift_pp": -0.099,
+        "breach": false
+      },
+      {
+        "asset_class": "Real Estate",
+        "sub_asset_class": "Swiss Real Estate",
+        "benchmark": "SXI Real Estate Funds (CHF)",
+        "target_pct": 2.0,
+        "target_chf": 200000.0,
+        "current_chf": 202075.78,
+        "current_pct": 1.952,
+        "drift_pp": -0.048,
+        "breach": false
+      },
+      {
+        "asset_class": "Real Estate",
+        "sub_asset_class": "Global Listed REITs",
+        "benchmark": "FTSE EPRA Nareit Developed",
+        "target_pct": 3.0,
+        "target_chf": 300000.0,
+        "current_chf": 302923.47,
+        "current_pct": 2.926,
+        "drift_pp": -0.074,
+        "breach": false
+      },
+      {
+        "asset_class": "Alternatives",
+        "sub_asset_class": "Cryptocurrencies\t",
+        "benchmark": "Nasdaq Crypto Index (NCI)",
+        "target_pct": 0.0,
+        "target_chf": 0.0,
+        "current_chf": 0.0,
+        "current_pct": 0.0,
+        "drift_pp": 0.0,
+        "breach": false
+      },
+      {
+        "asset_class": "Alternatives",
+        "sub_asset_class": "Private Markets",
+        "benchmark": "LPX 50 Listed Private Equity",
+        "target_pct": 3.5,
+        "target_chf": 350000.0,
+        "current_chf": 360259.56,
+        "current_pct": 3.48,
+        "drift_pp": -0.02,
+        "breach": false
+      },
+      {
+        "asset_class": "Alternatives",
+        "sub_asset_class": "Commodities / Gold",
+        "benchmark": "LBMA Gold Price (CHF)",
+        "target_pct": 5.0,
+        "target_chf": 500000.0,
+        "current_chf": 535486.94,
+        "current_pct": 5.173,
+        "drift_pp": 0.173,
+        "breach": false
+      },
+      {
+        "asset_class": "Liquidity",
+        "sub_asset_class": "Cash & Money Market",
+        "benchmark": "SARON / Swiss 3M LIBOR",
+        "target_pct": 3.0,
+        "target_chf": 300000.0,
+        "current_chf": 300000.0,
+        "current_pct": 2.898,
+        "drift_pp": -0.102,
+        "breach": false
+      },
+      {
+        "asset_class": "TOTAL",
+        "sub_asset_class": "GLOBAL MANDATE",
+        "benchmark": "MULTI-ASSET COMPOSITE",
+        "target_pct": 100.0,
+        "target_chf": 10000000.0,
+        "current_chf": 0.0,
+        "current_pct": 0.0,
+        "drift_pp": -100.0,
+        "breach": true
+      },
+      {
+        "asset_class": "Target amount",
+        "sub_asset_class": "10000000",
+        "benchmark": "",
+        "target_pct": 0.0,
+        "target_chf": 0.0,
+        "current_chf": 0.0,
+        "current_pct": 0.0,
+        "drift_pp": 0.0,
+        "breach": false
+      }
+    ]
+  },
+  "log_count": 26
+}

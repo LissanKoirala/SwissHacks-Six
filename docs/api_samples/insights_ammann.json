@@ -1,0 +1,261 @@
+{
+  "client": {
+    "client_id": "ammann",
+    "name": "Julian Ammann",
+    "mandate": "Growth",
+    "headline": "Zero tolerance for labour/governance scandals in holdings; dump exposed names before the Swiss press links his name.",
+    "alert_count": 1
+  },
+  "matches": [
+    {
+      "id": "ammann:news-pdd-labour-scandal",
+      "client_id": "ammann",
+      "polarity": "conflict",
+      "headline": "PDD Holdings Inc. puts a holding in conflict with this client's stance on Labour & supply-chain governance.",
+      "news": {
+        "id": "news-pdd-labour-scandal",
+        "title": "PDD Holdings (Temu) hit with forced-labour allegations across supplier network",
+        "body": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense media scrutiny. Labour-rights groups described conditions in several subcontractor facilities as modern slavery.",
+        "source": "Bloomberg",
+        "url": "https://example.com/pdd-labour",
+        "published_at": "2026-06-14",
+        "topics": [
+          "labour-governance"
+        ],
+        "sentiment": {
+          "score": -0.68,
+          "label": "BEARISH"
+        },
+        "issuer_name": "PDD Holdings Inc.",
+        "issuer_isin": "US7223041028",
+        "market_digest": false,
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-pdd-labour-scandal",
+          "excerpt": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense medi",
+          "url": "https://example.com/pdd-labour",
+          "timestamp": "2026-06-14"
+        }
+      },
+      "shared_topics": [
+        {
+          "topic": "labour-governance",
+          "client_provenance": {
+            "source_type": "crm_log",
+            "source_id": "ammann#2023-06-20#3",
+            "excerpt": "My national brand equity is built on clean labor and local integrity. If my name is linked via my portfolio to an international corporate parent caught using sweatshops, illegal exploitation, or wage theft, it creates immediate hypocrisy risk. Screen all consumer discretionary holdings for supply-chain governance liabilities.",
+            "url": null,
+            "timestamp": "2023-06-20"
+          },
+          "news_provenance": {
+            "source_type": "news",
+            "source_id": "news-pdd-labour-scandal",
+            "excerpt": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense medi",
+            "url": "https://example.com/pdd-labour",
+            "timestamp": "2026-06-14"
+          }
+        }
+      ],
+      "affected_holding": {
+        "portfolio": "Growth",
+        "asset_class": "Equities",
+        "sub_asset_class": "Emerging Markets",
+        "region": "Emerging M.",
+        "industry_group": "Consumer Discretionary",
+        "issuer": "PDD Holdings Inc.",
+        "security": "ADR (Temu Mother Co)",
+        "isin": "US7223041028",
+        "target_chf": 100000.0,
+        "current_chf": 95688.35,
+        "valor": "42826115",
+        "mic": "XNAS",
+        "yahoo": "PDD"
+      },
+      "why": [
+        {
+          "source_type": "crm_log",
+          "source_id": "ammann#2023-06-20#3",
+          "excerpt": "My national brand equity is built on clean labor and local integrity. If my name is linked via my portfolio to an international corporate parent caught using sweatshops, illegal exploitation, or wage theft, it creates immediate hypocrisy risk. Screen all consumer discretionary holdings for supply-chain governance liabilities.",
+          "url": null,
+          "timestamp": "2023-06-20"
+        },
+        {
+          "source_type": "news",
+          "source_id": "news-pdd-labour-scandal",
+          "excerpt": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense medi",
+          "url": "https://example.com/pdd-labour",
+          "timestamp": "2026-06-14"
+        },
+        {
+          "source_type": "portfolio",
+          "source_id": "Growth:US7223041028",
+          "excerpt": "Holds PDD Holdings Inc. (US7223041028) — CHF 95,688 in the Growth mandate.",
+          "url": null,
+          "timestamp": null
+        }
+      ]
+    }
+  ],
+  "strategy_proposal": {
+    "client_id": "ammann",
+    "headline": "PDD Holdings Inc. puts a holding in conflict with this client's stance on Labour & supply-chain governance.",
+    "polarity": "conflict",
+    "swaps": [
+      {
+        "action": "SWAP",
+        "sell_isin": "US7223041028",
+        "sell_issuer": "PDD Holdings Inc.",
+        "buy_isin": "CH0210483332",
+        "buy_issuer": "Cie Financière Richemont",
+        "industry_group": "Consumer Discretionary",
+        "same_sector": true,
+        "amount_chf": 95688.35,
+        "rationale": "Divest PDD Holdings Inc. (CIO: HOLD): the trigger directly violates the client's documented stance on Labour & supply-chain governance. Reinvest CHF 95,688 into Cie Financière Richemont (CIO BUY), a same-sector name labelled clean-governance, swiss-luxury — keeps the sector weight, upgrades the values fit.",
+        "drift_safe": true,
+        "provenance": [
+          {
+            "source_type": "crm_log",
+            "source_id": "ammann#2023-06-20#3",
+            "excerpt": "My national brand equity is built on clean labor and local integrity. If my name is linked via my portfolio to an international corporate parent caught using sweatshops, illegal exploitation, or wage theft, it creates immediate hypocrisy risk. Screen all consumer discretionary holdings for supply-chain governance liabilities.",
+            "url": null,
+            "timestamp": "2023-06-20"
+          },
+          {
+            "source_type": "news",
+            "source_id": "news-pdd-labour-scandal",
+            "excerpt": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense medi",
+            "url": "https://example.com/pdd-labour",
+            "timestamp": "2026-06-14"
+          },
+          {
+            "source_type": "portfolio",
+            "source_id": "Growth:US7223041028",
+            "excerpt": "Holds PDD Holdings Inc. (US7223041028) — CHF 95,688 in the Growth mandate.",
+            "url": null,
+            "timestamp": null
+          },
+          {
+            "source_type": "cio_list",
+            "source_id": "CH0210483332",
+            "excerpt": "BUY · Cie Financière Richemont · Swiss luxury champion; strong balance sheet",
+            "url": null,
+            "timestamp": null
+          }
+        ]
+      }
+    ],
+    "constraints_checked": [
+      "Universe limited to CIO-approved names (BUY-rated targets only).",
+      "Same sector: Consumer Discretionary.",
+      "Emerging Markets: post-swap drift -1.55pp (within the ±2.0pp band).",
+      "Domestic (CHF): post-swap drift +0.06pp (within the ±2.0pp band)."
+    ],
+    "provenance": [
+      {
+        "source_type": "crm_log",
+        "source_id": "ammann#2023-06-20#3",
+        "excerpt": "My national brand equity is built on clean labor and local integrity. If my name is linked via my portfolio to an international corporate parent caught using sweatshops, illegal exploitation, or wage theft, it creates immediate hypocrisy risk. Screen all consumer discretionary holdings for supply-chain governance liabilities.",
+        "url": null,
+        "timestamp": "2023-06-20"
+      },
+      {
+        "source_type": "news",
+        "source_id": "news-pdd-labour-scandal",
+        "excerpt": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense medi",
+        "url": "https://example.com/pdd-labour",
+        "timestamp": "2026-06-14"
+      },
+      {
+        "source_type": "portfolio",
+        "source_id": "Growth:US7223041028",
+        "excerpt": "Holds PDD Holdings Inc. (US7223041028) — CHF 95,688 in the Growth mandate.",
+        "url": null,
+        "timestamp": null
+      }
+    ]
+  },
+  "dialogue_suggestion": {
+    "client_id": "ammann",
+    "style": "Sharp, analytical and data-driven. Julian is the public face of a Swiss retail brand; reputational contamination is his top risk. Frame everything as live operational/reputational risk, not backward-looking ESG scores.",
+    "talking_points": [
+      {
+        "text": "PDD Holdings Inc. puts a holding in conflict with this client's stance on Labour & supply-chain governance.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-pdd-labour-scandal",
+          "excerpt": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense medi",
+          "url": "https://example.com/pdd-labour",
+          "timestamp": "2026-06-14"
+        }
+      },
+      {
+        "text": "Connects to what Julian Ammann told us about Labour & supply-chain governance.",
+        "provenance": {
+          "source_type": "crm_log",
+          "source_id": "ammann#2023-06-20#3",
+          "excerpt": "My national brand equity is built on clean labor and local integrity. If my name is linked via my portfolio to an international corporate parent caught using sweatshops, illegal exploitation, or wage theft, it creates immediate hypocrisy risk. Screen all consumer discretionary holdings for supply-chain governance liabilities.",
+          "url": null,
+          "timestamp": "2023-06-20"
+        }
+      },
+      {
+        "text": "Directly affects a current holding: PDD Holdings Inc. (CHF 95,688).",
+        "provenance": {
+          "source_type": "portfolio",
+          "source_id": "Growth:US7223041028",
+          "excerpt": "PDD Holdings Inc. held in the Growth mandate.",
+          "url": null,
+          "timestamp": null
+        }
+      }
+    ],
+    "draft_message": "Dear Ammann, a development needs your attention: PDD Holdings (Temu) hit with forced-labour allegations across supplier network. Because it touches your stance and a current holding, I have prepared a same-sector, CIO-approved option that keeps your strategy intact while restoring the values fit.",
+    "market_context": [
+      {
+        "text": "Swiss Market Index holds steady as defensive names outperform.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-smi-steady",
+          "excerpt": "The SMI was little changed this week, with consumer-staples and healthcare blue chips outperforming amid broader volatility. Swiss franc strength continued to support domestic defensives.",
+          "url": "https://example.com/smi-steady",
+          "timestamp": "2026-06-16"
+        }
+      },
+      {
+        "text": "Global bond yields ease as central banks signal patience.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-global-rates",
+          "excerpt": "Government bond yields edged lower across G7 markets after central banks signalled a patient stance on rate cuts, supporting high-grade fixed income and dividend-paying defensives.",
+          "url": "https://example.com/global-rates",
+          "timestamp": "2026-06-17"
+        }
+      }
+    ],
+    "provenance": [
+      {
+        "source_type": "news",
+        "source_id": "news-pdd-labour-scandal",
+        "excerpt": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense medi",
+        "url": "https://example.com/pdd-labour",
+        "timestamp": "2026-06-14"
+      },
+      {
+        "source_type": "crm_log",
+        "source_id": "ammann#2023-06-20#3",
+        "excerpt": "My national brand equity is built on clean labor and local integrity. If my name is linked via my portfolio to an international corporate parent caught using sweatshops, illegal exploitation, or wage theft, it creates immediate hypocrisy risk. Screen all consumer discretionary holdings for supply-chain governance liabilities.",
+        "url": null,
+        "timestamp": "2023-06-20"
+      },
+      {
+        "source_type": "portfolio",
+        "source_id": "Growth:US7223041028",
+        "excerpt": "PDD Holdings Inc. held in the Growth mandate.",
+        "url": null,
+        "timestamp": null
+      }
+    ]
+  },
+  "generated_at": "2026-06-19T22:47:03+00:00",
+  "llm_used": false
+}

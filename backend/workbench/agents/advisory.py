@@ -1,0 +1,342 @@
+"""Advisory agent (CLAUDE.md §1/§8.D). Produces the two outputs for the RM, strictly inside the
+rails: (1) a STRATEGY proposal — same-sector, CIO-approved, sentiment-screened swaps; (2) a
+DIALOGUE suggestion — style-matched talking points + a ready draft, with light general-market
+context. Strong model only here, lazily; deterministic fallback keeps it offline-testable (§9).
+
+The rails are COMPUTED, not asserted: same_sector and drift_safe are derived from the actual
+sectors and mandate targets, so the golden-rule guarantees (§2) have teeth."""
+from __future__ import annotations
+
+from typing import Optional
+
+from ..graph.store import World
+from ..models import (
+    CIOStock,
+    DialogueSuggestion,
+    Holding,
+    Match,
+    Provenance,
+    Statement,
+    StrategyProposal,
+    SwapProposal,
+)
+from ..topics import topic_label
+from . import llm
+
+# Topic -> (value tags we want in a swap target, tags that disqualify, fallback sector)
+TOPIC_PREFERENCES = {
+    "neuro-research": (["neuro-research-commitment"], ["neuro-research-retreat"], "Health Care"),
+    "esg-deforestation": (["deforestation-leader", "reforestation-commitment"], [], "Consumer Staples"),
+    "labour-governance": (["clean-governance", "supply-chain-transparency"],
+                          ["labour-risk", "supply-chain-governance-risk"], "Consumer Discretionary"),
+    "us-tech-ai": (["tangible-hardware", "ai-infrastructure"],
+                   ["ai-hype-risk", "us-mega-cap-software"], "Information Technology"),
+}
+
+
+def _topic_labels(match: Match) -> str:
+    return ", ".join(dict.fromkeys(topic_label(t.topic) for t in match.shared_topics))
+
+
+def _prefs_for_match(match: Match):
+    desired: list[str] = []
+    avoid: list[str] = []
+    sector = None
+    for tm in match.shared_topics:
+        d, a, s = TOPIC_PREFERENCES.get(tm.topic, ([], [], None))
+        desired += d
+        avoid += a
+        sector = sector or s
+    return list(dict.fromkeys(desired)), list(dict.fromkeys(avoid)), sector
+
+
+def _drift_after_swap(world: World, client_id: str, sell_sac: Optional[str],
+                      buy_sac: Optional[str], amount: float) -> "tuple[bool, list[str]]":
+    """Compute the post-swap mandate drift for the affected sub-asset-class sleeves (#3).
+    Value-neutral swap: -amount from the sold sleeve, +amount into the bought sleeve."""
+    mand = world.mandates.get(world.portfolio_of(client_id))
+    if amount <= 0 or not mand:
+        return True, ["Drift-neutral (no net value change to any sleeve)."]
+    if sell_sac and sell_sac == buy_sac:
+        return True, [f"Same sub-asset-class ({sell_sac}) — drift-neutral within the ±2.0pp band."]
+    total = mand.total_chf or 1.0
+    by = {t.sub_asset_class: t for t in mand.targets}
+    ok = True
+    notes: list[str] = []
+    for sac, delta in ((sell_sac, -amount), (buy_sac, +amount)):
+        if not sac:
+            continue
+        t = by.get(sac)
+        if not t:
+            ok = False
+            notes.append(f"{sac}: sleeve target not found — verify drift with the RM.")
+            continue
+        new_drift = (t.current_chf + delta) / total * 100 - t.target_pct
+        within = abs(new_drift) <= 2.0
+        ok = ok and within
+        notes.append(f"{sac}: post-swap drift {new_drift:+.2f}pp "
+                     f"({'within' if within else 'BREACHES'} the ±2.0pp band).")
+    return ok, notes
+
+
+def select_swap_candidate(
+    world: World, client_id: str, industry_group: str,
+    desired: list[str], avoid: list[str], exclude_isin: Optional[str],
+    same_sub_asset_class: Optional[str],
+) -> Optional[CIOStock]:
+    held = world.held_isins(client_id)
+    candidates = [c for c in world.cio_by_industry(industry_group, "BUY") if c.isin != exclude_isin]
+    if not candidates:
+        return None
+
+    def score(c: CIOStock) -> float:
+        s = 0.0
+        tags = set(c.value_tags)
+        s += 2.0 * len(tags & set(desired))
+        s -= 4.0 * len(tags & set(avoid))
+        if same_sub_asset_class and c.sub_asset_class == same_sub_asset_class:
+            s += 1.5
+        if c.sentiment:
+            s += c.sentiment.score
+        if c.isin in held:
+            s += 0.25
+        return s
+
+    candidates.sort(key=score, reverse=True)
+    best = candidates[0]
+    if set(best.value_tags) & set(avoid):  # never swap into a disqualified name
+        return None
+    return best
+
+
+def _find_laggard(world: World, client_id: str, industry_group: Optional[str],
+                  sub_asset_class: Optional[str], exclude_isin: str) -> Optional[Holding]:
+    """A held, same-sector, same-sleeve name with no aligned leadership signal — the source of
+    funds for rewarding a leader without growing the sleeve (#4, drift-neutral)."""
+    best = None
+    best_sent = 999.0
+    for h in world.holdings_for_client(client_id):
+        if h.isin == exclude_isin or h.industry_group != industry_group:
+            continue
+        if sub_asset_class and h.sub_asset_class != sub_asset_class:
+            continue
+        cio = world.cio_by_isin.get(h.isin)
+        sent = cio.sentiment.score if (cio and cio.sentiment) else 0.0
+        tags = set(cio.value_tags) if cio else set()
+        if {"deforestation-leader", "reforestation-commitment", "neuro-research-commitment"} & tags:
+            continue  # don't trim another leader
+        if sent < best_sent:
+            best_sent = sent
+            best = h
+    return best
+
+
+def build_strategy(world: World, client_id: str, match: Match) -> StrategyProposal:
+    desired, avoid, fallback_sector = _prefs_for_match(match)
+    affected = match.affected_holding
+    swaps: list[SwapProposal] = []
+    constraints: list[str] = ["Universe limited to CIO-approved names (BUY-rated targets only)."]
+    prov: list[Provenance] = list(match.why)
+
+    if match.polarity == "conflict" and affected is not None:
+        sector = affected.industry_group or fallback_sector or ""
+        cand = select_swap_candidate(world, client_id, sector, desired, avoid,
+                                     affected.isin, affected.sub_asset_class)
+        cio_row = world.cio_by_isin.get(affected.isin)
+        sell_view = f" (CIO: {cio_row.rating})" if cio_row else ""
+        if cand:
+            same_sector = bool(affected.industry_group) and cand.industry_group == affected.industry_group
+            drift_safe, drift_notes = _drift_after_swap(
+                world, client_id, affected.sub_asset_class, cand.sub_asset_class,
+                round(affected.current_chf, 2))
+            constraints.append(f"Same sector: {sector}." if same_sector
+                               else f"Sector check: sell {affected.industry_group} → buy {cand.industry_group}.")
+            constraints += drift_notes
+            swaps.append(SwapProposal(
+                action="SWAP",
+                sell_isin=affected.isin, sell_issuer=affected.issuer,
+                buy_isin=cand.isin, buy_issuer=cand.issuer,
+                industry_group=cand.industry_group,
+                same_sector=same_sector,
+                amount_chf=round(affected.current_chf, 2),
+                drift_safe=drift_safe,
+                rationale=(
+                    f"Divest {affected.issuer}{sell_view}: the trigger directly violates the client's "
+                    f"documented stance on {_topic_labels(match)}. Reinvest CHF {affected.current_chf:,.0f} "
+                    f"into {cand.issuer} (CIO BUY), a same-sector name labelled "
+                    f"{', '.join(cand.value_tags) or 'sentiment-positive'} — keeps the sector weight, upgrades "
+                    f"the values fit."
+                ),
+                provenance=prov + [cand.provenance],
+            ))
+        else:
+            swaps.append(SwapProposal(
+                action="DIVEST", sell_isin=affected.isin, sell_issuer=affected.issuer,
+                industry_group=affected.industry_group, same_sector=True,
+                amount_chf=round(affected.current_chf, 2), drift_safe=False,
+                rationale=(f"Flag {affected.issuer} for divestment — violates the client's stance. No "
+                           f"same-sector BUY-rated replacement clears the values screen; raise with the RM."),
+                provenance=prov,
+            ))
+
+    elif match.polarity == "opportunity" and affected is not None:
+        cio_row = world.cio_by_isin.get(affected.isin)
+        rating = cio_row.rating if cio_row else "—"
+        laggard = _find_laggard(world, client_id, affected.industry_group,
+                                affected.sub_asset_class, affected.isin)
+        headroom = max(0.0, affected.target_chf - affected.current_chf)
+        if laggard is not None:
+            amount = round(min(laggard.current_chf, max(headroom, affected.current_chf * 0.25)), 2)
+            same_sector = laggard.industry_group == affected.industry_group
+            drift_safe, drift_notes = _drift_after_swap(
+                world, client_id, laggard.sub_asset_class, affected.sub_asset_class, amount)
+            constraints.append(f"Same sector ({affected.industry_group}); funded by trimming a non-aligned "
+                               f"laggard in the same sleeve, so the sleeve total is unchanged.")
+            constraints += drift_notes
+            swaps.append(SwapProposal(
+                action="SWAP",
+                sell_isin=laggard.isin, sell_issuer=laggard.issuer,
+                buy_isin=affected.isin, buy_issuer=affected.issuer,
+                industry_group=affected.industry_group, same_sector=same_sector,
+                amount_chf=amount, drift_safe=drift_safe,
+                rationale=(
+                    f"{affected.issuer} (CIO: {rating}) just demonstrated exactly the leadership this client "
+                    f"rewards on {_topic_labels(match)}. Rotate CHF {amount:,.0f} from {laggard.issuer} "
+                    f"(no comparable leadership signal) into {affected.issuer} — same sector, same sleeve, "
+                    f"drift-neutral."
+                ),
+                provenance=prov + ([cio_row.provenance] if cio_row else []),
+            ))
+        else:
+            constraints.append("No same-sleeve laggard to fund an increase; surface as a values win to discuss.")
+            swaps.append(SwapProposal(
+                action="HOLD", buy_isin=affected.isin, buy_issuer=affected.issuer,
+                industry_group=affected.industry_group, same_sector=True,
+                amount_chf=0.0, drift_safe=True,
+                rationale=(f"{affected.issuer} (CIO: {rating}) acted on {_topic_labels(match)} — exactly what "
+                           f"this client rewards. Hold and celebrate; no drift-safe increase is available now."),
+                provenance=prov + ([cio_row.provenance] if cio_row else []),
+            ))
+
+    elif match.polarity == "conflict":
+        # A recommended/market direction the client is averse to — no held name involved.
+        sector = fallback_sector or "Information Technology"
+        cand = select_swap_candidate(world, client_id, sector, desired, avoid, None, None)
+        constraints.append("Respects the client's explicit, logged aversion — strategy stays unchanged.")
+        swaps.append(SwapProposal(
+            action="HOLD", same_sector=True, drift_safe=True, industry_group=sector,
+            rationale=(
+                "Do NOT execute the rotation as recommended: it sells down the defensive staples/healthcare "
+                "the client explicitly values to buy exactly the abstract US tech/AI exposure he has repeatedly "
+                "rejected. Keep the defensive allocation."
+            ),
+            provenance=prov,
+        ))
+        if cand:
+            constraints.append(f"If sector exposure is mandated: prefer tangible {sector} ({cand.issuer}).")
+            swaps.append(SwapProposal(
+                action="SWAP", buy_isin=cand.isin, buy_issuer=cand.issuer,
+                industry_group=sector, same_sector=True, amount_chf=0.0, drift_safe=True,
+                rationale=(
+                    f"If the mandate forces {sector} exposure, route it through {cand.issuer} (CIO BUY) — the "
+                    f"tangible-hardware name the client explicitly respects — rather than abstract US mega-cap "
+                    f"software. Labelled: {', '.join(cand.value_tags) or 'sentiment-positive'}."
+                ),
+                provenance=prov + [cand.provenance],
+            ))
+
+    else:  # neutral / informational — route to dialogue, propose no trade
+        constraints.append("Informational only — surfaced for the conversation, no portfolio action proposed.")
+
+    return StrategyProposal(
+        client_id=client_id,
+        headline=match.headline,
+        polarity=match.polarity,
+        swaps=swaps,
+        constraints_checked=constraints,
+        provenance=prov,
+    )
+
+
+def _market_context(world: World, limit: int = 2) -> list[Statement]:
+    out: list[Statement] = []
+    for n in world.news:
+        if n.market_digest:  # explicit flag, not inferred (#10)
+            out.append(Statement(text=f"{n.title}.", provenance=n.provenance))
+        if len(out) >= limit:
+            break
+    return out
+
+
+def build_dialogue(world: World, client_id: str, match: Match) -> "tuple[DialogueSuggestion, bool]":
+    seed = world.clients.get(client_id, {})
+    style = seed.get("style", "Professional and concise.")
+    profile = world.profiles.get(client_id)
+    name = profile.name if profile else client_id
+    parts = name.split()
+    surname = parts[-1] if parts else (name or "there")
+
+    points: list[Statement] = []
+    points.append(Statement(text=match.headline, provenance=match.news.provenance))
+    for tm in match.shared_topics[:2]:
+        points.append(Statement(
+            text=f"Connects to what {name} told us about {topic_label(tm.topic)}.",
+            provenance=tm.client_provenance,
+        ))
+    if match.affected_holding:
+        h = match.affected_holding
+        points.append(Statement(
+            text=f"Directly affects a current holding: {h.issuer} (CHF {h.current_chf:,.0f}).",
+            provenance=Provenance(source_type="portfolio", source_id=f"{h.portfolio}:{h.isin}",
+                                  excerpt=f"{h.issuer} held in the {h.portfolio} mandate."),
+        ))
+
+    market_context = _market_context(world)
+    title_lead = (match.news.title.split(",")[0].lower() if match.news.title else "made a notable move")
+
+    if match.polarity == "opportunity":
+        opener = (f"Dear {surname}, I wanted to call you with good news rather than a market dip: "
+                  f"{match.news.issuer_name or 'a company you hold'} has just {title_lead}. "
+                  f"It is exactly the kind of leadership you asked us to watch for.")
+    elif match.polarity == "conflict" and match.affected_holding:
+        opener = (f"Dear {surname}, a development needs your attention: {match.news.title}. "
+                  f"Because it touches your stance and a current holding, I have prepared a same-sector, "
+                  f"CIO-approved option that keeps your strategy intact while restoring the values fit.")
+    elif match.polarity == "conflict":
+        opener = (f"Dear {surname}, before we act on the latest CIO tactical update I want to flag that it runs "
+                  f"against the defensive, low-volatility approach you have consistently asked us to protect. "
+                  f"My recommendation is to hold course; here is my reasoning.")
+    else:
+        opener = (f"Dear {surname}, a quick note on a development relevant to your interests: {match.news.title}. "
+                  f"Nothing needs to change in the portfolio — I simply thought it worth sharing.")
+
+    draft = opener
+    llm_used = False
+    if llm.llm_available():
+        prose = llm.chat(
+            system=(
+                "You are drafting a short note FROM a Swiss relationship manager TO their private-banking "
+                "client, for the RM to review and send. Advisory only: never instruct the client to trade, "
+                "never place trades. Match the client's communication style exactly. 90-140 words, warm, "
+                "specific, UK spelling. Do not invent facts beyond those given."
+            ),
+            user=(
+                f"Client: {name}\nStyle: {style}\n\nSituation: {match.headline}\n"
+                f"Talking points: {[p.text for p in points]}\n"
+                f"Proposed (for RM, not the client to execute): a same-sector, CIO-approved adjustment.\n\n"
+                f"Write the note."
+            ),
+            max_tokens=320,
+        )
+        if prose:
+            draft = prose.strip()
+            llm_used = True
+
+    return DialogueSuggestion(
+        client_id=client_id,
+        style=style,
+        talking_points=points,
+        draft_message=draft,
+        market_context=market_context,
+        provenance=[p.provenance for p in points],
+    ), llm_used

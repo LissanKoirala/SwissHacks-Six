@@ -1,0 +1,260 @@
+{
+  "client": {
+    "client_id": "schneider",
+    "name": "Hubertus Schneider",
+    "mandate": "Balanced",
+    "headline": "Wants core pharma holdings to actively fund Parkinson's research; will divest any name that abandons it.",
+    "alert_count": 1
+  },
+  "matches": [
+    {
+      "id": "schneider:news-biogen-neuro-shutdown",
+      "client_id": "schneider",
+      "polarity": "conflict",
+      "headline": "Biogen Inc. puts a holding in conflict with this client's stance on Neurodegenerative research.",
+      "news": {
+        "id": "news-biogen-neuro-shutdown",
+        "title": "Biogen to wind down neurodegenerative research division, pivot to higher-margin therapeutics",
+        "body": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therapeutics. Hundreds of neuroscience researchers face redundancy. Analysts called the retreat from brain-disease research a defunding of one of the company's historic franchises.",
+        "source": "Reuters Health",
+        "url": "https://example.com/biogen-neuro",
+        "published_at": "2026-06-12",
+        "topics": [
+          "neuro-research"
+        ],
+        "sentiment": {
+          "score": -0.62,
+          "label": "BEARISH"
+        },
+        "issuer_name": "Biogen Inc.",
+        "issuer_isin": "US09062X1037",
+        "market_digest": false,
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-biogen-neuro-shutdown",
+          "excerpt": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therape",
+          "url": "https://example.com/biogen-neuro",
+          "timestamp": "2026-06-12"
+        }
+      },
+      "shared_topics": [
+        {
+          "topic": "neuro-research",
+          "client_provenance": {
+            "source_type": "crm_log",
+            "source_id": "schneider#2026-03-05#22",
+            "excerpt": "If a company we own ever abandons or defunds Parkinson's research to chase cheap lifestyle profits, it would feel like a personal betrayal of my daughter. Flag them immediately for divestment.",
+            "url": null,
+            "timestamp": "2026-03-05"
+          },
+          "news_provenance": {
+            "source_type": "news",
+            "source_id": "news-biogen-neuro-shutdown",
+            "excerpt": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therape",
+            "url": "https://example.com/biogen-neuro",
+            "timestamp": "2026-06-12"
+          }
+        }
+      ],
+      "affected_holding": {
+        "portfolio": "Balanced",
+        "asset_class": "Equities",
+        "sub_asset_class": "Foreign (Dev. Markets)",
+        "region": "USA",
+        "industry_group": "Health Care",
+        "issuer": "Biogen Inc.",
+        "security": "Registered Shares",
+        "isin": "US09062X1037",
+        "target_chf": 100000.0,
+        "current_chf": 101097.29,
+        "valor": "1720684",
+        "mic": "XNAS",
+        "yahoo": "BIIB"
+      },
+      "why": [
+        {
+          "source_type": "crm_log",
+          "source_id": "schneider#2026-03-05#22",
+          "excerpt": "If a company we own ever abandons or defunds Parkinson's research to chase cheap lifestyle profits, it would feel like a personal betrayal of my daughter. Flag them immediately for divestment.",
+          "url": null,
+          "timestamp": "2026-03-05"
+        },
+        {
+          "source_type": "news",
+          "source_id": "news-biogen-neuro-shutdown",
+          "excerpt": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therape",
+          "url": "https://example.com/biogen-neuro",
+          "timestamp": "2026-06-12"
+        },
+        {
+          "source_type": "portfolio",
+          "source_id": "Balanced:US09062X1037",
+          "excerpt": "Holds Biogen Inc. (US09062X1037) — CHF 101,097 in the Balanced mandate.",
+          "url": null,
+          "timestamp": null
+        }
+      ]
+    }
+  ],
+  "strategy_proposal": {
+    "client_id": "schneider",
+    "headline": "Biogen Inc. puts a holding in conflict with this client's stance on Neurodegenerative research.",
+    "polarity": "conflict",
+    "swaps": [
+      {
+        "action": "SWAP",
+        "sell_isin": "US09062X1037",
+        "sell_issuer": "Biogen Inc.",
+        "buy_isin": "US5324571083",
+        "buy_issuer": "Eli Lilly & Co.",
+        "industry_group": "Health Care",
+        "same_sector": true,
+        "amount_chf": 101097.29,
+        "rationale": "Divest Biogen Inc. (CIO: HOLD): the trigger directly violates the client's documented stance on Neurodegenerative research. Reinvest CHF 101,097 into Eli Lilly & Co. (CIO BUY), a same-sector name labelled neuro-research-commitment, metabolic-leader — keeps the sector weight, upgrades the values fit.",
+        "drift_safe": true,
+        "provenance": [
+          {
+            "source_type": "crm_log",
+            "source_id": "schneider#2026-03-05#22",
+            "excerpt": "If a company we own ever abandons or defunds Parkinson's research to chase cheap lifestyle profits, it would feel like a personal betrayal of my daughter. Flag them immediately for divestment.",
+            "url": null,
+            "timestamp": "2026-03-05"
+          },
+          {
+            "source_type": "news",
+            "source_id": "news-biogen-neuro-shutdown",
+            "excerpt": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therape",
+            "url": "https://example.com/biogen-neuro",
+            "timestamp": "2026-06-12"
+          },
+          {
+            "source_type": "portfolio",
+            "source_id": "Balanced:US09062X1037",
+            "excerpt": "Holds Biogen Inc. (US09062X1037) — CHF 101,097 in the Balanced mandate.",
+            "url": null,
+            "timestamp": null
+          },
+          {
+            "source_type": "cio_list",
+            "source_id": "US5324571083",
+            "excerpt": "BUY · Eli Lilly & Co. · Metabolic-medicine leadership; unmatched commercial execution",
+            "url": null,
+            "timestamp": null
+          }
+        ]
+      }
+    ],
+    "constraints_checked": [
+      "Universe limited to CIO-approved names (BUY-rated targets only).",
+      "Same sector: Health Care.",
+      "Same sub-asset-class (Foreign (Dev. Markets)) — drift-neutral within the ±2.0pp band."
+    ],
+    "provenance": [
+      {
+        "source_type": "crm_log",
+        "source_id": "schneider#2026-03-05#22",
+        "excerpt": "If a company we own ever abandons or defunds Parkinson's research to chase cheap lifestyle profits, it would feel like a personal betrayal of my daughter. Flag them immediately for divestment.",
+        "url": null,
+        "timestamp": "2026-03-05"
+      },
+      {
+        "source_type": "news",
+        "source_id": "news-biogen-neuro-shutdown",
+        "excerpt": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therape",
+        "url": "https://example.com/biogen-neuro",
+        "timestamp": "2026-06-12"
+      },
+      {
+        "source_type": "portfolio",
+        "source_id": "Balanced:US09062X1037",
+        "excerpt": "Holds Biogen Inc. (US09062X1037) — CHF 101,097 in the Balanced mandate.",
+        "url": null,
+        "timestamp": null
+      }
+    ]
+  },
+  "dialogue_suggestion": {
+    "client_id": "schneider",
+    "style": "Empathetic and mission-driven. Hubertus is an analytical automotive CEO, but since his daughter Chloe's diagnosis his decisions are driven by purpose. Lead with the human stake, then the facts.",
+    "talking_points": [
+      {
+        "text": "Biogen Inc. puts a holding in conflict with this client's stance on Neurodegenerative research.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-biogen-neuro-shutdown",
+          "excerpt": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therape",
+          "url": "https://example.com/biogen-neuro",
+          "timestamp": "2026-06-12"
+        }
+      },
+      {
+        "text": "Connects to what Hubertus Schneider told us about Neurodegenerative research.",
+        "provenance": {
+          "source_type": "crm_log",
+          "source_id": "schneider#2026-03-05#22",
+          "excerpt": "If a company we own ever abandons or defunds Parkinson's research to chase cheap lifestyle profits, it would feel like a personal betrayal of my daughter. Flag them immediately for divestment.",
+          "url": null,
+          "timestamp": "2026-03-05"
+        }
+      },
+      {
+        "text": "Directly affects a current holding: Biogen Inc. (CHF 101,097).",
+        "provenance": {
+          "source_type": "portfolio",
+          "source_id": "Balanced:US09062X1037",
+          "excerpt": "Biogen Inc. held in the Balanced mandate.",
+          "url": null,
+          "timestamp": null
+        }
+      }
+    ],
+    "draft_message": "Dear Schneider, a development needs your attention: Biogen to wind down neurodegenerative research division, pivot to higher-margin therapeutics. Because it touches your stance and a current holding, I have prepared a same-sector, CIO-approved option that keeps your strategy intact while restoring the values fit.",
+    "market_context": [
+      {
+        "text": "Swiss Market Index holds steady as defensive names outperform.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-smi-steady",
+          "excerpt": "The SMI was little changed this week, with consumer-staples and healthcare blue chips outperforming amid broader volatility. Swiss franc strength continued to support domestic defensives.",
+          "url": "https://example.com/smi-steady",
+          "timestamp": "2026-06-16"
+        }
+      },
+      {
+        "text": "Global bond yields ease as central banks signal patience.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-global-rates",
+          "excerpt": "Government bond yields edged lower across G7 markets after central banks signalled a patient stance on rate cuts, supporting high-grade fixed income and dividend-paying defensives.",
+          "url": "https://example.com/global-rates",
+          "timestamp": "2026-06-17"
+        }
+      }
+    ],
+    "provenance": [
+      {
+        "source_type": "news",
+        "source_id": "news-biogen-neuro-shutdown",
+        "excerpt": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therape",
+        "url": "https://example.com/biogen-neuro",
+        "timestamp": "2026-06-12"
+      },
+      {
+        "source_type": "crm_log",
+        "source_id": "schneider#2026-03-05#22",
+        "excerpt": "If a company we own ever abandons or defunds Parkinson's research to chase cheap lifestyle profits, it would feel like a personal betrayal of my daughter. Flag them immediately for divestment.",
+        "url": null,
+        "timestamp": "2026-03-05"
+      },
+      {
+        "source_type": "portfolio",
+        "source_id": "Balanced:US09062X1037",
+        "excerpt": "Biogen Inc. held in the Balanced mandate.",
+        "url": null,
+        "timestamp": null
+      }
+    ]
+  },
+  "generated_at": "2026-06-19T22:47:03+00:00",
+  "llm_used": false
+}
