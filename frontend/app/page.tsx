@@ -19,38 +19,16 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<MeUser | null>(null);
-  const [authReady, setAuthReady] = useState(false);
 
-  // Gate the desk on Google sign-in: an unauthenticated first visit is sent straight to the Google
-  // login, returning here after consent. If Google isn't configured we fall through to the open
-  // seed demo so local dev still works.
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      const [me, cfg] = await Promise.all([
-        api.me().catch(() => null),
-        api.authConfig().catch(() => null),
-      ]);
-      if (!alive) return;
-      if (!me && cfg?.google_enabled) {
-        window.location.href = api.loginUrl(); // keep the loading screen during navigation
-        return;
-      }
-      setUser(me);
-      setAuthReady(true);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  // Load the desk only once auth is resolved (and we're staying on the page).
-  useEffect(() => {
-    if (!authReady) return;
     let alive = true;
     api
       .clients()
-      .then((cs) => alive && setClients(cs))
+      .then((cs) => {
+        if (!alive) return;
+        setClients(cs);
+        // default landing is the Overview, per the desk philosophy
+      })
       .catch((e) => alive && setError(String(e)))
       .finally(() => alive && setLoading(false));
 
@@ -60,23 +38,22 @@ export default function Home() {
       .then((h) => alive && setHealth(h))
       .catch(() => {});
 
+    // Sign-in is optional — fetch the RM in the background only to personalise the greeting.
+    // No gate, no redirect: the desk works logged-out on seed data.
+    api
+      .me()
+      .then((u) => alive && setUser(u))
+      .catch(() => {});
+
     return () => {
       alive = false;
     };
-  }, [authReady]);
+  }, []);
 
   const openClient = (id: string) => {
     setSelectedId(id);
     setView("client");
   };
-
-  if (!authReady) {
-    return (
-      <main className="grid h-screen place-items-center bg-background text-sm text-muted-foreground">
-        Signing in…
-      </main>
-    );
-  }
 
   return (
     <main className="flex h-screen overflow-hidden">

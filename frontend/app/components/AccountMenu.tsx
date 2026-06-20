@@ -6,7 +6,7 @@
 // Degrades gracefully when Google or Twilio isn't configured (clear inline hints).
 
 import { useEffect, useState } from "react";
-import { LogOut, Bell } from "lucide-react";
+import { LogOut, Bell, Mail, CalendarDays } from "lucide-react";
 import type { MeUser, SendTestResult } from "@/lib/types";
 import { api } from "@/lib/api";
 import {
@@ -110,19 +110,34 @@ export function AccountMenu() {
   if (!user) {
     const ready = config?.google_enabled ?? false;
     return (
-      <div className="border-t border-sidebar-border px-3 py-2.5">
+      <div className="space-y-2 border-t border-sidebar-border px-3 py-3">
+        <div className="flex items-start gap-2">
+          <div className="mt-0.5 flex shrink-0 items-center gap-1 text-muted-foreground">
+            <Mail className="h-3.5 w-3.5" />
+            <CalendarDays className="h-3.5 w-3.5" />
+          </div>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            Link your{" "}
+            <span className="font-medium text-foreground">Gmail &amp; Calendar</span>{" "}
+            to read each client&rsquo;s emails, draft replies, and track meetings in the desk.
+          </p>
+        </div>
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
           className="w-full"
           disabled={!ready}
-          title={ready ? "Sign in with Google" : "Set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in .env"}
+          title={
+            ready
+              ? "Link your Google account — Gmail (read/draft) + Calendar (read/add). Nothing is sent without you."
+              : "Set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in .env"
+          }
           onClick={() => {
             window.location.href = api.loginUrl();
           }}
         >
           <GoogleGlyph />
-          {ready ? "Sign in with Google" : "Sign-in (configure Google)"}
+          {ready ? "Link to Google" : "Link Google (configure creds)"}
         </Button>
       </div>
     );
