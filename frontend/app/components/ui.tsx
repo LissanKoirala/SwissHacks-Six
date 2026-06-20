@@ -152,6 +152,31 @@ export function Expander({
   );
 }
 
+/**
+ * Headless collapsible — owns only the open/closed state. The caller renders its
+ * own header via `trigger(open, toggle)` so each surface keeps its native look
+ * (uppercase section header, card bar, muted label …) while sharing one toggle
+ * behaviour. Children render below the trigger when open.
+ */
+export function Collapsible({
+  defaultOpen = true,
+  trigger,
+  children,
+}: {
+  defaultOpen?: boolean;
+  trigger: (open: boolean, toggle: () => void) => ReactNode;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const toggle = () => setOpen((o) => !o);
+  return (
+    <>
+      {trigger(open, toggle)}
+      {open && children}
+    </>
+  );
+}
+
 /* ------------------------------------------------------------- figure tile --- */
 
 /**
