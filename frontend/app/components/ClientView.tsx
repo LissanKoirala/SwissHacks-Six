@@ -24,22 +24,37 @@ import { PortfolioCharts } from "./PortfolioCharts";
 import { InvestmentGlobe } from "./InvestmentGlobe";
 import { CrmGraph } from "./CrmGraph";
 import { DecisionFlow } from "./DecisionFlow";
-// Rendezvous pulls in the day/night globe + live flights — load it lazily so it
-// never weighs on the Advisory glance.
-const RendezvousView = dynamic(
-  () => import("./RendezvousView").then((m) => m.RendezvousView),
-  {
-    loading: () => (
-      <p className="p-5 text-sm text-muted-foreground">
-        Loading rendezvous planner…
-      </p>
-    ),
-  },
-);
 import { RiskTimeline } from "./RiskTimeline";
 import { CaptureNote } from "./CaptureNote";
 import { OpportunitiesPanel } from "./OpportunitiesPanel";
 import { TransactionsView } from "./TransactionsView";
+
+function loadRendezvousView() {
+  return import("./RendezvousView").catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const isChunkLoad =
+      (error instanceof Error && error.name === "ChunkLoadError") ||
+      /loading chunk .* failed/i.test(message);
+    if (isChunkLoad && typeof window !== "undefined") {
+      const key = "rendezvous-chunk-reload";
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return new Promise<typeof import("./RendezvousView")>(() => {});
+      }
+      sessionStorage.removeItem(key);
+    }
+    throw error;
+  });
+}
+
+// Rendezvous pulls in WebGL globe + live flights — lazy, client-only.
+const RendezvousView = dynamic(() => loadRendezvousView(), {
+  ssr: false,
+  loading: () => (
+    <p className="p-5 text-sm text-muted-foreground">Loading rendezvous planner…</p>
+  ),
+});
 
 type Area = "advisory" | "portfolio" | "client" | "capture";
 type PortfolioSub = "holdings" | "allocation" | "transactions" | "risk" | "map";

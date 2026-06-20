@@ -38,6 +38,12 @@ import type {
   DraftResult,
   EventBody,
   AddEventResult,
+  Task,
+  TaskCreateBody,
+  TaskUpdateBody,
+  TaskSignoffBody,
+  IngestResult,
+  EmailMessage,
 } from "./types";
 
 // Default to 127.0.0.1 (not "localhost"): on macOS "localhost" can resolve to IPv6 ::1 first,
@@ -80,6 +86,20 @@ async function send<T>(method: "POST" | "PUT", path: string, body: unknown): Pro
 
 const post = <T>(path: string, body: unknown) => send<T>("POST", path, body);
 const put = <T>(path: string, body: unknown) => send<T>("PUT", path, body);
+
+async function patch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "PATCH",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    cache: "no-store",
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`${res.status} ${res.statusText} — PATCH ${path}`);
+  }
+  return (await res.json()) as T;
+}
 
 export const api = {
   overview: () => get<Overview>("/overview"),
@@ -150,6 +170,20 @@ export const api = {
     get<{ events: CalendarEvent[] }>("/integrations/google/calendar"),
   addCalendarEvent: (body: EventBody) =>
     post<AddEventResult>("/integrations/google/calendar", body),
+
+  // --- The Front Door: inbox + agentic kanban board ---
+  tasks: (clientId?: string) =>
+    get<Task[]>(`/tasks${clientId ? `?client_id=${clientId}` : ""}`),
+  inbox: () => get<EmailMessage[]>("/inbox"),
+  createTask: (body: TaskCreateBody) => post<Task>("/tasks", body),
+  updateTask: (id: string, body: TaskUpdateBody) =>
+    patch<Task>(`/tasks/${id}`, body),
+  runTask: (id: string) => post<Task>(`/tasks/${id}/execute`, {}),
+  signoffTask: (id: string, body: TaskSignoffBody) =>
+    post<Task>(`/tasks/${id}/signoff`, body),
+  dismissTask: (id: string) => post<Task>(`/tasks/${id}/dismiss`, {}),
+  ingestEmail: () => post<IngestResult>("/ingest/email", {}),
+  ingestNews: () => post<IngestResult>("/ingest/news", {}),
   ocr: async (image: Blob, filename = "note.png"): Promise<{ text: string; provider: string; model?: string }> => {
     const form = new FormData();
     form.append("file", image, filename);

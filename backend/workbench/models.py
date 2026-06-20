@@ -441,3 +441,110 @@ class ClientInsights(BaseModel):
     additional_proposals: list[StrategyProposal] = Field(default_factory=list)
     generated_at: str
     llm_used: bool = False
+
+
+# --- The Front Door: email/news → kanban → agentic execution → RM sign-off -----------------
+# A workbench that does the work. Two "front doors" create tasks: inbound client email and
+# selectively-surfaced news/risk. The agent then ATTEMPTS each task with the client's data at
+# hand and parks a draft for the RM to sign off (Golden rule §2: advisory only — the agent
+# proposes, the RM approves, nothing auto-executes a trade or auto-sends a message).
+
+# backlog  → freshly created, agent has not run yet
+# started  → a COMPLEX task the agent began and left part-done for the RM to carry forward
+# review   → the agent produced a complete draft; awaiting RM sign-off (the confirm gate)
+# done     → RM signed off
+# dismissed→ RM archived it (not actionable)
+TaskStatus = Literal["backlog", "started", "review", "done", "dismissed"]
+TaskPriority = Literal["low", "medium", "high"]
+# How the agent attempts the task; also picks which deterministic/LLM tool runs.
+TaskKind = Literal[
+    "email_reply", "investment_review", "research", "schedule", "document", "general",
+]
+TaskSource = Literal["email", "news", "manual", "system"]
+
+
+class EmailMessage(BaseModel):
+    """One inbound message at the front door. Seed fixtures offline; IMAP/Graph when a key is
+    dropped in (see ingestion/email.py). Routed to a client, then mined for tasks."""
+    # id + provenance are internal: sources (fixture/IMAP) set them, and a hand-dropped email
+    # (POST /ingest/email) gets them synthesised server-side from its content — see ingest_email.
+    id: str = ""
+    from_name: str = ""
+    from_email: str = ""
+    to_email: str = ""
+    subject: str = ""
+    body: str = ""
+    received_at: str = ""
+    client_id: Optional[str] = None      # resolved by the triage router (may be None = unrouted)
+    provenance: Optional[Provenance] = None
+
+
+class DraftEmail(BaseModel):
+    """A ready-to-send reply the RM reviews, edits and sends — never auto-sent (§2)."""
+    to_name: str = ""
+    to_email: str = ""
+    subject: str = ""
+    body: str = ""
+
+
+class TaskArtifact(BaseModel):
+    """The agent's work product for a task — what it actually produced with the client's data.
+    Everything here is a DRAFT for the RM; carries provenance so the RM can see why."""
+    kind: Literal["draft_email", "strategy", "research_note", "analysis", "note"]
+    summary: str                          # one line: what the agent did
+    body: str = ""                        # markdown deliverable (narrative / analysis / brief)
+    draft_email: Optional[DraftEmail] = None
+    strategy_proposal: Optional[StrategyProposal] = None
+    dialogue: Optional[DialogueSuggestion] = None
+    confidence: Literal["high", "medium", "low"] = "medium"
+    llm_used: bool = False
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
+class Task(BaseModel):
+    """A unit of RM work on the kanban board."""
+    id: str
+    client_id: Optional[str] = None
+    title: str
+    detail: str = ""
+    kind: TaskKind = "general"
+    source: TaskSource = "manual"
+    status: TaskStatus = "backlog"
+    priority: TaskPriority = "medium"
+    created_at: str
+    updated_at: str
+    dedup_key: Optional[str] = None       # e.g. "email:<id>" / "news:<client>:<news>" — idempotent ingest
+    origin: Optional[Provenance] = None   # the email / news item that spawned the task
+    artifact: Optional[TaskArtifact] = None  # the agent's attempt
+    activity: list[str] = Field(default_factory=list)  # human-readable execution trail
+    complex: bool = False                 # left in `started` for the RM to carry forward
+    requires_signoff: bool = True         # advisory only — the RM gate
+    signed_off_by: Optional[str] = None
+
+
+class TaskCreateRequest(BaseModel):
+    title: str
+    detail: str = ""
+    client_id: Optional[str] = None
+    kind: TaskKind = "general"
+    priority: TaskPriority = "medium"
+    execute: bool = True                  # let the agent attempt it immediately
+
+
+class TaskUpdateRequest(BaseModel):
+    """RM edits a card: move column, re-prioritise, tweak title/detail."""
+    status: Optional[TaskStatus] = None
+    priority: Optional[TaskPriority] = None
+    title: Optional[str] = None
+    detail: Optional[str] = None
+
+
+class TaskSignoffRequest(BaseModel):
+    """The confirm gate. RM approves the agent's draft; may hand-edit the deliverable body first."""
+    rm_name: str = ""
+    edited_body: Optional[str] = None     # RM's final edit of the draft (email/brief), if any
+
+
+class EmailIngestRequest(BaseModel):
+    """Scan the inbox, or drop in a single raw email to triage on the spot."""
+    raw_email: Optional[EmailMessage] = None

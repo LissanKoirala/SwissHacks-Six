@@ -1,5 +1,12 @@
 /** Live day/night shading for globe.gl (based on vasturiano/globe.gl day-night-cycle example). */
-import { ShaderMaterial, Texture, TextureLoader, Vector2 } from "three";
+import {
+  LinearFilter,
+  LinearMipmapLinearFilter,
+  ShaderMaterial,
+  Texture,
+  TextureLoader,
+  Vector2,
+} from "three";
 
 const DAY_NIGHT_VERTEX = `
 varying vec3 vNormal;
@@ -81,15 +88,37 @@ export function sunPositionAt(date: Date): [number, number] {
 
 let texturePromise: Promise<[Texture, Texture]> | null = null;
 
+function tuneEarthTexture(texture: Texture): void {
+  texture.generateMipmaps = true;
+  texture.minFilter = LinearMipmapLinearFilter;
+  texture.magFilter = LinearFilter;
+  texture.anisotropy = 8;
+}
+
 export function loadDayNightTextures(): Promise<[Texture, Texture]> {
   if (!texturePromise) {
     const loader = new TextureLoader();
     texturePromise = Promise.all([
       loader.loadAsync("/textures/earth-day.jpg"),
       loader.loadAsync("/textures/earth-night.jpg"),
-    ]);
+    ]).then(([day, night]) => {
+      tuneEarthTexture(day);
+      tuneEarthTexture(night);
+      return [day, night];
+    });
   }
   return texturePromise;
+}
+
+export function boostTextureAnisotropy(
+  textures: Texture[],
+  maxAnisotropy: number,
+): void {
+  const aniso = Math.max(1, Math.min(maxAnisotropy, 16));
+  for (const texture of textures) {
+    texture.anisotropy = aniso;
+    texture.needsUpdate = true;
+  }
 }
 
 export function createDayNightMaterial(
