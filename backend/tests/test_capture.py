@@ -200,6 +200,97 @@ def test_log_endpoint_includes_new_entry():
     assert appended["source"]["source_type"] == "crm_log"
 
 
+# --- LLM-backed extraction (mocked) -----------------------------------------
+
+# A paraphrased note that hits NONE of the keyword/risk lexicons, so the
+# deterministic path finds nothing — only the LLM should surface signals.
+PARAPHRASED_NOTE = (
+    "Hubertus mentioned over coffee that he is keen to channel money toward "
+    "brain-illness studies and prefers to keep the family nest egg well shielded."
+)
+
+_LLM_RESPONSE = {
+    "topics": [
+        {
+            "topic": "neuro-research",
+            "facet": "interests",
+            "polarity": "opportunity",
+            "rationale": "Keen to fund brain-illness studies.",
+        },
+        {"topic": "not-a-real-topic", "facet": "interests", "polarity": "neutral", "rationale": "x"},
+    ],
+    "facets": [
+        {"facet": "personality", "text": "Wants the family capital kept well protected."},
+    ],
+    "risk_signals": [
+        {"term": "keep the nest egg shielded", "direction": "down"},
+        {"term": "", "direction": "down"},  # dropped — empty term
+    ],
+}
+
+
+@pytest.fixture
+def _llm_on(monkeypatch):
+    """Force the LLM path on with a canned structured response."""
+    monkeypatch.setattr(capture, "llm_available", lambda: True)
+    monkeypatch.setattr(capture, "chat_json", lambda *a, **k: dict(_LLM_RESPONSE))
+
+
+def test_keyword_path_misses_paraphrased_note(fresh_world):
+    """Baseline: the deterministic path finds no topic and no risk in a paraphrase."""
+    draft = capture.extract_draft(
+        fresh_world, "schneider", CaptureExtractRequest(note=PARAPHRASED_NOTE)
+    )
+    assert draft["detected_topics"] == []
+    assert draft["risk_preview"]["direction"] == "flat"
+
+
+def test_llm_extract_surfaces_topic_facet_and_risk(_llm_on, fresh_world):
+    draft = capture.extract_draft(
+        fresh_world, "schneider", CaptureExtractRequest(note=PARAPHRASED_NOTE)
+    )
+    # topic mapped despite no keyword; unknown topic dropped
+    assert {t["topic"] for t in draft["detected_topics"]} == {"neuro-research"}
+    edge = draft["proposed_edges"][0]
+    assert edge["topic"] == "neuro-research" and edge["polarity"] == "opportunity"
+    # facet captured
+    assert any(f["facet"] == "personality" for f in draft["proposed_facets"])
+    # risk surfaced (down), empty-term signal dropped
+    rp = draft["risk_preview"]
+    assert rp["direction"] == "down" and rp["delta"] < 0
+    assert [s["term"] for s in rp["signals"]] == ["keep the nest egg shielded"]
+
+
+def test_llm_risk_signals_flow_into_timeline(_llm_on, fresh_world):
+    from workbench.agents.risk_timeline import build_risk_timeline
+
+    draft = capture.extract_draft(
+        fresh_world, "schneider", CaptureExtractRequest(note=PARAPHRASED_NOTE, date="2026-06-20")
+    )
+    res = capture.confirm_capture(
+        fresh_world,
+        "schneider",
+        CaptureConfirmRequest(
+            note=draft["note"],
+            modality=draft["modality"],
+            date=draft["date"],
+            edges=draft["proposed_edges"],
+            facets=draft["proposed_facets"],
+            risk_signals=draft["risk_preview"]["signals"],
+        ),
+    )
+
+    # the stored entry carries the analysis's risk cues
+    entry = next(e for e in fresh_world.meeting_logs["schneider"] if e.id == res["entry_id"])
+    assert [s.term for s in entry.risk_signals] == ["keep the nest egg shielded"]
+
+    # the timeline point for this note registers a de-risking move (not a flat 0)
+    timeline = build_risk_timeline(fresh_world, "schneider")
+    point = next(p for p in timeline["points"] if p["id"] == res["entry_id"])
+    assert point["risk_relevant"] is True
+    assert point["direction"] == "down" and point["delta"] < 0
+
+
 # --- persistence stays out of the repo --------------------------------------
 
 def test_confirm_writes_to_tmp_store_not_repo(fresh_world):
