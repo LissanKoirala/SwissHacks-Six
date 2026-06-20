@@ -45,6 +45,13 @@ class Settings:
     news_key = _clean(os.getenv("NEWSAPI_KEY") or os.getenv("NEWSAI_API_KEY"))
     news_url = os.getenv("NEWSAI_API_URL", "https://eventregistry.org/api/v1").strip()
 
+    # Google Flights via the ``flights`` (fli) library — no API key; can be slow on first load.
+    live_flights = os.getenv("USE_LIVE_FLIGHTS", "0").strip() in ("1", "true", "True")
+
+    @property
+    def flights_enabled(self) -> bool:
+        return self.live_flights
+
     @property
     def llm_enabled(self) -> bool:
         return self.use_live and bool(self.phoeniqs_key)

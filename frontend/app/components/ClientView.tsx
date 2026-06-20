@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import type { Insights } from "@/lib/types";
 import { api } from "@/lib/api";
@@ -15,9 +16,17 @@ import { PortfolioCharts } from "./PortfolioCharts";
 import { InvestmentGlobe } from "./InvestmentGlobe";
 import { CrmGraph } from "./CrmGraph";
 import { DecisionFlow } from "./DecisionFlow";
-import { RendezvousView } from "./RendezvousView";
 import { RiskTimeline } from "./RiskTimeline";
 import { CaptureNote } from "./CaptureNote";
+
+const RendezvousView = dynamic(
+  () => import("./RendezvousView").then((m) => m.RendezvousView),
+  {
+    loading: () => (
+      <p className="p-5 text-sm text-slate-500">Loading rendezvous planner…</p>
+    ),
+  },
+);
 
 type Tab =
   | "advisory"
