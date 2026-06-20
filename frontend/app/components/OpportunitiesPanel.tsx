@@ -20,22 +20,22 @@ function OpportunityRow({ opp }: { opp: Opportunity }) {
   const muted = [volLabel, sentLabel].filter(Boolean).join("  ·  ");
 
   return (
-    <div className="rounded-lg border border-slate-200 p-4">
+    <div className="rounded-lg border border-border p-4">
       <div className="flex flex-wrap items-center gap-2">
         <IssuerLogo issuer={opp.issuer} isin={opp.isin} size="sm" />
-        <span className="text-sm font-semibold text-ink">{opp.issuer}</span>
-        <span className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 font-semibold">
+        <span className="text-sm font-semibold text-foreground">{opp.issuer}</span>
+        <span className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20 font-semibold">
           BUY
         </span>
-        <span className="chip bg-accent-soft text-accent ring-1 ring-inset ring-accent/30 font-semibold">
+        <span className="chip bg-primary/10 text-primary ring-1 ring-inset ring-primary/30 font-semibold">
           NEW · not held
         </span>
         {opp.industry_group && (
-          <span className="chip bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">
+          <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
             {opp.industry_group}
           </span>
         )}
-        <span className="ml-auto font-mono text-[11px] text-slate-400">
+        <span className="ml-auto font-mono text-[11px] text-muted-foreground">
           {opp.isin}
         </span>
       </div>
@@ -45,7 +45,7 @@ function OpportunityRow({ opp }: { opp: Opportunity }) {
           {opp.alignment_topics.map((t) => (
             <span
               key={t}
-              className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+              className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20"
             >
               {t}
             </span>
@@ -53,12 +53,12 @@ function OpportunityRow({ opp }: { opp: Opportunity }) {
         </div>
       )}
 
-      <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-3 text-sm leading-relaxed text-foreground/80">
         {opp.alignment_reason}
       </p>
 
       {muted && (
-        <p className="mt-2 text-[11px] text-slate-400">{muted}</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">{muted}</p>
       )}
 
       {opp.provenance.length > 0 && (
@@ -93,11 +93,11 @@ export function OpportunitiesPanel({ clientId }: { clientId: string }) {
 
   return (
     <section className="card flex flex-col">
-      <header className="border-b border-slate-200 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+      <header className="border-b border-border px-5 py-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
           New opportunities
         </p>
-        <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">
+        <h2 className="mt-1 text-sm font-medium leading-snug text-foreground/80">
           Unheld CIO BUY names aligned to this client&apos;s values —
           proactive, not a swap.
         </h2>
@@ -105,13 +105,13 @@ export function OpportunitiesPanel({ clientId }: { clientId: string }) {
 
       <div className="flex-1 space-y-4 p-5">
         {loading ? (
-          <p className="text-sm text-slate-500">Loading opportunities…</p>
+          <p className="text-sm text-muted-foreground">Loading opportunities…</p>
         ) : error ? (
-          <p className="text-sm text-rose-600">
+          <p className="text-sm text-destructive">
             Could not load opportunities: {error}
           </p>
         ) : !data || data.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             No aligned opportunities right now — no unheld CIO BUY name matches
             this client&apos;s values.
           </p>
@@ -125,7 +125,7 @@ export function OpportunitiesPanel({ clientId }: { clientId: string }) {
       </div>
 
       {data && data.length > 0 && (
-        <footer className="border-t border-slate-200 px-5 py-4">
+        <footer className="border-t border-border px-5 py-4">
           <ConfirmGate
             action="Add to discussion list (RM approve)"
             confirmQuestion="Surface these opportunities in the client conversation?"
