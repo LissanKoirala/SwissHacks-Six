@@ -28,11 +28,11 @@ export function ProfileView({ clientId }: { clientId: string }) {
   }, [clientId]);
 
   if (loading) {
-    return <p className="p-5 text-sm text-slate-500">Loading profile…</p>;
+    return <p className="p-5 text-sm text-muted-foreground">Loading profile…</p>;
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600">Could not load profile: {error}</p>
+      <p className="p-5 text-sm text-rose-600 dark:text-rose-400">Could not load profile: {error}</p>
     );
   }
   if (!data) return null;
@@ -55,7 +55,7 @@ export function ProfileView({ clientId }: { clientId: string }) {
           <div className="space-y-3">
             {facets[k].map((entry, i) => (
               <div key={i}>
-                <p className="mb-1.5 text-sm leading-relaxed text-ink">
+                <p className="mb-1.5 text-sm leading-relaxed text-foreground">
                   {entry.text}
                 </p>
                 <Provenance prov={entry.provenance} />
@@ -65,7 +65,7 @@ export function ProfileView({ clientId }: { clientId: string }) {
         </section>
       ))}
       {keys.length === 0 && (
-        <p className="text-sm text-slate-500">No profile facets recorded.</p>
+        <p className="text-sm text-muted-foreground">No profile facets recorded.</p>
       )}
     </div>
   );

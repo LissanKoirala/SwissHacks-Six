@@ -3,9 +3,10 @@
 // RM Capture — multimodal interaction note (CLAUDE.md §8.B, CAPTURE_CONTRACT §3).
 // Type / dictate (Web Speech) / photo (tesseract.js OCR, in-browser) fill ONE
 // note textarea → Extract (read-only draft) → staged review → RM Confirm gate
-// (the only mutation). Light theme only; reuses card/chip/accent/ink tokens.
+// (the only mutation). Light + dark via semantic tokens + shadcn primitives.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Camera, Check, Mic } from "lucide-react";
 import type {
   CaptureDraft,
   CapturePrompt,
@@ -14,6 +15,18 @@ import type {
   ProposedFacet,
 } from "@/lib/types";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StagedPanel, extractErrorMessage } from "./CaptureStaged";
 import { GuidedPrompts } from "./CaptureGuided";
 
@@ -31,10 +44,8 @@ const MODALITIES = [
 
 const NOTE_MAX = 5000; // mirror the backend cap (CAPTURE_CONTRACT §1).
 
-// Shared field styling — keep the long Tailwind strings in one place.
-const FIELD =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-ink outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20";
-const LABEL = "mb-1 block text-xs font-medium text-slate-500";
+// Shared label styling — keep the long Tailwind strings in one place.
+const LABEL = "mb-1 block text-xs font-medium text-muted-foreground";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -93,7 +104,7 @@ function appendToNote(prev: string, chunk: string): string {
 // A neutral slate chip — the recurring metadata pill in the success summary.
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="chip bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">
+    <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
       {children}
     </span>
   );
@@ -386,30 +397,24 @@ export function CaptureNote({
       <section className="card p-6">
         <div className="flex items-start gap-3">
           <span
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400"
             aria-hidden
           >
-            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.3 3.29 6.8-6.8a1 1 0 0 1 1.4 0Z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <Check className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-ink">
+            <h3 className="text-base font-semibold text-foreground">
               Note appended to the meeting log
             </h3>
-            <p className="mt-1 text-sm text-ink-soft">
+            <p className="mt-1 text-sm text-muted-foreground">
               The entry is now immutable and flows into the profile, CRM network
               and risk timeline.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="chip bg-indigo-50 font-mono text-[11px] text-indigo-700 ring-1 ring-inset ring-indigo-200">
+              <span className="chip bg-primary/10 font-mono text-[11px] text-primary ring-1 ring-inset ring-primary/20">
                 {result.entry_id}
               </span>
-              <span className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
+              <span className="chip bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
                 applied {result.applied.edges} edge
                 {result.applied.edges === 1 ? "" : "s"} / {result.applied.facets}{" "}
                 facet{result.applied.facets === 1 ? "" : "s"}
@@ -422,9 +427,9 @@ export function CaptureNote({
           </div>
         </div>
         <div className="mt-5 flex gap-2">
-          <button type="button" className="btn-primary" onClick={resetAll}>
+          <Button type="button" onClick={resetAll}>
             Capture another
-          </button>
+          </Button>
         </div>
       </section>
     );
@@ -440,10 +445,10 @@ export function CaptureNote({
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">
             New interaction note
           </p>
-          <h2 className="mt-1 text-base font-semibold text-ink">
+          <h2 className="mt-1 text-base font-semibold text-foreground">
             Capture by text, voice or photo
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Everything below is a draft. Nothing touches the live profile until
             you review and confirm.
           </p>
@@ -460,13 +465,14 @@ export function CaptureNote({
 
         {/* mode buttons */}
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Add via
           </span>
 
           {/* Dictate */}
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={toggleDictation}
             disabled={!speechSupported}
             aria-pressed={listening}
@@ -477,15 +483,12 @@ export function CaptureNote({
                   : "Dictate the note (Chrome/Edge)"
                 : "Dictation needs Chrome or Edge"
             }
-            className={`btn ring-1 ring-inset transition-colors ${
-              !speechSupported
-                ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 ring-slate-200"
-                : listening
-                ? "border-rose-300 bg-rose-50 text-rose-700 ring-rose-200"
-                : "border-slate-300 bg-white text-ink-soft ring-transparent hover:bg-slate-50"
-            }`}
+            className={cn(
+              listening &&
+                "border-rose-500/30 bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 hover:text-rose-600 dark:text-rose-400"
+            )}
           >
-            <span aria-hidden>🎙</span>
+            <Mic className="h-4 w-4" />
             {listening ? (
               <span className="flex items-center gap-1.5">
                 Listening
@@ -497,16 +500,17 @@ export function CaptureNote({
             ) : (
               "Dictate"
             )}
-          </button>
+          </Button>
 
           {/* Photo / OCR */}
           <label
-            className={`btn border border-slate-300 bg-white text-ink-soft ring-1 ring-inset ring-transparent hover:bg-slate-50 ${
+            className={cn(
+              buttonVariants({ variant: "outline" }),
               ocrBusy ? "cursor-wait opacity-70" : "cursor-pointer"
-            }`}
+            )}
             title="Read a printed/handwritten note via in-browser OCR"
           >
-            <span aria-hidden>📷</span>
+            <Camera className="h-4 w-4" />
             {ocrBusy ? "Reading…" : "Photo"}
             <input
               ref={fileInputRef}
@@ -520,10 +524,10 @@ export function CaptureNote({
           </label>
 
           {ocrMsg && (
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               {ocrBusy && (
                 <span
-                  className="mr-1.5 inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-accent align-middle"
+                  className="mr-1.5 inline-block h-3 w-3 animate-spin rounded-full border-2 border-border border-t-primary align-middle"
                   aria-hidden
                 />
               )}
@@ -533,15 +537,15 @@ export function CaptureNote({
         </div>
 
         {/* the single note textarea (Type mode is default) */}
-        <textarea
+        <Textarea
           value={note}
           onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
           rows={6}
           maxLength={NOTE_MAX}
           placeholder="Type the interaction here — or dictate / snap a photo above. e.g. “Lunch at Kronenhalle. Hubertus wants to fund Parkinson's research and is proud of the foundation's work.”"
-          className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-ink shadow-sm outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+          className="resize-y text-sm leading-relaxed"
         />
-        <div className="mt-1 flex justify-between text-[11px] text-slate-400">
+        <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
           <span>
             Dictation needs Chrome/Edge · OCR runs locally in your browser
           </span>
@@ -552,65 +556,65 @@ export function CaptureNote({
 
         {/* metadata row */}
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="block">
-            <span className={LABEL}>Modality</span>
-            <select
-              value={modality}
-              onChange={(e) => setModality(e.target.value)}
-              className={FIELD}
-            >
-              {MODALITIES.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="block">
+            <Label className={LABEL}>Modality</Label>
+            <Select value={modality} onValueChange={setModality}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MODALITIES.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <label className="block">
             <span className={LABEL}>Contact</span>
-            <input
+            <Input
               type="text"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               placeholder="Who you spoke with"
-              className={FIELD}
             />
           </label>
           <label className="block">
             <span className={LABEL}>Date</span>
-            <input
+            <Input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className={FIELD}
             />
           </label>
           <label className="block">
             <span className={LABEL}>
-              RM <span className="font-normal text-slate-400">(optional)</span>
+              RM{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
             </span>
-            <input
+            <Input
               type="text"
               value={rmName}
               onChange={(e) => setRmName(e.target.value)}
               placeholder="Your name"
-              className={FIELD}
             />
           </label>
         </div>
 
         {/* extract action */}
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button
+          <Button
             type="button"
-            className="btn-primary"
             onClick={handleExtract}
             disabled={extracting || !note.trim()}
           >
             {extracting ? (
               <>
                 <span
-                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground"
                   aria-hidden
                 />
                 Extracting…
@@ -620,19 +624,19 @@ export function CaptureNote({
             ) : (
               "Extract signals"
             )}
-          </button>
+          </Button>
           {draft && (
-            <button type="button" className="btn-ghost" onClick={resetAll}>
+            <Button type="button" variant="ghost" onClick={resetAll}>
               Clear
-            </button>
+            </Button>
           )}
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted-foreground">
             Read-only — proposes topics &amp; signals for your review.
           </span>
         </div>
 
         {error && !draft && (
-          <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <p className="mt-3 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400">
             {error}
           </p>
         )}

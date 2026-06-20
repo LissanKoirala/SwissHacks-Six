@@ -44,7 +44,7 @@ function InterestChip({
       className={`chip ring-1 ring-inset transition-colors ${
         active
           ? "bg-primary/10 text-primary ring-primary/30"
-          : "bg-white text-ink-soft ring-slate-200 hover:bg-slate-50"
+          : "bg-card text-muted-foreground ring-border hover:bg-accent hover:text-foreground"
       } ${hasProv ? "cursor-pointer" : "cursor-default opacity-90"}`}
       title={hasProv ? "Show the CRM source" : "No direct citation"}
     >
@@ -80,10 +80,10 @@ function InterestsStrip({
 
   return (
     <section className="card p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         What we know they enjoy
       </p>
-      <p className="mt-0.5 text-xs text-slate-400">
+      <p className="mt-0.5 text-xs text-muted-foreground/70">
         Drawn from the meeting log — tap a chip for the citation
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -114,7 +114,7 @@ function ConfidenceChip({
 }) {
   if (confidence === "grounded") {
     return (
-      <span className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
+      <span className="chip bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
         Grounded
         <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden>
           <path
@@ -129,7 +129,7 @@ function ConfidenceChip({
     );
   }
   return (
-    <span className="chip bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">
+    <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
       Inferred
     </span>
   );
@@ -160,16 +160,16 @@ function SuggestionCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold leading-snug text-ink">
+            <h3 className="font-semibold leading-snug text-foreground">
               {suggestion.title}
             </h3>
             <ConfidenceChip confidence={suggestion.confidence} />
           </div>
-          <p className="mt-0.5 truncate text-sm text-ink-soft">
+          <p className="mt-0.5 truncate text-sm text-foreground/80">
             <span className="font-medium">{suggestion.venue}</span>
-            <span className="text-slate-400"> · {suggestion.city}</span>
+            <span className="text-muted-foreground"> · {suggestion.city}</span>
           </p>
-          <p className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500">
+          <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
             <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" aria-hidden>
               <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3" />
               <path
@@ -181,7 +181,7 @@ function SuggestionCard({
               />
             </svg>
             {suggestion.when}
-            <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 text-[11px] text-slate-500">
+            <span className="ml-1.5 rounded-full bg-muted px-1.5 text-[11px] text-muted-foreground">
               {KIND_LABEL[suggestion.kind] ?? suggestion.kind}
             </span>
           </p>
@@ -189,14 +189,14 @@ function SuggestionCard({
       </div>
 
       {/* why */}
-      <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-3 text-sm leading-relaxed text-foreground/80">
         {suggestion.why}
       </p>
 
       {/* why this fits — matched interests */}
       {matched.length > 0 && (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Why this fits
           </p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -216,14 +216,14 @@ function SuggestionCard({
       {/* prep list */}
       {suggestion.prep.length > 0 && (
         <div className="mt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Prep
           </p>
           <ul className="mt-1.5 space-y-1">
             {suggestion.prep.map((p, i) => (
               <li
                 key={i}
-                className="flex items-start gap-2 text-sm text-ink-soft"
+                className="flex items-start gap-2 text-sm text-foreground/80"
               >
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
                 <span>{p}</span>
@@ -235,7 +235,7 @@ function SuggestionCard({
 
       {/* provenance */}
       {suggestion.provenance.length > 0 && (
-        <div className="mt-3 border-t border-slate-100 pt-3">
+        <div className="mt-3 border-t border-border pt-3">
           <ProvenanceList items={suggestion.provenance} />
         </div>
       )}
@@ -252,14 +252,14 @@ function TalkingPoints({
 }) {
   return (
     <section className="card p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Talking points
       </p>
       <ul className="mt-3 space-y-2.5">
         {points.map((p, i) => (
           <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-            <span className="text-ink-soft">
+            <span className="text-foreground/80">
               {p.text}
               {p.provenance && <ProvenanceTag prov={p.provenance} />}
             </span>
@@ -272,8 +272,8 @@ function TalkingPoints({
 
 function SteerAround({ avoid }: { avoid: string[] }) {
   return (
-    <section className="card border-amber-200 bg-amber-50/60 p-4">
-      <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-800">
+    <section className="card border-amber-500/30 bg-amber-500/5 p-4">
+      <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
         <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" aria-hidden>
           <path
             d="M8 1.5 15 14H1L8 1.5Z"
@@ -294,7 +294,7 @@ function SteerAround({ avoid }: { avoid: string[] }) {
         {avoid.map((a, i) => (
           <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-            <span className="text-amber-900">{a}</span>
+            <span className="text-amber-700 dark:text-amber-300">{a}</span>
           </li>
         ))}
       </ul>
@@ -336,11 +336,11 @@ export function RendezvousView({ clientId }: { clientId: string }) {
   );
 
   if (loading) {
-    return <p className="p-5 text-sm text-slate-500">Planning the next rendezvous…</p>;
+    return <p className="p-5 text-sm text-muted-foreground">Planning the next rendezvous…</p>;
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600">
+      <p className="p-5 text-sm text-rose-600 dark:text-rose-400">
         Could not load the rendezvous plan: {error}
       </p>
     );
@@ -355,18 +355,18 @@ export function RendezvousView({ clientId }: { clientId: string }) {
       <header className="card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-ink">
+            <h2 className="text-lg font-semibold text-foreground">
               Rendezvous planner
             </h2>
-            <p className="mt-1 max-w-2xl text-sm text-ink-soft">
+            <p className="mt-1 max-w-2xl text-sm text-foreground/80">
               A grounded next-meeting plan for{" "}
-              <span className="font-medium text-ink">{data.client_name}</span> —
+              <span className="font-medium text-foreground">{data.client_name}</span> —
               venues, conversation openers and topics to steer around, each cited
               back to the CRM history.
             </p>
           </div>
           {hasSuggestions && (
-            <span className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
+            <span className="chip bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
               {groundedCount} of {data.suggestions.length} grounded
             </span>
           )}
@@ -390,7 +390,7 @@ export function RendezvousView({ clientId }: { clientId: string }) {
           ))}
         </div>
       ) : (
-        <p className="card p-5 text-sm text-slate-500">
+        <p className="card p-5 text-sm text-muted-foreground">
           No rendezvous suggestions yet — add a few personal notes to the meeting
           log and they will appear here.
         </p>

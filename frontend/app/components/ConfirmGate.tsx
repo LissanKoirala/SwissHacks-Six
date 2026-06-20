@@ -22,7 +22,7 @@ export function ConfirmGate({
 
   if (phase === "approved") {
     return (
-      <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3.5 py-2 text-sm font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">
+      <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3.5 py-2 text-sm font-medium text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400">
         <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden>
           <path
             d="M3.5 8.5 7 12l6-7"
@@ -39,8 +39,8 @@ export function ConfirmGate({
 
   if (phase === "confirm") {
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 ring-1 ring-inset ring-amber-200">
-        <span className="text-sm font-medium text-amber-900">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 ring-1 ring-inset ring-amber-500/20">
+        <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
           {confirmQuestion}
         </span>
         <div className="ml-auto flex gap-2">

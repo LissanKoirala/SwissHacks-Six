@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { prettyDate } from "@/lib/format";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill } from "./ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertCard } from "./AlertCard";
 import { StrategyPanel } from "./StrategyPanel";
 import { DialoguePanel } from "./DialoguePanel";
@@ -55,7 +56,7 @@ export function ClientView({ clientId }: { clientId: string }) {
 
   if (loading) {
     return (
-      <div className="grid h-full place-items-center text-sm text-slate-500">
+      <div className="grid h-full place-items-center text-sm text-muted-foreground">
         Loading insights…
       </div>
     );
@@ -64,11 +65,11 @@ export function ClientView({ clientId }: { clientId: string }) {
     return (
       <div className="grid h-full place-items-center px-8 text-center">
         <div>
-          <p className="text-sm font-medium text-rose-600">
+          <p className="text-sm font-medium text-rose-600 dark:text-rose-400">
             Could not reach the backend.
           </p>
-          <p className="mt-1 text-xs text-slate-500">{error}</p>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-muted-foreground">{error}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
             Is the API running on http://localhost:8000?
           </p>
         </div>
@@ -91,14 +92,14 @@ export function ClientView({ clientId }: { clientId: string }) {
               name={client.name}
               size="lg"
             />
-            <h1 className="text-2xl font-semibold text-ink">{client.name}</h1>
+            <h1 className="text-2xl font-semibold text-foreground">{client.name}</h1>
             <MandatePill mandate={client.mandate} />
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-muted-foreground">
               generated {prettyDate(insights.generated_at)} ·{" "}
               {insights.llm_used ? "LLM" : "deterministic"}
             </span>
           </div>
-          <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-ink-soft">
+          <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-foreground/80">
             {client.headline}
           </p>
         </header>
@@ -117,77 +118,88 @@ export function ClientView({ clientId }: { clientId: string }) {
         </div>
 
         {/* tabs */}
-        <div className="mb-6 flex gap-1 border-b border-slate-200">
-          {([
-            ["advisory", `Advisory${client.alert_count ? ` · ${client.alert_count}` : ""}`],
-            ["decision", "Decision Flow"],
-            ["portfolio", "Portfolio"],
-            ["analytics", "Analytics"],
-            ["risk", "Risk Timeline"],
-            ["map", "Investment Map"],
-            ["network", "CRM Network"],
-            ["rendezvous", "Rendezvous"],
-            ["profile", "Profile"],
-            ["capture", "＋ Add Note"],
-          ] as [Tab, string][]).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                tab === id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-slate-500 hover:text-ink"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* tab content */}
-        {tab === "advisory" && (
-          <div className="space-y-6">
-            {insights.matches.length === 0 ? (
-              <div className="card p-6 text-sm text-slate-500">
-                No active alerts. The profile is being watched against incoming
-                news and the CIO list.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {insights.matches.map((m) => (
-                  <AlertCard key={m.id} match={m} />
-                ))}
-              </div>
-            )}
-
-            {/* dual output — the product core */}
-            <div className="grid gap-5 lg:grid-cols-2">
-              <StrategyPanel proposal={insights.strategy_proposal} />
-              <DialoguePanel dialogue={insights.dialogue_suggestion} />
-            </div>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+          <div className="scroll-thin mb-6 overflow-x-auto">
+            <TabsList className="h-auto flex-nowrap">
+              {([
+                ["advisory", `Advisory${client.alert_count ? ` · ${client.alert_count}` : ""}`],
+                ["decision", "Decision Flow"],
+                ["portfolio", "Portfolio"],
+                ["analytics", "Analytics"],
+                ["risk", "Risk Timeline"],
+                ["map", "Investment Map"],
+                ["network", "CRM Network"],
+                ["rendezvous", "Rendezvous"],
+                ["profile", "Profile"],
+                ["capture", "＋ Add Note"],
+              ] as [Tab, string][]).map(([id, label]) => (
+                <TabsTrigger key={id} value={id} className="shrink-0">
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
           </div>
-        )}
 
-        {tab === "decision" && <DecisionFlow clientId={clientId} />}
+          {/* tab content */}
+          <TabsContent value="advisory" className="mt-0">
+            <div className="space-y-6">
+              {insights.matches.length === 0 ? (
+                <div className="card p-6 text-sm text-muted-foreground">
+                  No active alerts. The profile is being watched against incoming
+                  news and the CIO list.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {insights.matches.map((m) => (
+                    <AlertCard key={m.id} match={m} />
+                  ))}
+                </div>
+              )}
 
-        {tab === "portfolio" && (
-          <PortfolioView clientId={clientId} affectedIsin={affectedIsin} />
-        )}
+              {/* dual output — the product core */}
+              <div className="grid gap-5 lg:grid-cols-2">
+                <StrategyPanel proposal={insights.strategy_proposal} />
+                <DialoguePanel dialogue={insights.dialogue_suggestion} />
+              </div>
+            </div>
+          </TabsContent>
 
-        {tab === "analytics" && <PortfolioCharts clientId={clientId} />}
+          <TabsContent value="decision" className="mt-0">
+            <DecisionFlow clientId={clientId} />
+          </TabsContent>
 
-        {tab === "risk" && <RiskTimeline clientId={clientId} />}
+          <TabsContent value="portfolio" className="mt-0">
+            <PortfolioView clientId={clientId} affectedIsin={affectedIsin} />
+          </TabsContent>
 
-        {tab === "map" && <InvestmentGlobe clientId={clientId} />}
+          <TabsContent value="analytics" className="mt-0">
+            <PortfolioCharts clientId={clientId} />
+          </TabsContent>
 
-        {tab === "network" && <CrmGraph clientId={clientId} />}
+          <TabsContent value="risk" className="mt-0">
+            <RiskTimeline clientId={clientId} />
+          </TabsContent>
 
-        {tab === "rendezvous" && <RendezvousView clientId={clientId} />}
+          <TabsContent value="map" className="mt-0">
+            <InvestmentGlobe clientId={clientId} />
+          </TabsContent>
 
-        {tab === "profile" && <ProfileView clientId={clientId} />}
+          <TabsContent value="network" className="mt-0">
+            <CrmGraph clientId={clientId} />
+          </TabsContent>
 
-        {tab === "capture" && <CaptureNote clientId={clientId} />}
+          <TabsContent value="rendezvous" className="mt-0">
+            <RendezvousView clientId={clientId} />
+          </TabsContent>
+
+          <TabsContent value="profile" className="mt-0">
+            <ProfileView clientId={clientId} />
+          </TabsContent>
+
+          <TabsContent value="capture" className="mt-0">
+            <CaptureNote clientId={clientId} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

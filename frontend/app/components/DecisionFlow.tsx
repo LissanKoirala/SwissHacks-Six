@@ -25,72 +25,80 @@ const NODE_H = 98; // node card height
 const CARD_W = 192; // preferred node card width (shrinks to fit a crowded band)
 const CARD_MIN = 138; // floor for card width
 
-// Per-layer accent — band tint + label pill. Light theme only. Class strings
-// are literal so Tailwind's JIT picks them up.
+// Per-layer accent — band tint + label pill. Theme-aware via opacity tints so
+// they read in both light and dark. Class strings are literal so Tailwind's
+// JIT picks them up.
 const LAYER_TINT: Record<
   DecisionLayerId,
   { header: string; headerText: string; band: string }
 > = {
   notes: {
-    header: "bg-indigo-50",
-    headerText: "text-indigo-700",
-    band: "bg-indigo-50/40",
+    header: "bg-indigo-500/10",
+    headerText: "text-indigo-600 dark:text-indigo-400",
+    band: "bg-indigo-500/[0.06]",
   },
   dna: {
-    header: "bg-violet-50",
-    headerText: "text-violet-700",
-    band: "bg-violet-50/40",
+    header: "bg-violet-500/10",
+    headerText: "text-violet-600 dark:text-violet-400",
+    band: "bg-violet-500/[0.06]",
   },
   signal: {
-    header: "bg-sky-50",
-    headerText: "text-sky-700",
-    band: "bg-sky-50/40",
+    header: "bg-sky-500/10",
+    headerText: "text-sky-600 dark:text-sky-400",
+    band: "bg-sky-500/[0.06]",
   },
   holding: {
-    header: "bg-teal-50",
-    headerText: "text-teal-700",
-    band: "bg-teal-50/40",
+    header: "bg-teal-500/10",
+    headerText: "text-teal-600 dark:text-teal-400",
+    band: "bg-teal-500/[0.06]",
   },
   candidate: {
-    header: "bg-emerald-50",
-    headerText: "text-emerald-700",
-    band: "bg-emerald-50/40",
+    header: "bg-emerald-500/10",
+    headerText: "text-emerald-600 dark:text-emerald-400",
+    band: "bg-emerald-500/[0.06]",
   },
   action: {
     header: "bg-primary/10",
     headerText: "text-primary",
-    band: "bg-primary/10",
+    band: "bg-primary/[0.08]",
   },
 };
 
-// Node card colouring by polarity (falls back to neutral slate).
+// Node card colouring by polarity (falls back to neutral border).
 function nodeTone(polarity?: Polarity | null): {
   border: string;
   ring: string;
 } {
   if (polarity === "conflict")
-    return { border: "border-amber-200", ring: "hover:ring-amber-300" };
+    return {
+      border: "border-amber-500/40",
+      ring: "hover:ring-amber-500/40",
+    };
   if (polarity === "opportunity")
-    return { border: "border-emerald-200", ring: "hover:ring-emerald-300" };
-  return { border: "border-slate-200", ring: "hover:ring-slate-300" };
+    return {
+      border: "border-emerald-500/40",
+      ring: "hover:ring-emerald-500/40",
+    };
+  return { border: "border-border", ring: "hover:ring-border" };
 }
 
-// Connector colour by edge kind — slate by default, warm for flags/triggers.
+// Connector colour by edge kind — uses CSS variables / theme-stable hues so the
+// SVG strokes read in both themes.
 function edgeColour(kind: DecisionEdge["kind"]): string {
   switch (kind) {
     case "flags":
-      return "#d97706"; // amber-600
+      return "#f59e0b"; // amber-500
     case "triggers":
-      return "#0284c7"; // sky-600
+      return "#0ea5e9"; // sky-500
     case "replaces":
-      return "#0d9488"; // teal-600
+      return "#14b8a6"; // teal-500
     case "proposes":
-      return "#1f5fa6"; // accent
+      return "hsl(var(--primary))"; // brand
     case "honors":
-      return "#7c3aed"; // violet-600
+      return "#8b5cf6"; // violet-500
     case "supports":
     default:
-      return "#94a3b8"; // slate-400
+      return "hsl(var(--muted-foreground))";
   }
 }
 
@@ -182,7 +190,7 @@ function FlowNode({
     <button
       type="button"
       onClick={() => onSelect(node.id)}
-      className={`absolute flex flex-col rounded-xl border bg-white p-2.5 text-left shadow-card ring-2 ring-transparent transition-all ${tone.border} ${tone.ring} ${
+      className={`absolute flex flex-col rounded-xl border bg-card p-2.5 text-left shadow-card ring-2 ring-transparent transition-all ${tone.border} ${tone.ring} ${
         selected ? "ring-primary shadow-pop" : ""
       }`}
       style={{
@@ -193,11 +201,11 @@ function FlowNode({
       }}
       aria-pressed={selected}
     >
-      <span className="line-clamp-2 text-sm font-semibold leading-snug text-ink">
+      <span className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
         {node.title}
       </span>
       {node.subtitle && (
-        <span className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+        <span className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
           {node.subtitle}
         </span>
       )}
@@ -348,8 +356,8 @@ function FlowCanvas({
                 >
                   <div className="flex h-full items-center justify-center">
                     <span
-                      className="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-medium leading-none ring-1 ring-inset"
-                      style={{ color: c, boxShadow: "0 0 0 1px rgba(255,255,255,0.9)" }}
+                      className="rounded-full bg-card px-1.5 py-0.5 text-[9px] font-medium leading-none ring-1 ring-inset ring-border"
+                      style={{ color: c }}
                     >
                       {e.label}
                     </span>
@@ -392,10 +400,10 @@ function RecommendationBar({ decision }: { decision: Decision }) {
   const r = decision.recommendation;
   const actionCls =
     decision.polarity === "conflict"
-      ? "bg-amber-100 text-amber-800 ring-amber-200"
+      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20"
       : decision.polarity === "opportunity"
-      ? "bg-emerald-100 text-emerald-800 ring-emerald-200"
-      : "bg-slate-100 text-slate-700 ring-slate-200";
+      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20"
+      : "bg-muted text-muted-foreground ring-border";
   const move =
     r.sell && r.buy
       ? `Sell ${r.sell} → Buy ${r.buy}`
@@ -405,7 +413,7 @@ function RecommendationBar({ decision }: { decision: Decision }) {
       ? `Review ${r.sell}`
       : null;
   return (
-    <div className="card border-l-4 border-l-accent p-4">
+    <div className="card border-l-4 border-l-primary p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={`chip ring-1 ring-inset ${actionCls} font-semibold`}
@@ -413,13 +421,13 @@ function RecommendationBar({ decision }: { decision: Decision }) {
           {r.action}
         </span>
         {move && (
-          <span className="text-sm font-semibold text-ink">{move}</span>
+          <span className="text-sm font-semibold text-foreground">{move}</span>
         )}
         <span className="ml-auto">
           <PolarityChip polarity={decision.polarity} />
         </span>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         {r.rationale}
       </p>
       {r.constraints_checked.length > 0 && (
@@ -427,7 +435,7 @@ function RecommendationBar({ decision }: { decision: Decision }) {
           {r.constraints_checked.map((c, i) => (
             <li
               key={i}
-              className="flex items-start gap-2 text-xs text-slate-500"
+              className="flex items-start gap-2 text-xs text-muted-foreground"
             >
               <svg
                 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500"
@@ -464,9 +472,9 @@ function ProvenancePanel({
   if (!node) {
     return (
       <div className="card flex h-full flex-col items-center justify-center p-6 text-center">
-        <div className="mb-2 rounded-full bg-slate-100 p-3">
+        <div className="mb-2 rounded-full bg-muted p-3">
           <svg
-            className="h-5 w-5 text-slate-400"
+            className="h-5 w-5 text-muted-foreground"
             viewBox="0 0 20 20"
             fill="none"
             aria-hidden
@@ -479,8 +487,8 @@ function ProvenancePanel({
             />
           </svg>
         </div>
-        <p className="text-sm font-medium text-ink">Trace the call</p>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="text-sm font-medium text-foreground">Trace the call</p>
+        <p className="mt-1 text-xs text-muted-foreground">
           Select any node in the flow to see the source it is grounded in.
         </p>
       </div>
@@ -488,22 +496,22 @@ function ProvenancePanel({
   }
   return (
     <div className="card flex h-full flex-col p-4">
-      <div className="mb-3 flex items-start gap-2 border-b border-slate-200 pb-3">
+      <div className="mb-3 flex items-start gap-2 border-b border-border pb-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {node.layer}
           </p>
-          <p className="mt-0.5 text-sm font-semibold leading-snug text-ink">
+          <p className="mt-0.5 text-sm font-semibold leading-snug text-foreground">
             {node.title}
           </p>
           {node.subtitle && (
-            <p className="mt-0.5 text-xs text-slate-500">{node.subtitle}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{node.subtitle}</p>
           )}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="ml-auto shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          className="ml-auto shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
           aria-label="Close"
         >
           <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -517,7 +525,7 @@ function ProvenancePanel({
         </button>
       </div>
       {node.detail && (
-        <p className="mb-3 text-sm leading-relaxed text-ink-soft">
+        <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
           {node.detail}
         </p>
       )}
@@ -525,7 +533,7 @@ function ProvenancePanel({
         {node.provenance.length > 0 ? (
           <ProvenanceList items={node.provenance} />
         ) : (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground">
             No direct citation on this node.
           </p>
         )}
@@ -568,12 +576,12 @@ export function DecisionFlow({ clientId }: { clientId: string }) {
 
   if (loading) {
     return (
-      <p className="p-5 text-sm text-slate-500">Loading decision flow…</p>
+      <p className="p-5 text-sm text-muted-foreground">Loading decision flow…</p>
     );
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600">
+      <p className="p-5 text-sm text-rose-600 dark:text-rose-400">
         Could not load decision flow: {error}
       </p>
     );
@@ -587,10 +595,10 @@ export function DecisionFlow({ clientId }: { clientId: string }) {
       {/* headline */}
       <div className="flex flex-wrap items-start gap-2">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Why this call
           </p>
-          <h3 className="mt-0.5 text-base font-semibold leading-snug text-ink">
+          <h3 className="mt-0.5 text-base font-semibold leading-snug text-foreground">
             {data.headline}
           </h3>
         </div>
@@ -601,9 +609,9 @@ export function DecisionFlow({ clientId }: { clientId: string }) {
 
       {isEmpty ? (
         <div className="card flex flex-col items-center justify-center p-10 text-center">
-          <div className="mb-3 rounded-full bg-slate-100 p-3">
+          <div className="mb-3 rounded-full bg-muted p-3">
             <svg
-              className="h-6 w-6 text-slate-400"
+              className="h-6 w-6 text-muted-foreground"
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden
@@ -624,8 +632,8 @@ export function DecisionFlow({ clientId }: { clientId: string }) {
               />
             </svg>
           </div>
-          <p className="text-sm font-medium text-ink">No active decision</p>
-          <p className="mt-1 max-w-md text-sm text-slate-500">
+          <p className="text-sm font-medium text-foreground">No active decision</p>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
             {data.recommendation.rationale}
           </p>
         </div>

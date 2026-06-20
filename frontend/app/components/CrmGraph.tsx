@@ -687,12 +687,12 @@ export function CrmGraph({ clientId }: { clientId: string }) {
 
   return (
     <section className="card overflow-hidden">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">
             CRM knowledge graph
           </p>
-          <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">
+          <h2 className="mt-1 text-sm font-medium leading-snug text-muted-foreground">
             Client relationship web · people, channels &amp; recurring themes
           </h2>
         </div>
@@ -702,14 +702,14 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search nodes…"
           autoComplete="off"
-          className="w-48 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-ink outline-none placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary"
+          className="w-48 rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </header>
 
-      {/* dark canvas panel (matches the source's Obsidian-style look) */}
+      {/* dark canvas panel (deliberately dark in both themes — Obsidian-style) */}
       <div
         ref={containerRef}
-        className="relative h-[560px] w-full select-none bg-slate-900"
+        className="relative h-[560px] w-full select-none bg-slate-950"
       >
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-slate-400">
@@ -774,7 +774,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
                     type="checkbox"
                     checked={enabledTypes.has(t)}
                     onChange={() => toggleType(t)}
-                    className="accent-accent"
+                    className="accent-primary"
                   />
                   <span
                     className="h-2.5 w-2.5 flex-none rounded-full"

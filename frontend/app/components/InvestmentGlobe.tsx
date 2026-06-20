@@ -73,19 +73,19 @@ const VERDICT_META: Record<
 > = {
   VIOLATION: {
     label: "Violation",
-    cls: "bg-rose-50 text-rose-700 ring-rose-200",
+    cls: "bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/20",
     dot: "bg-rose-500",
     hex: "#f43f5e",
   },
   WATCH: {
     label: "Watch",
-    cls: "bg-amber-50 text-amber-700 ring-amber-200",
+    cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20",
     dot: "bg-amber-500",
     hex: "#f59e0b",
   },
   OK: {
     label: "OK",
-    cls: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20",
     dot: "bg-emerald-500",
     hex: "#34d399",
   },
@@ -117,10 +117,12 @@ function sentimentHex(score?: number): string {
 }
 
 function sentimentLabel(score?: number): { text: string; cls: string } {
-  if (score == null) return { text: "neutral", cls: "text-slate-500" };
-  if (score <= -0.3) return { text: "negative", cls: "text-rose-600" };
-  if (score >= 0.3) return { text: "positive", cls: "text-emerald-600" };
-  return { text: "neutral", cls: "text-slate-500" };
+  if (score == null) return { text: "neutral", cls: "text-muted-foreground" };
+  if (score <= -0.3)
+    return { text: "negative", cls: "text-rose-600 dark:text-rose-400" };
+  if (score >= 0.3)
+    return { text: "positive", cls: "text-emerald-600 dark:text-emerald-400" };
+  return { text: "neutral", cls: "text-muted-foreground" };
 }
 
 /* globe.gl tooltips take an HTML string. Escape interpolated values so a stray
@@ -277,7 +279,7 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
   return (
     <div
       ref={wrapRef}
-      className="w-full overflow-hidden rounded-xl bg-slate-900"
+      className="w-full overflow-hidden rounded-xl border border-border bg-slate-950"
     >
       <div
         ref={mountRef}
@@ -289,7 +291,7 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         }}
         aria-label="3D globe of portfolio holdings, news events and signal arcs"
       />
-      <p className="border-t border-slate-800 px-4 py-3 text-center text-[11px] leading-relaxed text-slate-400">
+      <p className="border-t border-white/10 px-4 py-3 text-center text-[11px] leading-relaxed text-slate-400">
         {CAPTION}
       </p>
     </div>
@@ -304,27 +306,27 @@ function HoldingRow({ holding }: { holding: GlobeHolding }) {
     <div
       className={`rounded-lg border p-3 ${
         holding.verdict === "VIOLATION"
-          ? "border-rose-200 bg-rose-50/40"
+          ? "border-rose-500/30 bg-rose-500/[0.06]"
           : holding.verdict === "WATCH"
-          ? "border-amber-200 bg-amber-50/40"
-          : "border-slate-200 bg-white"
+          ? "border-amber-500/30 bg-amber-500/[0.06]"
+          : "border-border bg-card"
       }`}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-sm font-semibold text-ink">
+        <span className="text-sm font-semibold text-foreground">
           {holding.issuer}
         </span>
         {flagged && <VerdictChip verdict={holding.verdict} />}
-        <span className="ml-auto text-sm font-semibold tabular-nums text-ink">
+        <span className="ml-auto text-sm font-semibold tabular-nums text-foreground">
           {chf(holding.current_chf)}
         </span>
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
         <span>
           {holding.city}, {holding.country}
         </span>
         {holding.industry_group && <span>· {holding.industry_group}</span>}
-        <span className="font-mono text-[11px] text-slate-400">
+        <span className="font-mono text-[11px] text-muted-foreground">
           {holding.isin}
         </span>
       </div>
@@ -334,17 +336,17 @@ function HoldingRow({ holding }: { holding: GlobeHolding }) {
 
 function EventCard({ event }: { event: GlobeEvent }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="rounded-lg border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-ink">{event.summary}</span>
-        <span className="ml-auto text-[11px] text-slate-400">
+        <span className="text-sm font-semibold text-foreground">{event.summary}</span>
+        <span className="ml-auto text-[11px] text-muted-foreground">
           {prettyDate(event.published_at)}
         </span>
       </div>
-      <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
         {event.headline}
       </p>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-muted-foreground">
         {event.source} · {event.country} ·{" "}
         {event.linked_holding_ids.length} linked holding
         {event.linked_holding_ids.length === 1 ? "" : "s"}
@@ -356,9 +358,9 @@ function EventCard({ event }: { event: GlobeEvent }) {
 function NewsRow({ item }: { item: GlobeEvent }) {
   const senti = sentimentLabel(item.sentiment);
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-      <p className="text-sm font-medium leading-snug text-ink">{item.summary}</p>
-      <p className="mt-0.5 text-xs text-slate-500">
+    <div className="rounded-lg border border-border bg-card px-3 py-2">
+      <p className="text-sm font-medium leading-snug text-foreground">{item.summary}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
         {item.source} · {item.country} ·{" "}
         <span className={senti.cls}>{senti.text}</span>
       </p>
@@ -405,14 +407,14 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
   if (loading) {
     return (
       <section className="card p-5">
-        <p className="text-sm text-slate-500">Loading investment map…</p>
+        <p className="text-sm text-muted-foreground">Loading investment map…</p>
       </section>
     );
   }
   if (error) {
     return (
       <section className="card p-5">
-        <p className="text-sm text-rose-600">
+        <p className="text-sm text-rose-600 dark:text-rose-400">
           Could not load the investment map: {error}
         </p>
       </section>
@@ -425,20 +427,20 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
 
   return (
     <section className="card flex flex-col">
-      <header className="border-b border-slate-200 px-5 py-4">
+      <header className="border-b border-border px-5 py-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">
           Investment map
         </p>
-        <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">
+        <h2 className="mt-1 text-sm font-medium leading-snug text-muted-foreground">
           {stats.holdings} holding{stats.holdings === 1 ? "" : "s"} ·{" "}
           {flagged > 0 ? (
-            <span className="font-semibold text-rose-700">
+            <span className="font-semibold text-rose-600 dark:text-rose-400">
               {stats.violations} violation
               {stats.violations === 1 ? "" : "s"}, {stats.watches} watch
               {stats.watches === 1 ? "" : "es"}
             </span>
           ) : (
-            <span className="text-emerald-700">no live conflicts</span>
+            <span className="text-emerald-600 dark:text-emerald-400">no live conflicts</span>
           )}{" "}
           · {stats.events} signal{stats.events === 1 ? "" : "s"} ·{" "}
           {stats.news} world-news pulse{stats.news === 1 ? "" : "s"}
@@ -450,7 +452,7 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
           {data.holdings.length > 0 ? (
             <GlobeCanvas data={data} />
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-slate-900 text-sm text-slate-400">
+            <div className="flex aspect-square w-full items-center justify-center rounded-xl border border-border bg-slate-950 text-sm text-slate-400">
               No holdings to map.
             </div>
           )}
@@ -459,7 +461,7 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
         <div className="space-y-4">
           {data.events.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Live signals
               </p>
               <div className="space-y-3">
@@ -472,7 +474,7 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
 
           {data.news && data.news.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 World news · {data.news.length}
               </p>
               <div className="scroll-thin max-h-[300px] space-y-2 overflow-y-auto pr-1">
@@ -484,12 +486,12 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
           )}
 
           {data.holdings.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               No holdings to show on the map.
             </p>
           ) : (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Holdings by location
               </p>
               <div className="scroll-thin max-h-[520px] space-y-2 overflow-y-auto pr-1">
