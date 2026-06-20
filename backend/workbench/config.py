@@ -45,6 +45,13 @@ class Settings:
     news_key = _clean(os.getenv("NEWSAPI_KEY") or os.getenv("NEWSAI_API_KEY"))
     news_url = os.getenv("NEWSAI_API_URL", "https://eventregistry.org/api/v1").strip()
 
+    stt_provider = (os.getenv("STT_PROVIDER", "elevenlabs").strip().lower() or "elevenlabs")
+    elevenlabs_key = _clean(os.getenv("ELEVENLABS_API_KEY"))
+    elevenlabs_stt_model = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v1").strip() or "scribe_v1"
+
+    ocr_provider = (os.getenv("OCR_PROVIDER", "phoeniqs").strip().lower() or "phoeniqs")
+    phoeniqs_ocr_model = os.getenv("PHOENIQS_OCR_MODEL", "inference-deepseek-ocr").strip() or "inference-deepseek-ocr"
+
     # --- Additional free data sources (CLAUDE.md §6: one adapter per source, all seed-first) ---
     # SEC EDGAR: free, NO key. The fair-access policy only asks for a User-Agent identifying the
     # caller (name + email). data.sec.gov serves 8-K/full-text/Form 4 as JSON at up to 10 req/s.
@@ -62,6 +69,19 @@ class Settings:
     # Macro/FX digest. Frankfurter (ECB rates) needs NO key; FRED key is optional enrichment.
     fred_key = _clean(os.getenv("FRED_API_KEY"))
     macro_url = os.getenv("MACRO_API_URL", "https://api.frankfurter.dev/v1").strip()
+
+    @property
+    def stt_enabled(self) -> bool:
+        if self.stt_provider == "elevenlabs":
+            return bool(self.elevenlabs_key)
+        # phoeniqs path not wired yet — see transcribe.py
+        return False
+
+    @property
+    def ocr_enabled(self) -> bool:
+        if self.ocr_provider == "phoeniqs":
+            return bool(self.phoeniqs_key)
+        return False
 
     @property
     def llm_enabled(self) -> bool:

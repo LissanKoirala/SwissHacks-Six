@@ -1,9 +1,10 @@
 "use client";
 
 // RM Capture — multimodal interaction note (CLAUDE.md §8.B, CAPTURE_CONTRACT §3).
-// Type / dictate (Web Speech) / photo (tesseract.js OCR, in-browser) fill ONE
-// note textarea → Extract (read-only draft) → staged review → RM Confirm gate
-// (the only mutation). Light + dark via semantic tokens + shadcn primitives.
+// Type / dictate (server STT or browser fallback) / photo (server OCR via
+// Phoeniqs deepseek-ocr) fill ONE note textarea → Extract (read-only draft) →
+// staged review → RM Confirm gate (the only mutation). Light + dark via
+// semantic tokens + shadcn primitives.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -134,13 +135,34 @@ export function CaptureNote({
   // --- guided capture prompts (client-aware quest list) ---
   const [prompts, setPrompts] = useState<CapturePrompt[]>([]);
 
-  // --- dictation (Web Speech) ---
+  // --- dictation ---
+  // Primary path: server-side STT (ElevenLabs now, Phoeniqs planned) via
+  // MediaRecorder upload — works in every browser. Fallback path: in-browser
+  // Web Speech when backend STT isn't configured (Chrome/Edge only).
   const [listening, setListening] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const finalBaseRef = useRef(""); // note text captured when dictation started
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const [serverSttEnabled, setServerSttEnabled] = useState<boolean | null>(null);
+  const [sttProvider, setSttProvider] = useState<string>("");
   const speechSupported = useMemo(() => getSpeechRecognitionCtor() !== null, []);
+  const mediaSupported = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      typeof navigator !== "undefined" &&
+      !!navigator.mediaDevices?.getUserMedia &&
+      typeof window.MediaRecorder !== "undefined",
+    [],
+  );
+  // Effective support: server STT (if backend says yes and browser can record)
+  // OR browser Web Speech as a fallback.
+  const dictationSupported =
+    (serverSttEnabled && mediaSupported) || speechSupported;
 
-  // --- OCR (tesseract.js) ---
+  // --- OCR (server: Phoeniqs deepseek-ocr) ---
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrMsg, setOcrMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -162,6 +184,28 @@ export function CaptureNote({
       } catch {
         /* noop */
       }
+      try {
+        mediaRecorderRef.current?.stop();
+      } catch {
+        /* noop */
+      }
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  // Probe the backend once to decide which dictation path to use.
+  useEffect(() => {
+    let alive = true;
+    api
+      .integrations()
+      .then((d) => {
+        if (!alive) return;
+        setServerSttEnabled(!!d.stt?.enabled);
+        setSttProvider(d.stt?.provider ?? "");
+      })
+      .catch(() => alive && setServerSttEnabled(false));
+    return () => {
+      alive = false;
     };
   }, []);
 
@@ -179,7 +223,11 @@ export function CaptureNote({
     setError(null);
     setOcrMsg(null);
     setOcrBusy(false);
-    if (listening) stopDictation();
+    if (listening) {
+      if (serverSttEnabled && mediaSupported) stopServerRecording();
+      else stopWebSpeech();
+    }
+    setTranscribing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
@@ -206,7 +254,8 @@ export function CaptureNote({
 
   /* ----------------------------------------------------- dictation --- */
 
-  function stopDictation() {
+  // --- Web Speech fallback path (no server STT configured) ---
+  function stopWebSpeech() {
     try {
       recognitionRef.current?.stop();
     } catch {
@@ -215,7 +264,7 @@ export function CaptureNote({
     setListening(false);
   }
 
-  function startDictation() {
+  function startWebSpeech() {
     const Ctor = getSpeechRecognitionCtor();
     if (!Ctor) return;
     const rec = new Ctor();
@@ -236,7 +285,6 @@ export function CaptureNote({
       if (finalChunk) {
         finalBaseRef.current = appendToNote(finalBaseRef.current, finalChunk);
       }
-      // Live preview = committed base + the in-flight interim words.
       setNote(appendToNote(finalBaseRef.current, interim));
     };
     rec.onerror = (ev: { error?: string }) => {
@@ -261,11 +309,73 @@ export function CaptureNote({
     }
   }
 
+  // --- Server STT path (record → upload → transcript). ElevenLabs is request/
+  // response, so there's no interim text — show "Transcribing…" while we wait.
+  async function startServerRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      // Let the browser pick a supported MIME (Safari prefers mp4; Chrome webm/opus).
+      const rec = new MediaRecorder(stream);
+      mediaRecorderRef.current = rec;
+      audioChunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      rec.onstop = async () => {
+        mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+        mediaStreamRef.current = null;
+        const mime = rec.mimeType || "audio/webm";
+        const blob = new Blob(audioChunksRef.current, { type: mime });
+        audioChunksRef.current = [];
+        if (blob.size === 0) {
+          setTranscribing(false);
+          return;
+        }
+        setTranscribing(true);
+        try {
+          const ext = mime.includes("mp4") ? "mp4" : mime.includes("ogg") ? "ogg" : "webm";
+          const { text } = await api.transcribe(blob, `dictation.${ext}`);
+          if (text) setNote((prev) => appendToNote(prev, text));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(`Transcription failed: ${msg}. You can keep typing.`);
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      rec.start();
+      setListening(true);
+      setError(null);
+    } catch (err) {
+      setListening(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Microphone unavailable: ${msg}`);
+    }
+  }
+
+  function stopServerRecording() {
+    try {
+      mediaRecorderRef.current?.stop();
+    } catch {
+      /* noop */
+    }
+    setListening(false);
+  }
+
   const toggleDictation = useCallback(() => {
-    if (listening) stopDictation();
-    else startDictation();
+    // Prefer server STT when the backend has it configured; otherwise fall back
+    // to in-browser Web Speech so offline demos still work.
+    const useServer = serverSttEnabled && mediaSupported;
+    if (listening) {
+      if (useServer) stopServerRecording();
+      else stopWebSpeech();
+      return;
+    }
+    if (useServer) startServerRecording();
+    else if (speechSupported) startWebSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listening, note]);
+  }, [listening, note, serverSttEnabled, mediaSupported, speechSupported]);
 
   /* ----------------------------------------------------------- OCR --- */
 
@@ -279,28 +389,19 @@ export function CaptureNote({
     setOcrMsg("Reading the photo…");
     setError(null);
     try {
-      // Dynamic import inside the handler — keeps the WASM/worker out of SSR
-      // and the main bundle until the RM actually snaps a photo.
-      const { default: Tesseract } = await import("tesseract.js");
-      const { data } = await Tesseract.recognize(file, "eng", {
-        logger: (m: { status?: string; progress?: number }) => {
-          if (m.status === "recognizing text" && typeof m.progress === "number") {
-            setOcrMsg(`Reading the photo… ${Math.round(m.progress * 100)}%`);
-          }
-        },
-      });
-      const text = (data?.text ?? "").trim();
-      if (text) {
-        setNote((prev) => appendToNote(prev, text));
+      // Server-side OCR via Phoeniqs (deepseek-ocr) — handles cursive that
+      // tesseract.js couldn't. See backend/workbench/agents/ocr.py.
+      const { text } = await api.ocr(file, file.name || "note.png");
+      const trimmed = (text ?? "").trim();
+      if (trimmed) {
+        setNote((prev) => appendToNote(prev, trimmed));
         setOcrMsg("Photo read — text added to the note.");
       } else {
         setOcrMsg("No text found in that image. You can type the note instead.");
       }
-    } catch {
-      // OCR failure must never block capture — friendly nudge, RM types on.
-      setOcrMsg(
-        "Could not read that image. You can type the note instead.",
-      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setOcrMsg(`Could not read that image: ${msg}`);
     } finally {
       setOcrBusy(false);
     }
@@ -314,7 +415,10 @@ export function CaptureNote({
       setError("Add a note first — type it, dictate it, or read it from a photo.");
       return;
     }
-    if (listening) stopDictation();
+    if (listening) {
+      if (serverSttEnabled && mediaSupported) stopServerRecording();
+      else stopWebSpeech();
+    }
     setExtracting(true);
     setError(null);
     setResult(null);
@@ -464,7 +568,9 @@ export function CaptureNote({
         <GuidedPrompts
           prompts={prompts}
           listening={listening}
-          speechSupported={speechSupported}
+          // `speechSupported` is the prop name, but it now reflects whichever
+          // dictation path is active (server STT or browser Web Speech).
+          speechSupported={!!dictationSupported}
           onToggleDictation={toggleDictation}
           onInsert={insertPromptLead}
         />
@@ -480,14 +586,16 @@ export function CaptureNote({
             type="button"
             variant="outline"
             onClick={toggleDictation}
-            disabled={!speechSupported}
+            disabled={!dictationSupported || transcribing}
             aria-pressed={listening}
             title={
-              speechSupported
-                ? listening
-                  ? "Stop dictation"
-                  : "Dictate the note (Chrome/Edge)"
-                : "Dictation needs Chrome or Edge"
+              !dictationSupported
+                ? "Dictation unavailable — server STT not configured and Web Speech missing"
+                : listening
+                ? "Stop dictation"
+                : serverSttEnabled
+                ? `Dictate the note (${sttProvider || "server"} STT)`
+                : "Dictate the note (Chrome/Edge Web Speech)"
             }
             className={cn(
               listening &&
@@ -495,9 +603,17 @@ export function CaptureNote({
             )}
           >
             <Mic className="h-4 w-4" />
-            {listening ? (
+            {transcribing ? (
               <span className="flex items-center gap-1.5">
-                Listening
+                Transcribing
+                <span
+                  className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-border border-t-primary"
+                  aria-hidden
+                />
+              </span>
+            ) : listening ? (
+              <span className="flex items-center gap-1.5">
+                {serverSttEnabled ? "Recording" : "Listening"}
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
@@ -514,7 +630,7 @@ export function CaptureNote({
               buttonVariants({ variant: "outline" }),
               ocrBusy ? "cursor-wait opacity-70" : "cursor-pointer"
             )}
-            title="Read a printed/handwritten note via in-browser OCR"
+            title="Read a printed/handwritten note via Phoeniqs OCR"
           >
             <Camera className="h-4 w-4" />
             {ocrBusy ? "Reading…" : "Photo"}
@@ -553,7 +669,9 @@ export function CaptureNote({
         />
         <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
           <span>
-            Dictation needs Chrome/Edge · OCR runs locally in your browser
+            {serverSttEnabled
+              ? `Dictation via ${sttProvider || "server"} STT · OCR via Phoeniqs`
+              : "Dictation needs Chrome/Edge (Web Speech) · OCR via Phoeniqs"}
           </span>
           <span className="tabular-nums">
             {note.length} / {NOTE_MAX}

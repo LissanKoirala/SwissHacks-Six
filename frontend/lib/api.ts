@@ -69,4 +69,24 @@ export const api = {
   capturePrompts: (id: string) =>
     get<CapturePrompts>(`/clients/${id}/capture/prompts`),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
+  ocr: async (image: Blob, filename = "note.png"): Promise<{ text: string; provider: string; model?: string }> => {
+    const form = new FormData();
+    form.append("file", image, filename);
+    const res = await fetch(`${API_BASE}/api/ocr`, { method: "POST", body: form, cache: "no-store" });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText} — POST /api/ocr ${detail}`);
+    }
+    return (await res.json()) as { text: string; provider: string; model?: string };
+  },
+  transcribe: async (audio: Blob, filename = "audio.webm"): Promise<{ text: string; provider: string }> => {
+    const form = new FormData();
+    form.append("file", audio, filename);
+    const res = await fetch(`${API_BASE}/api/transcribe`, { method: "POST", body: form, cache: "no-store" });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText} — POST /api/transcribe ${detail}`);
+    }
+    return (await res.json()) as { text: string; provider: string };
+  },
 };
