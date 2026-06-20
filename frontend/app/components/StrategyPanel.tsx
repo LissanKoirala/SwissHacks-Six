@@ -1,6 +1,11 @@
 "use client";
 
-import type { StrategyProposal, Swap, SwapAction } from "@/lib/types";
+import type {
+  StrategyProposal,
+  Swap,
+  SwapAction,
+  GoodNewsBriefing,
+} from "@/lib/types";
 import { chf, price, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
 import { Expander } from "./ui";
@@ -102,6 +107,30 @@ function SwapRow({ swap }: { swap: Swap }) {
   );
 }
 
+function GoodNewsBriefingCard({ briefing }: { briefing: GoodNewsBriefing }) {
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+      <span className="chip bg-emerald-100 text-emerald-800 ring-1 ring-inset ring-emerald-200 font-semibold">
+        ✦ Good news briefing
+      </span>
+      <p className="mt-2 text-sm font-semibold text-ink">{briefing.headline}</p>
+      <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+        {briefing.why_authentic}
+      </p>
+      <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+        {briefing.action_summary}
+      </p>
+      {briefing.provenance.length > 0 && (
+        <div className="mt-3">
+          <Expander label="View sources" count={briefing.provenance.length}>
+            <ProvenanceList items={briefing.provenance} />
+          </Expander>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function StrategyPanel({
   proposal,
 }: {
@@ -119,6 +148,9 @@ export function StrategyPanel({
       </header>
 
       <div className="flex-1 space-y-4 p-5">
+        {proposal?.good_news_briefing && (
+          <GoodNewsBriefingCard briefing={proposal.good_news_briefing} />
+        )}
         {!proposal || proposal.swaps.length === 0 ? (
           <p className="text-sm text-slate-500">
             Nothing to propose — the current portfolio stays within mandate and

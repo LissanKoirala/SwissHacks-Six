@@ -45,6 +45,24 @@ class Settings:
     news_key = _clean(os.getenv("NEWSAPI_KEY") or os.getenv("NEWSAI_API_KEY"))
     news_url = os.getenv("NEWSAI_API_URL", "https://eventregistry.org/api/v1").strip()
 
+    # --- Additional free data sources (CLAUDE.md §6: one adapter per source, all seed-first) ---
+    # SEC EDGAR: free, NO key. The fair-access policy only asks for a User-Agent identifying the
+    # caller (name + email). data.sec.gov serves 8-K/full-text/Form 4 as JSON at up to 10 req/s.
+    sec_user_agent = os.getenv(
+        "SEC_USER_AGENT", "Advisory Workbench (contact: rm@advisory-workbench.example)"
+    ).strip()
+    sec_url = os.getenv("SEC_API_URL", "https://data.sec.gov").strip()
+    sec_fts_url = os.getenv("SEC_FTS_URL", "https://efts.sec.gov/LATEST/search-index").strip()
+
+    # Financial Modeling Prep (free tier): ESG controversy ratings, earnings calendar/results,
+    # analyst ratings + price targets, fundamentals + dividends. One key, several adapters.
+    fmp_key = _clean(os.getenv("FMP_API_KEY"))
+    fmp_url = os.getenv("FMP_API_URL", "https://financialmodelingprep.com/api/v3").strip()
+
+    # Macro/FX digest. Frankfurter (ECB rates) needs NO key; FRED key is optional enrichment.
+    fred_key = _clean(os.getenv("FRED_API_KEY"))
+    macro_url = os.getenv("MACRO_API_URL", "https://api.frankfurter.dev/v1").strip()
+
     @property
     def llm_enabled(self) -> bool:
         return self.use_live and bool(self.phoeniqs_key)
@@ -56,6 +74,20 @@ class Settings:
     @property
     def news_enabled(self) -> bool:
         return self.use_live and bool(self.news_key)
+
+    @property
+    def sec_enabled(self) -> bool:
+        # No key required, but gated on USE_LIVE so the default demo stays fully offline.
+        return self.use_live and bool(self.sec_user_agent)
+
+    @property
+    def fmp_enabled(self) -> bool:
+        return self.use_live and bool(self.fmp_key)
+
+    @property
+    def macro_enabled(self) -> bool:
+        # Frankfurter needs no key; gated on USE_LIVE only.
+        return self.use_live
 
 
 settings = Settings()

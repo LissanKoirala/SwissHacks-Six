@@ -1,10 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Portfolio } from "@/lib/types";
+import type { Portfolio, Fundamentals, Holding } from "@/lib/types";
 import { api } from "@/lib/api";
-import { chf, pct, signedPp, price, prettyDate } from "@/lib/format";
+import { chf, pct, signedPp, price, compact, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
+import { ProvenanceTag } from "./Provenance";
+
+/** CIO-deviation chip: a held name off the CIO list, downgraded to SELL, or on-list. */
+function CioStatusChip({ status }: { status?: string | null }) {
+  if (!status || status === "CASH") return null;
+  const map: Record<string, string> = {
+    OFF_LIST: "bg-rose-50 text-rose-700 ring-rose-200",
+    SELL: "bg-amber-100 text-amber-800 ring-amber-200",
+    HOLD: "bg-slate-100 text-slate-600 ring-slate-200",
+    BUY: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  };
+  const label = status === "OFF_LIST" ? "Off CIO list" : `CIO · ${status}`;
+  return (
+    <span className={`chip ring-1 ring-inset ${map[status] ?? map.HOLD}`}>
+      {label}
+    </span>
+  );
+}
 
 export function PortfolioView({
   clientId,
@@ -14,6 +32,7 @@ export function PortfolioView({
   affectedIsin?: string | null;
 }) {
   const [data, setData] = useState<Portfolio | null>(null);
+  const [fundamentals, setFundamentals] = useState<Fundamentals[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -21,11 +40,17 @@ export function PortfolioView({
     let alive = true;
     setLoading(true);
     setError(null);
+    setFundamentals([]);
     api
       .portfolio(clientId)
       .then((p) => alive && setData(p))
       .catch((e) => alive && setError(String(e)))
       .finally(() => alive && setLoading(false));
+    // Fundamentals are context, not a blocker — load separately and degrade silently.
+    api
+      .fundamentals(clientId)
+      .then((f) => alive && setFundamentals(f))
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -60,6 +85,11 @@ export function PortfolioView({
       t.target_pct > 0
   );
 
+  // CIO-deviation audit (Portfolio Agent): held names off the CIO list or downgraded to SELL.
+  const deviations: Holding[] = data.holdings
+    .filter((h) => h.cio_status === "OFF_LIST" || h.cio_status === "SELL")
+    .sort((a, b) => b.current_chf - a.current_chf);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline gap-2">
@@ -70,6 +100,46 @@ export function PortfolioView({
           total {chf(data.total_chf)}
         </span>
       </div>
+
+      {/* CIO deviation audit — held names no longer on the CIO list or downgraded to SELL */}
+      {deviations.length > 0 && (
+        <section className="card overflow-hidden ring-1 ring-inset ring-amber-200">
+          <div className="flex flex-wrap items-center gap-2 border-b border-amber-200 bg-amber-50/60 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+              CIO deviations · {deviations.length}
+            </p>
+            <span className="text-[11px] text-amber-700">
+              Held names off the CIO list or rated SELL — review with the client.
+            </span>
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {deviations.map((h) => (
+              <li
+                key={h.isin}
+                className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm"
+              >
+                <IssuerLogo
+                  issuer={h.issuer}
+                  isin={h.isin}
+                  yahoo={h.yahoo}
+                  size="sm"
+                />
+                <span className="font-medium text-ink">{h.issuer}</span>
+                <CioStatusChip status={h.cio_status} />
+                <span className="font-mono text-[11px] text-slate-400">
+                  {h.isin}
+                </span>
+                <span className="ml-auto tabular-nums text-ink-soft">
+                  {chf(h.current_chf)}
+                </span>
+                {h.provenance && (
+                  <ProvenanceTag prov={h.provenance} label="holding" />
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Mandate drift table */}
       <section className="card overflow-hidden">
@@ -104,6 +174,9 @@ export function PortfolioView({
                     <span className="ml-2 text-xs text-slate-400">
                       {t.asset_class}
                     </span>
+                    {t.provenance && (
+                      <ProvenanceTag prov={t.provenance} label="mandate" />
+                    )}
                   </td>
                   <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
                     {pct(t.target_pct, 1)}
@@ -195,6 +268,12 @@ export function PortfolioView({
                               In alert
                             </span>
                           )}
+                          {(h.cio_status === "OFF_LIST" ||
+                            h.cio_status === "SELL") && (
+                            <span className="ml-2 inline-flex">
+                              <CioStatusChip status={h.cio_status} />
+                            </span>
+                          )}
                           <div className="font-mono text-[11px] text-slate-400">
                             {h.isin}
                             {h.six_ticker ? ` · ${h.six_ticker}` : ""}
@@ -243,7 +322,12 @@ export function PortfolioView({
                       </td>
                     )}
                     <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
-                      {chf(h.current_chf)}
+                      <span className="inline-flex items-center justify-end gap-1">
+                        {chf(h.current_chf)}
+                        {h.provenance && (
+                          <ProvenanceTag prov={h.provenance} label="src" />
+                        )}
+                      </span>
                     </td>
                   </tr>
                 );
@@ -252,6 +336,80 @@ export function PortfolioView({
           </table>
         </div>
       </section>
+
+      {/* Issuer fundamentals · dividends · insider activity (context, never an alert) */}
+      {fundamentals.length > 0 && (
+        <section className="card overflow-hidden">
+          <div className="border-b border-slate-200 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Issuer fundamentals · dividends · insider · {fundamentals.length}
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              Reference context for the conversation — not a trade signal.
+            </p>
+          </div>
+          <div className="grid gap-px bg-slate-100 sm:grid-cols-2">
+            {fundamentals.map((f) => {
+              const affected = affectedIsin && f.isin === affectedIsin;
+              return (
+                <div
+                  key={f.isin}
+                  className={`bg-white p-4 ${affected ? "ring-1 ring-inset ring-amber-200" : ""}`}
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <IssuerLogo issuer={f.issuer} isin={f.isin} size="sm" />
+                    <span className="font-medium text-ink">{f.issuer}</span>
+                    {affected && (
+                      <span className="chip bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200">
+                        In alert
+                      </span>
+                    )}
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                    <Metric label="P/E" value={f.pe_ratio != null ? f.pe_ratio.toFixed(1) : "—"} />
+                    <Metric label="Dividend yield" value={pct(f.dividend_yield, 2)} />
+                    <Metric label="Next ex-div" value={f.next_ex_dividend ? prettyDate(f.next_ex_dividend) : "—"} />
+                    <Metric label="Market cap" value={compact(f.market_cap, f.currency)} />
+                    <Metric
+                      label="52-week range"
+                      value={
+                        f.week52_low != null && f.week52_high != null
+                          ? `${price(f.week52_low, f.currency)} – ${price(f.week52_high, f.currency)}`
+                          : "—"
+                      }
+                    />
+                  </dl>
+                  {f.insider_summary && (
+                    <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-sm text-ink-soft ring-1 ring-inset ring-slate-200">
+                      <span className="font-medium">Insider:</span>
+                      <span>{f.insider_summary}</span>
+                      {f.insider_trades.map((t, i) => (
+                        <ProvenanceTag
+                          key={`${t.date}-${i}`}
+                          prov={t.provenance}
+                          label={`${t.transaction === "BUY" ? "▲" : "▼"} ${t.role ?? t.insider}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    {f.as_of ? `As of ${prettyDate(f.as_of)}` : ""}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="text-xs text-slate-400">{label}</dt>
+      <dd className="tabular-nums text-ink-soft">{value}</dd>
     </div>
   );
 }
