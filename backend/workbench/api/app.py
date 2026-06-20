@@ -507,13 +507,17 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     def _warm_insights_cache() -> None:
+        from concurrent.futures import ThreadPoolExecutor
         import threading
         def _warm():
-            for cid in world.clients:
-                try:
-                    get_insights(world, cid)
-                except Exception:
-                    pass
+            client_ids = list(world.clients)
+            with ThreadPoolExecutor(max_workers=len(client_ids) or 1) as pool:
+                futures = [pool.submit(get_insights, world, cid) for cid in client_ids]
+                for f in futures:
+                    try:
+                        f.result()
+                    except Exception:
+                        pass
         threading.Thread(target=_warm, daemon=True).start()
 
     # --- The Front Door: inbox + agentic kanban board -----------------------
