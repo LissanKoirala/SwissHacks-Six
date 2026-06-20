@@ -5,11 +5,12 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    /* Ink black #0a0a0a (neutral-950) carries body text + headlines — DESIGN-marketing on-surface */
+    --foreground: 0 0% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card-foreground: 0 0% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover-foreground: 0 0% 4%;
     --primary: 214 100% 44%;
     --primary-foreground: 0 0% 100%;
     --primary-strong: 214 100% 33%;
@@ -19,7 +20,7 @@
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 45%;
     --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 9%;
+    --accent-foreground: 0 0% 4%;
     --destructive: 357 100% 45%;
     --destructive-foreground: 0 0% 100%;
     --success: 153 91% 30%;
@@ -115,7 +116,8 @@
 .scroll-thin::-webkit-scrollbar-track { background: transparent; }
 
 @layer components {
-  .card { @apply rounded-lg border border-border bg-card text-card-foreground shadow-card dark:shadow-none; }
+  /* DESIGN-marketing: cards/panels sit at the 12–16px radius step (rounded-xl), not the 8–10px default. */
+  .card { @apply rounded-xl border border-border bg-card text-card-foreground shadow-card dark:shadow-none; }
   .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; }
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50; }
   .btn-primary { @apply btn bg-primary text-primary-foreground hover:bg-primary-strong; }
@@ -159,4 +161,10 @@
 
 @layer utilities {
   .focus-ring { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
+}
+
+/* Investment-map news reel: the dwell-time progress bar fills left→right. */
+@keyframes storyProgress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }

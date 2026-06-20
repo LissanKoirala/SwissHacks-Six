@@ -623,7 +623,7 @@ export function OverviewDashboard({
         {/* greeting + briefing */}
         <header className="mb-5">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h1 className="text-2xl font-semibold text-ink">
+            <h1 className="font-display text-3xl font-light tracking-tight text-ink">
               {greeting()}, {firstName(o.rm_name)}
             </h1>
             <span className="text-sm text-muted-foreground">

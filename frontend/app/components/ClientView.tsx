@@ -292,7 +292,7 @@ export function ClientView({ clientId }: { clientId: string }) {
               name={client.name}
               size="lg"
             />
-            <h1 className="font-display text-4xl font-light tracking-tight text-foreground">
+            <h1 className="font-display text-[2.5rem] leading-[1.1] font-light tracking-tight text-foreground">
               {client.name}
             </h1>
             <MandatePill mandate={client.mandate} />

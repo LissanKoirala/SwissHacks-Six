@@ -137,7 +137,7 @@ export function ProfileView({ clientId }: { clientId: string }) {
       </div>
       {keys.length === 0 && (
         <div>
-          <h3 className="font-display text-4xl font-light tracking-tight text-foreground">
+          <h3 className="font-display text-[2.5rem] leading-[1.1] font-light tracking-tight text-foreground">
             No profile yet
           </h3>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
