@@ -22,6 +22,8 @@ import type {
   CapturePrompts,
   Overview,
   Opportunity,
+  PortfolioAudit,
+  BreakingFeed,
   TransactionsData,
   RMQueryBody,
   RMQueryResult,
@@ -83,6 +85,8 @@ export const api = {
   analytics: (id: string) => get<Analytics>(`/clients/${id}/analytics`),
   opportunities: (id: string) =>
     get<Opportunity[]>(`/clients/${id}/opportunities`),
+  audit: (id: string) => get<PortfolioAudit>(`/clients/${id}/audit`),
+  breaking: () => get<BreakingFeed>("/breaking"),
   transactions: (id: string) =>
     get<TransactionsData>(`/clients/${id}/transactions`),
   graph: (id: string) => get<CrmGraph>(`/clients/${id}/graph`),

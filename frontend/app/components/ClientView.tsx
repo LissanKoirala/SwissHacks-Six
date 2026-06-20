@@ -39,10 +39,11 @@ const RendezvousView = dynamic(
 import { RiskTimeline } from "./RiskTimeline";
 import { CaptureNote } from "./CaptureNote";
 import { OpportunitiesPanel } from "./OpportunitiesPanel";
+import { AuditPanel } from "./AuditPanel";
 import { TransactionsView } from "./TransactionsView";
 
 type Area = "advisory" | "portfolio" | "client" | "capture";
-type PortfolioSub = "holdings" | "allocation" | "transactions" | "risk" | "map";
+type PortfolioSub = "holdings" | "audit" | "allocation" | "transactions" | "risk" | "map";
 type ClientSub = "profile" | "network" | "rendezvous";
 
 const ACTION_CHIP: Record<SwapAction, string> = {
@@ -402,6 +403,7 @@ export function ClientView({ clientId }: { clientId: string }) {
                 onChange={setPortfolioSub}
                 items={[
                   { id: "holdings", label: "Holdings" },
+                  { id: "audit", label: "Audit" },
                   { id: "allocation", label: "Allocation" },
                   { id: "transactions", label: "Transactions" },
                   { id: "risk", label: "Risk Timeline" },
@@ -411,6 +413,7 @@ export function ClientView({ clientId }: { clientId: string }) {
               {portfolioSub === "holdings" && (
                 <PortfolioView clientId={clientId} affectedIsin={affectedIsin} />
               )}
+              {portfolioSub === "audit" && <AuditPanel clientId={clientId} />}
               {portfolioSub === "allocation" && (
                 <PortfolioCharts clientId={clientId} />
               )}

@@ -9,6 +9,26 @@ import { MandatePill } from "./ui";
 
 const FACET_ORDER = ["professional", "interests", "historical", "personality"];
 
+// A tiny marker showing how a fact entered the DNA — the visible proof the agent read the logs
+// rather than having facts hand-entered. Seed facts carry no badge (they're the baseline).
+function OriginBadge({ origin }: { origin?: "seed" | "log" | "capture" }) {
+  if (origin === "log") {
+    return (
+      <span className="ml-1.5 align-middle rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary ring-1 ring-inset ring-primary/20">
+        auto-extracted
+      </span>
+    );
+  }
+  if (origin === "capture") {
+    return (
+      <span className="ml-1.5 align-middle rounded-full bg-teal/10 px-1.5 py-px text-[10px] font-medium text-teal ring-1 ring-inset ring-teal/20">
+        from note
+      </span>
+    );
+  }
+  return null;
+}
+
 export function ProfileView({ clientId }: { clientId: string }) {
   const [data, setData] = useState<ClientDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +83,7 @@ export function ProfileView({ clientId }: { clientId: string }) {
           keys.length
         } ${keys.length === 1 ? "facet" : "facets"}`
       : null;
+  const scanned = data.profile.log_entries_scanned ?? data.log_count ?? 0;
 
   return (
     <div className="space-y-5">
@@ -82,6 +103,15 @@ export function ProfileView({ clientId }: { clientId: string }) {
               {headline}
             </p>
           )}
+          {scanned > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">DNA auto-built from the CRM log</span>{" "}
+              — the agent read{" "}
+              <span className="tabular-nums">{scanned}</span> meeting{" "}
+              {scanned === 1 ? "entry" : "entries"} to map these facets; each fact links back to the
+              line that justifies it.
+            </p>
+          )}
         </header>
       )}
       <div className="grid gap-5 md:grid-cols-2">
@@ -97,6 +127,7 @@ export function ProfileView({ clientId }: { clientId: string }) {
                   className="text-sm leading-relaxed text-foreground"
                 >
                   {entry.text}
+                  <OriginBadge origin={entry.origin} />
                   <ProvenanceTag prov={entry.provenance} />
                 </p>
               ))}
