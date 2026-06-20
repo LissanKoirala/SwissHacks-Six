@@ -5,6 +5,7 @@ import type { ClientSummary, IntegrationHealth } from "@/lib/types";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill } from "./ui";
 import { ThemeToggle } from "./ThemeToggle";
+import { AccountMenu } from "./AccountMenu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -166,6 +167,9 @@ export function Sidebar({
           </ul>
         </div>
       )}
+
+      {/* account + morning-briefing settings */}
+      <AccountMenu />
 
       {/* theme + advisory hint */}
       <div className="flex items-center justify-between gap-2 border-t border-sidebar-border px-2.5 py-2">

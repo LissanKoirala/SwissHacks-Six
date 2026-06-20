@@ -882,3 +882,38 @@ export interface Overview {
   portfolio_events: PortfolioEvent[];
   news: NewsWireItem[];
 }
+
+// --- Auth (Google sign-in) + Twilio morning briefing ---
+
+export interface MeUser {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string | null;
+  phone_e164?: string | null;
+  briefing_hour: number;
+  briefing_enabled: boolean;
+}
+
+export interface BriefingPrefsBody {
+  phone_e164?: string | null;
+  briefing_hour?: number;
+  briefing_enabled?: boolean;
+}
+
+export interface BriefingPrefsResult {
+  ok: boolean;
+  phone_e164?: string | null;
+  briefing_hour: number;
+  briefing_enabled: boolean;
+}
+
+export interface SendTestResult {
+  ok: boolean;
+  text: string;
+  sent: boolean;
+  status?: string;
+  sid?: string;
+  error?: string;
+  skipped?: string;
+}

@@ -29,3 +29,8 @@ backend/.cache/
 
 # RM capture write-through store (replayed on boot)
 backend/data/captured_entries.json
+
+# SQLite store (RM accounts + briefing log)
+backend/data/workbench.db
+backend/data/workbench.db-shm
+backend/data/workbench.db-wal
