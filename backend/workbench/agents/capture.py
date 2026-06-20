@@ -435,8 +435,9 @@ def _apply_capture(world, client_id: str, payload: dict, persist: bool = False) 
             )
         applied_facets += 1
 
-    # Invalidate insights so the new edges flow into the next /insights (§2.4).
+    # Invalidate insights + twin so the new edges flow into the next /insights and /twin (§2.4).
     world.insights_cache.pop(client_id, None)
+    world.twin_cache.pop(client_id, None)
 
     if persist:
         _append_store(_store_payload(client_id, payload, note, date, modality, contact, rm_name))

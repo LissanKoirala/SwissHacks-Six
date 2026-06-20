@@ -126,6 +126,7 @@ def poll_once(world: World, *, push: bool = True) -> list[dict]:
         alerts = detect_breaking(world, fresh)
         for a in alerts:
             world.insights_cache.pop(a["client_id"], None)  # so /insights reflects the new match
+            world.twin_cache.pop(a["client_id"], None)       # and the twin re-reads the new proposal
         if alerts:
             world.breaking[:0] = alerts            # prepend newest
             del world.breaking[_BREAKING_CAP:]     # keep bounded

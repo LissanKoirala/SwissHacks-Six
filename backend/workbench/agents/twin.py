@@ -273,7 +273,11 @@ def _polish(name: str, stance: str, scored: list[TwinDriver]) -> Optional[dict]:
 
 def build_twin(world: World, client_id: str, *, refresh: bool = False) -> ClientTwin:
     """Predict the client's reaction to the current proposal. Deterministic, fully cited;
-    LLM only polishes the phrasing."""
+    LLM only polishes the phrasing. Cached per client on the world so the lazy strong-model
+    polish runs once per opened client, not on every GET (§9)."""
+    cache = getattr(world, "twin_cache", None)
+    if cache is not None and not refresh and client_id in cache:
+        return cache[client_id]
     insights = get_insights(world, client_id, refresh=refresh)
     name = insights.client.name
     proposals = _proposals(insights)
@@ -320,7 +324,7 @@ def build_twin(world: World, client_id: str, *, refresh: bool = False) -> Client
     provenance = list({(d.provenance.source_type, d.provenance.source_id): d.provenance
                        for d in drivers}.values())
 
-    return ClientTwin(
+    twin = ClientTwin(
         client_id=client_id,
         client_name=name,
         stance=stance,
@@ -333,6 +337,9 @@ def build_twin(world: World, client_id: str, *, refresh: bool = False) -> Client
         llm_used=llm_used,
         provenance=provenance,
     )
+    if cache is not None:
+        cache[client_id] = twin
+    return twin
 
 
 # --- Ask the twin (free-form Q&A) + autoformat (channel drafts) --------------

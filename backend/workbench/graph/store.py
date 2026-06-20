@@ -56,6 +56,9 @@ class World:
 
     # per-world insights cache (lazy, §9) — keyed by client_id, bound to THIS world
     insights_cache: dict = field(default_factory=dict)
+    # per-world digital-twin cache (the twin's lazy strong-model polish, §9) — keyed by client_id;
+    # invalidated wherever insights_cache is, so it never serves a stale read.
+    twin_cache: dict = field(default_factory=dict)
 
     # lazy resolution drafts for map holding popovers — keyed by (client_id, match_id)
     resolution_cache: dict = field(default_factory=dict)
