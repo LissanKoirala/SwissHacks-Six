@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type {
   RiskTimeline as RiskTimelineData,
   RiskPoint,
@@ -21,7 +21,7 @@ const PAD_R = 14;
 const PAD_T = 14;
 const PAD_B = 30; // x-axis gutter (date labels)
 const CHART_H = 248; // inner plot height
-const AUTO_MS = 700; // playhead step interval
+const AUTO_MS = 1300; // playhead step interval (gentle replay pace)
 
 // Faint horizontal band tints — defensive (sky/slate), balanced (amber),
 // growth (emerald). Literal hex so they read identically server/client.
@@ -402,6 +402,35 @@ function ScrubberChart({
 
 /* ----------------------------------------------------------- playhead bar --- */
 
+function StepButton({
+  onClick,
+  disabled,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 ring-inset transition-colors ${
+        disabled
+          ? "cursor-not-allowed bg-slate-50 text-slate-300 ring-slate-200"
+          : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50 hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function PlayheadBar({
   data,
   index,
@@ -419,37 +448,92 @@ function PlayheadBar({
 }) {
   const last = data.points.length - 1;
   const cur = data.points[index];
+
+  // "Major" events = the milestone points (de-risking spikes, mandate crossings,
+  // the start). Map them to indices for the skip-to-major transport controls.
+  const majorIdx = useMemo(() => {
+    const byId = new Map(data.points.map((p, i) => [p.id, i] as const));
+    const set = new Set<number>();
+    data.milestones.forEach((m) => {
+      const i = byId.get(m.point_id);
+      if (i !== undefined) set.add(i);
+    });
+    return [...set].sort((a, b) => a - b);
+  }, [data]);
+  const prevMajor = [...majorIdx].reverse().find((i) => i < index);
+  const nextMajor = majorIdx.find((i) => i > index);
+
   return (
     <div className="flex items-center gap-3">
-      <button
-        type="button"
-        onClick={togglePlay}
-        disabled={!canAutoplay}
-        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-inset transition-colors ${
-          canAutoplay
-            ? "bg-accent text-white ring-accent hover:bg-accent-ink"
-            : "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200"
-        }`}
-        aria-label={playing ? "Pause timeline" : "Play timeline"}
-        title={
-          canAutoplay
-            ? playing
-              ? "Pause"
-              : "Play"
-            : "Autoplay off (reduced motion)"
-        }
-      >
-        {playing ? (
+      <div className="flex shrink-0 items-center gap-1.5">
+        <StepButton
+          onClick={() => prevMajor !== undefined && setIndex(prevMajor)}
+          disabled={prevMajor === undefined}
+          label="Previous major event"
+        >
           <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-            <rect x="3.5" y="2.5" width="3.2" height="11" rx="1" />
-            <rect x="9.3" y="2.5" width="3.2" height="11" rx="1" />
+            <rect x="3" y="3" width="2" height="10" rx="1" />
+            <path d="M13 3.4 6.8 8 13 12.6z" />
           </svg>
-        ) : (
+        </StepButton>
+        <StepButton
+          onClick={() => setIndex(Math.max(0, index - 1))}
+          disabled={index <= 0}
+          label="Previous entry"
+        >
           <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-            <path d="M4.5 2.8v10.4a.8.8 0 0 0 1.22.68l8.3-5.2a.8.8 0 0 0 0-1.36l-8.3-5.2A.8.8 0 0 0 4.5 2.8Z" />
+            <path d="M10.5 3.4 4.3 8l6.2 4.6z" />
           </svg>
-        )}
-      </button>
+        </StepButton>
+        <button
+          type="button"
+          onClick={togglePlay}
+          disabled={!canAutoplay}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-inset transition-colors ${
+            canAutoplay
+              ? "bg-accent text-white ring-accent hover:bg-accent-ink"
+              : "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200"
+          }`}
+          aria-label={playing ? "Pause timeline" : "Play timeline"}
+          title={
+            canAutoplay
+              ? playing
+                ? "Pause"
+                : "Play"
+              : "Autoplay off (reduced motion)"
+          }
+        >
+          {playing ? (
+            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+              <rect x="3.5" y="2.5" width="3.2" height="11" rx="1" />
+              <rect x="9.3" y="2.5" width="3.2" height="11" rx="1" />
+            </svg>
+          ) : (
+            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+              <path d="M4.5 2.8v10.4a.8.8 0 0 0 1.22.68l8.3-5.2a.8.8 0 0 0 0-1.36l-8.3-5.2A.8.8 0 0 0 4.5 2.8Z" />
+            </svg>
+          )}
+        </button>
+        <StepButton
+          onClick={() => setIndex(Math.min(last, index + 1))}
+          disabled={index >= last}
+          label="Next entry"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+            <path d="M5.5 3.4 11.7 8 5.5 12.6z" />
+          </svg>
+        </StepButton>
+        <StepButton
+          onClick={() => nextMajor !== undefined && setIndex(nextMajor)}
+          disabled={nextMajor === undefined}
+          label="Next major event"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+            <path d="M3 3.4 9.2 8 3 12.6z" />
+            <rect x="11" y="3" width="2" height="10" rx="1" />
+          </svg>
+        </StepButton>
+      </div>
 
       <div className="min-w-0 flex-1">
         <input
