@@ -234,6 +234,81 @@ def _size_overweight(world: World, client_id: str, buy_sac: Optional[str],
     return round(amount, 2), (cash_t.sub_asset_class if cash_t else None)
 
 
+def _size_new_buy(world: World, client_id: str,
+                  buy_sac: Optional[str]) -> "tuple[float, Optional[str]]":
+    """Largest drift-safe opening position in an *unheld* name, fundable from idle cash and VERIFIED
+    against the mandate's ±2.0pp band by the same drift engine the swaps use. Bisects the amount
+    down until both the buy sleeve and the cash sleeve stay inside the band, so the figure is safe
+    by construction — never a breach. (0.0, None) ⇒ no drift-safe room (caller skips the buy)."""
+    mand = world.mandates.get(world.portfolio_of(client_id))
+    by_sac = {t.sub_asset_class: t for t in (mand.targets if mand else [])}
+    if not mand or buy_sac not in by_sac:
+        return 0.0, None  # can't drift-check an unknown sleeve → don't fabricate a buy
+    total = mand.total_chf or 1.0
+    cash_t = next((t for t in mand.targets
+                   if "cash" in (t.sub_asset_class or "").lower()
+                   or "money market" in (t.sub_asset_class or "").lower()), None)
+    if cash_t is None:
+        return 0.0, None  # no idle-cash sleeve to fund an additive buy
+    fund_sac = cash_t.sub_asset_class
+    # Candidate ceiling: a modest 1.5%-of-mandate "toe in the water". Then step it down until the
+    # authoritative drift check passes, so the math can never disagree with what we display.
+    amount = total * 0.015
+    for _ in range(8):
+        if amount < total * 0.001:  # below ~0.1% of mandate isn't worth surfacing
+            return 0.0, None
+        safe, _notes = _drift_after_swap(world, client_id, fund_sac, buy_sac, round(amount, 2))
+        if safe:
+            return round(amount, 2), fund_sac
+        amount *= 0.6
+    return 0.0, None
+
+
+def build_opportunity_proposal(world: World, client_id: str, opp: dict) -> Optional[StrategyProposal]:
+    """Turn a surfaced *unheld* DNA-aligned CIO BUY (from opportunities.build_opportunities) into a
+    first-class, RM-approvable BUY proposal — sized to stay inside the ±2.0pp mandate band — rather
+    than a passive list item. Proactive (news-independent) personalisation at the asset level, which
+    is exactly the mission (DeepDive p.4). Returns None when there's no drift-safe room to open it,
+    so a noisy or un-fundable idea never reaches the RM as a fake action."""
+    buy_sac = opp.get("sub_asset_class")
+    amount, fund_sac = _size_new_buy(world, client_id, buy_sac)
+    if amount <= 0:
+        return None
+    drift_safe, drift_notes = _drift_after_swap(world, client_id, fund_sac, buy_sac, amount)
+    if not drift_safe:  # belt-and-braces: never surface a drift-unsafe additive buy
+        return None
+
+    prov = [Provenance(**p) for p in opp.get("provenance", [])]
+    issuer = opp.get("issuer", "this name")
+    tag_str = ", ".join(opp.get("value_tags") or []) or "sentiment-positive"
+    # The opportunity pass already wrote a persona-correct one-liner (handling the "acceptable
+    # substitute" nuance for an averse client) — reuse it so the headline never misreads.
+    fit = opp.get("alignment_reason") or f"{issuer} fits the client's documented values."
+
+    swap = SwapProposal(
+        action="INCREASE", buy_isin=opp.get("isin"), buy_issuer=issuer,
+        industry_group=opp.get("industry_group"), same_sector=True,
+        amount_chf=amount, drift_safe=True,
+        **_buy_quote(opp.get("valor"), opp.get("mic")),
+        rationale=(f"Open a CHF {amount:,.0f} position in {issuer} by deploying idle {fund_sac} — a "
+                   f"proactive buy the client does not yet hold, kept within the ±2.0pp mandate band. "
+                   f"{fit}"),
+        provenance=prov,
+    )
+    return StrategyProposal(
+        client_id=client_id,
+        headline=f"New opportunity: {issuer} ({tag_str}).",
+        polarity="opportunity",
+        swaps=[swap],
+        constraints_checked=[
+            "Universe limited to CIO-approved names (BUY-rated).",
+            f"Proactive opportunity (news-independent), funded from idle {fund_sac} — additive BUY, "
+            f"no holding sold.", *drift_notes,
+        ],
+        provenance=prov,
+    )
+
+
 def build_strategy(world: World, client_id: str, match: Match) -> StrategyProposal:
     desired, avoid, fallback_sector = _prefs_for_match(match)
     affected = match.affected_holding
