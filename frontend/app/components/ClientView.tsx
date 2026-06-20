@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { ArrowLeft, CalendarClock, Info, Plus } from "lucide-react";
+import { ArrowLeft, CalendarClock, Plus } from "lucide-react";
 import type {
   Insights,
   Analytics,
@@ -369,16 +369,6 @@ export function ClientView({ clientId }: { clientId: string }) {
         {insights.life_events && insights.life_events.length > 0 && (
           <LifeEventBanner events={insights.life_events} />
         )}
-
-        {/* advisory-only banner — golden rule */}
-        <div className="mb-6 flex items-center gap-2 rounded-md bg-primary/10 px-4 py-2.5 text-sm text-primary ring-1 ring-inset ring-primary/20">
-          <Info className="h-4 w-4 shrink-0" aria-hidden />
-          <span>
-            <span className="font-semibold">Advisory only</span> — the RM
-            approves, the client decides. Nothing here is auto-executed or
-            auto-sent.
-          </span>
-        </div>
 
         {area === "capture" ? (
           <section>
