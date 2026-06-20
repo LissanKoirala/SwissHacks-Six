@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill, FigureCard, Expander, PolarityChip } from "./ui";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AlertCard } from "./AlertCard";
+import { AlertCard, groupMatchesByHeadline } from "./AlertCard";
 import { StrategyPanel } from "./StrategyPanel";
 import { DialoguePanel } from "./DialoguePanel";
 import { PortfolioView } from "./PortfolioView";
@@ -373,8 +373,11 @@ export function ClientView({ clientId }: { clientId: string }) {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {insights.matches.map((m) => (
-                      <AlertCard key={m.id} match={m} />
+                    {groupMatchesByHeadline(insights.matches).map((group) => (
+                      <AlertCard
+                        key={group.map((m) => m.id).join(":")}
+                        matches={group}
+                      />
                     ))}
                   </div>
                 )}

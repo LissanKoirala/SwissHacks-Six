@@ -14,6 +14,8 @@ function faviconFromUrl(url: string): string {
   }
 }
 
+const FAVICON_FILTER = "grayscale(1)";
+
 export function LinkPreviewThumb({
   url,
   className = "",
@@ -23,7 +25,7 @@ export function LinkPreviewThumb({
   url: string;
   className?: string;
   size?: "sm" | "md";
-  layout?: "icon" | "thumbnail";
+  layout?: "icon" | "thumbnail" | "thumbnail-stretch";
 }) {
   const [preview, setPreview] = useState<LinkPreview | null>(null);
   const [failed, setFailed] = useState(false);
@@ -42,10 +44,17 @@ export function LinkPreviewThumb({
   }, [url]);
 
   const dim = size === "sm" ? "h-14 w-14" : "h-20 w-20";
-  const iconDim = size === "sm" ? "h-5 w-5" : "h-7 w-7";
-  const frameClass =
-    layout === "thumbnail"
-      ? "h-auto w-40 max-w-[160px] shrink-0 aspect-video rounded-md"
+  const stretched = layout === "thumbnail-stretch";
+  const faviconDim = stretched
+    ? "h-10 w-10"
+    : size === "sm"
+      ? "h-6 w-6"
+      : "h-9 w-9";
+  const iconDim = faviconDim;
+  const frameClass = stretched
+    ? "relative h-full min-h-[5rem] w-auto shrink-0 aspect-video rounded-none rounded-r-md ring-0"
+    : layout === "thumbnail"
+      ? "h-auto w-56 max-w-[224px] shrink-0 aspect-video rounded-md"
       : `relative shrink-0 overflow-hidden rounded-lg bg-muted ring-1 ring-inset ring-border ${dim}`;
   const fallbackFavicon = preview?.favicon_url || faviconFromUrl(url);
   const showThumbnail =
@@ -54,14 +63,22 @@ export function LinkPreviewThumb({
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden bg-muted ring-1 ring-inset ring-border ${frameClass} ${className}`}
+      className={`relative shrink-0 overflow-hidden bg-muted ${
+        stretched
+          ? "border-l border-border/50"
+          : "ring-1 ring-inset ring-border"
+      } ${frameClass} ${className}`}
       aria-hidden
     >
       {showThumbnail ? (
         <img
           src={preview.image_url!}
           alt=""
-          className="h-full w-full object-cover"
+          className={
+            stretched
+              ? "absolute inset-0 h-full w-full object-cover"
+              : "h-full w-full object-cover"
+          }
           onError={() => setFailed(true)}
         />
       ) : showFavicon ? (
@@ -69,7 +86,8 @@ export function LinkPreviewThumb({
           <img
             src={fallbackFavicon}
             alt=""
-            className={`${iconDim} object-contain`}
+            className={`${faviconDim} object-contain`}
+            style={{ filter: FAVICON_FILTER }}
             onError={() => setFailed(true)}
           />
         </div>
