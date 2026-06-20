@@ -20,6 +20,19 @@ export function signedPp(value: number | null | undefined, decimals = 2): string
   return `${sign}${value.toFixed(decimals)}pp`;
 }
 
+export function price(
+  value: number | null | undefined,
+  ccy?: string | null,
+  decimals = 2
+): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const n = new Intl.NumberFormat("en-GB", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+  return ccy ? `${ccy} ${n}` : n;
+}
+
 export function prettyDate(iso?: string | null): string {
   if (!iso) return "";
   // Accept both date-only and full ISO timestamps.

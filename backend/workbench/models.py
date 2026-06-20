@@ -149,6 +149,14 @@ class Holding(BaseModel):
     valor: Optional[str] = None
     mic: Optional[str] = None
     yahoo: Optional[str] = None
+    # --- Live SIX enrichment (only when USE_LIVE=1 and the listing has data; additive,
+    # never feeds the deterministic valuation/drift math which stays on current_chf). ---
+    live_price: Optional[float] = None       # latest SIX EOD close, price per share
+    live_ccy: Optional[str] = None
+    live_ts: Optional[str] = None            # ISO timestamp of that close
+    live_change_pct: Optional[float] = None  # close vs open, same session
+    price_source: Optional[str] = None       # e.g. "SIX EOD"
+    six_ticker: Optional[str] = None         # SIX-resolved exchange ticker (listing_base)
 
 
 class MandateTarget(BaseModel):
@@ -221,6 +229,10 @@ class SwapProposal(BaseModel):
     amount_chf: float = 0.0
     rationale: str
     drift_safe: bool = True         # value-neutral swap within the same sub-asset-class
+    # Live SIX price of the BUY candidate (when available) — makes the proposal concrete.
+    buy_live_price: Optional[float] = None
+    buy_live_ccy: Optional[str] = None
+    buy_live_ts: Optional[str] = None
     provenance: list[Provenance] = Field(default_factory=list)
 
 

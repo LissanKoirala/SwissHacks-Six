@@ -6,13 +6,16 @@ from __future__ import annotations
 
 import json
 
-from .config import DATA_DIR, WORKBOOK_DIR
+from concurrent.futures import ThreadPoolExecutor
+
+from .config import DATA_DIR, WORKBOOK_DIR, settings
 from .agents.classifier import label_cio, to_news_item
 from .agents.profile_builder import build_profile
 from .graph.store import World
 from .ingestion.crm_xlsx import CRMWorkbookSource
 from .ingestion.news import EventRegistrySource, NewsFixtureSource
 from .ingestion.portfolio_xlsx import PortfolioWorkbookSource
+from .ingestion.six_mcp import enrich_listing
 from .models import Holding, Mandate, MandateTarget, MeetingLogEntry, Provenance
 
 
@@ -63,6 +66,7 @@ def build_world(use_live_news: bool = False) -> World:
             ))
 
     _finalise_mandates(world, mandate_targets)
+    _enrich_holdings_live(world)
 
     # --- News graph: classify once ---
     news_recs = NewsFixtureSource(DATA_DIR / "news_fixtures.json").fetch()
@@ -87,6 +91,38 @@ def build_world(use_live_news: bool = False) -> World:
         pass
 
     return world
+
+
+def _enrich_holdings_live(world: World) -> None:
+    """Layer live SIX prices + symbology onto holdings (A+C), opt-in via USE_LIVE=1.
+
+    Additive only: mutates the new live_* / identifier fields, never current_chf — the
+    deterministic drift/valuation engine is untouched. Runs in parallel and is disk-cached
+    (incl. negative results), so the one-time warm-up only ever happens once per listing.
+    No-op (instant) when SIX is disabled, so the offline demo path is unaffected."""
+    if not settings.six_enabled:
+        return
+    holdings = [h for hs in world.holdings.values() for h in hs]
+
+    # De-dupe by listing so the same name across mandates is fetched once (the disk cache
+    # would make repeats cheap anyway, but this also cuts cold-start network round-trips).
+    by_listing: dict[tuple, list[Holding]] = {}
+    for h in holdings:
+        by_listing.setdefault((h.valor, h.mic), []).append(h)
+
+    def _fetch(key: tuple) -> tuple:
+        try:
+            return key, enrich_listing(key[0], key[1])
+        except Exception:
+            return key, {}  # best-effort; never break the deterministic world
+
+    # Modest concurrency: the SIX endpoint rate-limits bursts into empty responses, so a
+    # smaller pool is both faster (fewer wasted retries) and more complete than a big one.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for key, fields in pool.map(_fetch, by_listing):
+            for h in by_listing[key]:
+                for k, v in fields.items():
+                    setattr(h, k, v)
 
 
 def _finalise_mandates(world: World, mandate_targets: dict) -> None:

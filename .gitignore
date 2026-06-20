@@ -6,6 +6,10 @@
 .env
 backend/.env
 frontend/.env.local
+demo/secrets/
+*.pem
+mcp_key
+CH56655-api2026hack22.zip
 
 # python
 __pycache__/

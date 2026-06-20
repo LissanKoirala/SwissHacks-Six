@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Portfolio } from "@/lib/types";
 import { api } from "@/lib/api";
-import { chf, pct, signedPp } from "@/lib/format";
+import { chf, pct, signedPp, price, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
 
 export function PortfolioView({
@@ -42,6 +42,15 @@ export function PortfolioView({
     );
   }
   if (!data) return null;
+
+  // Live SIX prices are present only in USE_LIVE mode and only for listings the dataset
+  // covers (mostly US lines); the column degrades to "—" otherwise.
+  const hasLive = data.holdings.some((h) => h.live_price != null);
+  const latestLiveTs = data.holdings
+    .map((h) => h.live_ts)
+    .filter(Boolean)
+    .sort()
+    .pop();
 
   // Drop the summary/TOTAL pseudo-rows that aren't real asset sleeves.
   const targets = data.mandate.targets.filter(
@@ -129,10 +138,23 @@ export function PortfolioView({
 
       {/* Holdings table */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Holdings · {data.holdings.length}
           </p>
+          {hasLive && (
+            <span
+              className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+              title={
+                latestLiveTs
+                  ? `Latest SIX close ${prettyDate(latestLiveTs)}`
+                  : "Live SIX prices"
+              }
+            >
+              ● SIX live
+              {latestLiveTs ? ` · ${prettyDate(latestLiveTs)}` : ""}
+            </span>
+          )}
         </div>
         <div className="scroll-thin max-h-[28rem] overflow-auto">
           <table className="w-full text-sm">
@@ -141,6 +163,9 @@ export function PortfolioView({
                 <th className="px-4 py-2 font-medium">Issuer</th>
                 <th className="px-4 py-2 font-medium">Industry group</th>
                 <th className="px-4 py-2 font-medium">Sub-asset class</th>
+                {hasLive && (
+                  <th className="px-4 py-2 text-right font-medium">Live (SIX)</th>
+                )}
                 <th className="px-4 py-2 text-right font-medium">Value</th>
               </tr>
             </thead>
@@ -172,6 +197,7 @@ export function PortfolioView({
                           )}
                           <div className="font-mono text-[11px] text-slate-400">
                             {h.isin}
+                            {h.six_ticker ? ` · ${h.six_ticker}` : ""}
                           </div>
                         </div>
                       </div>
@@ -182,6 +208,40 @@ export function PortfolioView({
                     <td className="px-4 py-2 text-slate-500">
                       {h.sub_asset_class.trim()}
                     </td>
+                    {hasLive && (
+                      <td className="px-4 py-2 text-right tabular-nums">
+                        {h.live_price != null ? (
+                          <div className="flex flex-col items-end leading-tight">
+                            <span
+                              className="text-ink-soft"
+                              title={
+                                h.live_ts
+                                  ? `${h.price_source ?? "SIX"} · ${prettyDate(
+                                      h.live_ts
+                                    )}`
+                                  : h.price_source ?? "SIX"
+                              }
+                            >
+                              {price(h.live_price, h.live_ccy)}
+                            </span>
+                            {h.live_change_pct != null && (
+                              <span
+                                className={`text-[11px] ${
+                                  h.live_change_pct >= 0
+                                    ? "text-emerald-600"
+                                    : "text-rose-600"
+                                }`}
+                              >
+                                {h.live_change_pct >= 0 ? "▲" : "▼"}{" "}
+                                {pct(Math.abs(h.live_change_pct), 2)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
                       {chf(h.current_chf)}
                     </td>

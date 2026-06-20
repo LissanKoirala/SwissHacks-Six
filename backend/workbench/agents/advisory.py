@@ -21,7 +21,17 @@ from ..models import (
     SwapProposal,
 )
 from ..topics import topic_label
+from ..ingestion.six_mcp import live_quote
 from . import llm
+
+
+def _buy_quote(valor: Optional[str], mic: Optional[str]) -> dict:
+    """Live SIX price of a BUY candidate, as SwapProposal kwargs (B). Empty when off/unavailable."""
+    q = live_quote(valor, mic)
+    if not q.get("price"):
+        return {}
+    return {"buy_live_price": q["price"], "buy_live_ccy": q.get("currency"),
+            "buy_live_ts": q.get("timestamp")}
 
 # Topic -> (value tags we want in a swap target, tags that disqualify, fallback sector)
 TOPIC_PREFERENCES = {
@@ -160,6 +170,7 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
                 same_sector=same_sector,
                 amount_chf=round(affected.current_chf, 2),
                 drift_safe=drift_safe,
+                **_buy_quote(cand.valor, cand.mic),
                 rationale=(
                     f"Divest {affected.issuer}{sell_view}: the trigger directly violates the client's "
                     f"documented stance on {_topic_labels(match)}. Reinvest CHF {affected.current_chf:,.0f} "
@@ -199,6 +210,7 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
                 buy_isin=affected.isin, buy_issuer=affected.issuer,
                 industry_group=affected.industry_group, same_sector=same_sector,
                 amount_chf=amount, drift_safe=drift_safe,
+                **_buy_quote(affected.valor, affected.mic),
                 rationale=(
                     f"{affected.issuer} (CIO: {rating}) just demonstrated exactly the leadership this client "
                     f"rewards on {_topic_labels(match)}. Rotate CHF {amount:,.0f} from {laggard.issuer} "
@@ -237,6 +249,7 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
             swaps.append(SwapProposal(
                 action="SWAP", buy_isin=cand.isin, buy_issuer=cand.issuer,
                 industry_group=sector, same_sector=True, amount_chf=0.0, drift_safe=True,
+                **_buy_quote(cand.valor, cand.mic),
                 rationale=(
                     f"If the mandate forces {sector} exposure, route it through {cand.issuer} (CIO BUY) — the "
                     f"tangible-hardware name the client explicitly respects — rather than abstract US mega-cap "
