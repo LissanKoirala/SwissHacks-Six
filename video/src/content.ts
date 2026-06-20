@@ -1,0 +1,69 @@
+// Real product output, extracted from the backend over the seed book
+// (get_insights / build_risk_timeline). Kept here so the pitch shows the
+// product's actual generated text and numbers — not invented copy.
+
+export const BRAND = {
+  name: "Everyone's a Billionaire",
+  credit: "SwissHacks · SIX / Noumena / NTT DATA",
+};
+
+export const DESK: {
+  name: string;
+  mandate: string;
+  alerts: number;
+  polarity: "conflict" | "opportunity";
+  note: string;
+}[] = [
+  { name: "Hubertus Schneider", mandate: "Balanced", alerts: 3, polarity: "conflict", note: "Biogen conflicts with his neuro-research stance" },
+  { name: "Julian Ammann", mandate: "Growth", alerts: 3, polarity: "conflict", note: "PDD Holdings — labour-governance scandal" },
+  { name: "Eugen Räber", mandate: "Defensive", alerts: 3, polarity: "conflict", note: "Signal pushes into US mega-cap tech he avoids" },
+  { name: "Marius Huber", mandate: "Defensive", alerts: 2, polarity: "opportunity", note: "Unilever acts on deforestation — values-aligned" },
+];
+
+export const SCHNEIDER = {
+  name: "Hubertus Schneider",
+  mandate: "Balanced",
+  alert: {
+    polarity: "conflict" as const,
+    text:
+      "Biogen Inc. puts a holding in conflict with this client's stance on Neurodegenerative research.",
+    source: "esg:biogen-cut",
+  },
+  swap: {
+    action: "SWAP",
+    sell: "Biogen Inc.",
+    buy: "Eli Lilly & Co.",
+    amount: "CHF 101,097",
+    rationale:
+      "Divest Biogen (CIO: HOLD) — the trigger violates his documented stance on neurodegenerative research. Reinvest into Eli Lilly (CIO: BUY), a same-sector name labelled neuro-research-commitment — keeps the sector weight, upgrades the values fit at comparable risk.",
+    constraints: [
+      "CIO-approved names only",
+      "Same sector · Health Care",
+      "Risk-matched · 19% → 22% vol",
+      "Drift-neutral · within ±2.0pp",
+    ],
+    source: "cio_list",
+  },
+  dialogue: {
+    style:
+      "Empathetic and mission-driven. Hubertus is an analytical automotive CEO, but since his daughter Chloe's diagnosis his decisions are driven by purpose. Lead with the human stake, then the facts.",
+    draft:
+      "Dear Schneider, a development needs your attention: Biogen to wind down its neurodegenerative research division, pivoting to higher-margin therapeutics. Because it touches your stance and a current holding, I have prepared a same-sector, CIO-approved option that keeps your strategy intact while restoring the values fit.",
+    points: [
+      "Connects to what Hubertus told us about neurodegenerative research.",
+      "Directly affects a current holding: Biogen Inc. (CHF 101,097).",
+    ],
+  },
+  risk: {
+    scores: [
+      0.62, 0.41, 0.34, 0.34, 0.27, 0.27, 0.34, 0.27, 0.2, 0.05, 0.05, 0.05,
+      0.05, 0.05, 0.05, 0.05, 0.05, 0.12, 0.12, 0.19, 0.19, 0.19, 0.19, 0.19,
+      0.19, 0.19,
+    ],
+    baseline: 0.55,
+    band: [0.43, 0.67] as [number, number],
+    from: "Apr 2023",
+    to: "May 2026",
+    fit: "cautious-drift",
+  },
+};

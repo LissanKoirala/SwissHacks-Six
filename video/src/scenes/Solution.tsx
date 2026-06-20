@@ -16,7 +16,7 @@ export const SolutionScene: React.FC<{ dur: number }> = ({ dur }) => (
   <Stage dur={dur} kicker="The solution">
     <Appear at={8}>
       <Headline size={74}>
-        A living client profile that <HL>watches the world</HL> for each client.
+        Give every client the <HL>billionaire treatment</HL>.
       </Headline>
     </Appear>
 
@@ -39,7 +39,8 @@ export const SolutionScene: React.FC<{ dur: number }> = ({ dur }) => (
 
     <Appear at={64} style={{ marginTop: 48 }}>
       <Sub style={{ fontSize: 34 }}>
-        Within the mandate. <strong style={{ color: COLORS.ink, fontWeight: 600 }}>The RM approves. The client decides.</strong>
+        The workbench watches the world for each client — the RM gives undivided attention.{" "}
+        <strong style={{ color: COLORS.ink, fontWeight: 600 }}>The RM approves. The client decides.</strong>
       </Sub>
     </Appear>
   </Stage>

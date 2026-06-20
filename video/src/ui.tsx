@@ -245,9 +245,88 @@ export const Wordmark: React.FC = () => (
   >
     <span style={{ width: 16, height: 16, borderRadius: 5, background: COLORS.primary }} />
     <span style={{ fontSize: 24, fontWeight: 700, color: COLORS.ink, letterSpacing: "-0.01em" }}>
-      Advisory Workbench
+      Everyone&rsquo;s a Billionaire
     </span>
   </div>
+);
+
+// Product-fidelity bits — mirror the real dashboard components.
+const POLARITY: Record<string, { bg: string; fg: string; label: string }> = {
+  conflict: { bg: "#fde8e9", fg: COLORS.destructive, label: "Conflict" },
+  opportunity: { bg: "#e7f6ee", fg: COLORS.success, label: "Opportunity" },
+  neutral: { bg: "#f5f5f5", fg: COLORS.inkSoft, label: "Neutral" },
+};
+
+export const PolarityChip: React.FC<{ polarity: string }> = ({ polarity }) => {
+  const p = POLARITY[polarity] ?? POLARITY.neutral;
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 9,
+        padding: "8px 16px",
+        borderRadius: 999,
+        background: p.bg,
+        color: p.fg,
+        fontSize: 24,
+        fontWeight: 600,
+      }}
+    >
+      <span style={{ width: 10, height: 10, borderRadius: 999, background: p.fg }} />
+      {p.label}
+    </span>
+  );
+};
+
+export const Avatar: React.FC<{ name: string; size?: number }> = ({ name, size = 56 }) => {
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("");
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 999,
+        background: COLORS.primarySubtle,
+        color: COLORS.primary,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: size * 0.38,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {initials}
+    </span>
+  );
+};
+
+export const MetaChip: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "8px 16px",
+      borderRadius: 999,
+      background: "#f5f5f5",
+      color: COLORS.inkSoft,
+      boxShadow: `inset 0 0 0 1.5px ${COLORS.border}`,
+      fontSize: 22,
+      fontWeight: 500,
+    }}
+  >
+    {children}
+  </span>
+);
+
+export const Mono: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span style={{ fontFamily: MONO, fontSize: 22, color: COLORS.inkSoft }}>{children}</span>
 );
 
 /* ------------------------------------------------------------------ stage --- */

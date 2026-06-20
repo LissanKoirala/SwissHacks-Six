@@ -30,10 +30,10 @@ export const PipelineScene: React.FC<{ dur: number }> = ({ dur }) => {
   const frame = useCurrentFrame();
   const NODE_AT = [18, 48, 78, 108, 138];
   return (
-    <Stage dur={dur} kicker="How it works">
+    <Stage dur={dur} kicker="How it scales">
       <Appear at={8}>
         <Headline size={72}>
-          Classify once. <HL>Match for free</HL>. Reason only on the real hits.
+          One RM. The whole book. <HL>Undivided attention</HL>.
         </Headline>
       </Appear>
 
@@ -68,8 +68,8 @@ export const PipelineScene: React.FC<{ dur: number }> = ({ dur }) => {
 
       <Appear at={158} style={{ marginTop: 8 }}>
         <div style={{ fontSize: 30, color: COLORS.inkSoft }}>
-          A match is a <strong style={{ color: COLORS.ink, fontWeight: 600 }}>shared topic node</strong> — an
-          index lookup, never an LLM call per client.
+          Classify once, <strong style={{ color: COLORS.ink, fontWeight: 600 }}>match for free</strong> — the
+          cost stays flat as the book grows. Add a client without taking attention from the rest.
         </div>
       </Appear>
     </Stage>
