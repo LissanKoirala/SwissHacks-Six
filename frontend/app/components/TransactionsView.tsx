@@ -29,19 +29,19 @@ function FigureCard({
 }) {
   const toneCls =
     tone === "green"
-      ? "text-emerald-600"
+      ? "text-success"
       : tone === "red"
-      ? "text-rose-600"
-      : "text-ink";
+      ? "text-destructive"
+      : "text-foreground";
   return (
     <div className="card px-4 py-3.5">
       <p className={`text-2xl font-semibold tabular-nums leading-none ${toneCls}`}>
         {value}
       </p>
       {sub && (
-        <p className="mt-1 text-xs tabular-nums text-slate-400">{sub}</p>
+        <p className="mt-1 text-xs tabular-nums text-muted-foreground">{sub}</p>
       )}
-      <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+      <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
     </div>
@@ -57,8 +57,8 @@ function SideChip({ side }: { side: string }) {
     <span
       className={`chip ring-1 ring-inset ${
         sell
-          ? "bg-rose-50 text-rose-700 ring-rose-200"
-          : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+          ? "bg-destructive/10 text-destructive ring-destructive/20"
+          : "bg-success/10 text-success ring-success/20"
       }`}
     >
       {s}
@@ -108,11 +108,11 @@ export function TransactionsView({ clientId }: { clientId: string }) {
   }, [data]);
 
   if (loading) {
-    return <p className="p-5 text-sm text-slate-500">Loading transactions…</p>;
+    return <p className="p-5 text-sm text-muted-foreground">Loading transactions…</p>;
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600">
+      <p className="p-5 text-sm text-destructive">
         Could not load transactions: {error}
       </p>
     );
@@ -125,10 +125,10 @@ export function TransactionsView({ clientId }: { clientId: string }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="text-base font-semibold text-ink">
+        <h3 className="text-base font-semibold text-foreground">
           {data.portfolio} ledger
         </h3>
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-muted-foreground">
           {s.txn_count} transactions · {s.buy_count} buy · {s.sell_count} sell
         </span>
       </div>
@@ -163,15 +163,15 @@ export function TransactionsView({ clientId }: { clientId: string }) {
 
       {/* 2. Positions · cost basis vs market ----------------------------- */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Positions · cost basis vs market
           </p>
         </div>
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+              <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-2 font-medium">Issuer</th>
                 <th className="px-4 py-2 text-right font-medium">Units</th>
                 <th className="px-4 py-2 text-right font-medium">Cost basis</th>
@@ -183,33 +183,33 @@ export function TransactionsView({ clientId }: { clientId: string }) {
             <tbody>
               {positions.map((p, i) => {
                 const pnlCls =
-                  p.unrealised_pnl_chf >= 0 ? "text-emerald-600" : "text-rose-600";
+                  p.unrealised_pnl_chf >= 0 ? "text-success" : "text-destructive";
                 return (
                   <tr
                     key={`${p.isin}-${i}`}
-                    className="border-t border-slate-100 hover:bg-slate-50"
+                    className="border-t border-border/60 hover:bg-muted/50"
                   >
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2">
                         <IssuerLogo issuer={p.issuer} isin={p.isin} size="sm" />
                         <div>
-                          <span className="font-medium text-ink">{p.issuer}</span>
+                          <span className="font-medium text-foreground">{p.issuer}</span>
                           {p.provenance && (
                             <ProvenanceTag prov={p.provenance} label="src" />
                           )}
-                          <div className="font-mono text-[11px] text-slate-400">
+                          <div className="font-mono text-[11px] text-muted-foreground">
                             {p.isin}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
+                    <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
                       {p.units != null ? p.units.toLocaleString("en-GB") : "—"}
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
+                    <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
                       {chf(p.cost_basis_chf)}
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
+                    <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
                       {chf(p.current_chf)}
                     </td>
                     <td className={`px-4 py-2 text-right tabular-nums font-medium ${pnlCls}`}>
@@ -222,7 +222,7 @@ export function TransactionsView({ clientId }: { clientId: string }) {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-slate-500">
+                    <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
                       {p.holding_period_days != null
                         ? `${p.holding_period_days.toLocaleString("en-GB")}d`
                         : p.first_buy
@@ -239,15 +239,15 @@ export function TransactionsView({ clientId }: { clientId: string }) {
 
       {/* 3. Transaction history ------------------------------------------ */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Transaction history · {s.txn_count}
           </p>
         </div>
         <div className="scroll-thin max-h-[28rem] overflow-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-white">
-              <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+            <thead className="sticky top-0 bg-card">
+              <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="px-4 py-2 font-medium">Date</th>
                 <th className="px-4 py-2 font-medium">Side</th>
                 <th className="px-4 py-2 font-medium">Issuer</th>
@@ -261,9 +261,9 @@ export function TransactionsView({ clientId }: { clientId: string }) {
               {transactions.map((t, i) => (
                 <tr
                   key={`${t.transaction_id}-${i}`}
-                  className="border-t border-slate-100 align-top hover:bg-slate-50"
+                  className="border-t border-border/60 align-top hover:bg-muted/50"
                 >
-                  <td className="px-4 py-2 whitespace-nowrap tabular-nums text-ink-soft">
+                  <td className="px-4 py-2 whitespace-nowrap tabular-nums text-foreground/80">
                     {prettyDate(t.timestamp)}
                   </td>
                   <td className="px-4 py-2">
@@ -273,23 +273,23 @@ export function TransactionsView({ clientId }: { clientId: string }) {
                     <div className="flex items-center gap-2">
                       <IssuerLogo issuer={t.issuer} isin={t.isin} size="sm" />
                       <div>
-                        <span className="font-medium text-ink">{t.issuer}</span>
-                        <div className="font-mono text-[11px] text-slate-400">
+                        <span className="font-medium text-foreground">{t.issuer}</span>
+                        <div className="font-mono text-[11px] text-muted-foreground">
                           {t.isin}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
+                  <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
                     {t.quantity != null ? t.quantity.toLocaleString("en-GB") : "—"}
                   </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
+                  <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
                     {t.price_chf != null ? price(t.price_chf, "CHF") : "—"}
                   </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
+                  <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
                     {chf(t.amount_chf)}
                   </td>
-                  <td className="px-4 py-2 text-ink-soft">
+                  <td className="px-4 py-2 text-foreground/80">
                     {t.rationale ? (
                       <span className="inline-flex flex-wrap items-baseline gap-x-1">
                         <span className="max-w-md whitespace-normal break-words">
@@ -302,7 +302,7 @@ export function TransactionsView({ clientId }: { clientId: string }) {
                     ) : t.provenance ? (
                       <ProvenanceTag prov={t.provenance} label="src" />
                     ) : (
-                      <span className="text-slate-300">—</span>
+                      <span className="text-muted-foreground/60">—</span>
                     )}
                   </td>
                 </tr>
@@ -314,17 +314,17 @@ export function TransactionsView({ clientId }: { clientId: string }) {
 
       {/* 4. Cash flows --------------------------------------------------- */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Cash flows · {cashflows.length}
           </p>
         </div>
         {cashflows.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-slate-400">
+          <p className="px-4 py-6 text-sm text-muted-foreground">
             No cash flows recorded.
           </p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-border/60">
             {cashflows.map((c, i) => {
               const inflow = c.amount_chf >= 0;
               return (
@@ -332,19 +332,19 @@ export function TransactionsView({ clientId }: { clientId: string }) {
                   key={`${c.flow_id}-${i}`}
                   className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm"
                 >
-                  <span className="whitespace-nowrap tabular-nums text-ink-soft">
+                  <span className="whitespace-nowrap tabular-nums text-foreground/80">
                     {prettyDate(c.timestamp)}
                   </span>
                   <SideChip side={c.side} />
                   {c.rationale && (
-                    <span className="text-ink-soft">{c.rationale}</span>
+                    <span className="text-foreground/80">{c.rationale}</span>
                   )}
                   {c.provenance && (
                     <ProvenanceTag prov={c.provenance} label="src" />
                   )}
                   <span
                     className={`ml-auto tabular-nums font-medium ${
-                      inflow ? "text-emerald-600" : "text-rose-600"
+                      inflow ? "text-success" : "text-destructive"
                     }`}
                   >
                     {inflow ? "+" : "−"}

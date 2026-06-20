@@ -2,6 +2,8 @@
 Renders the orchestrator's output; nothing here makes decisions."""
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -216,7 +218,7 @@ def create_app() -> FastAPI:
         return {"text": text, "provider": settings.ocr_provider, "model": settings.phoeniqs_ocr_model}
 
     @app.post("/api/transcribe")
-    async def transcribe_audio(file: UploadFile = File(...), language: str | None = Form(default=None)):
+    async def transcribe_audio(file: UploadFile = File(...), language: Optional[str] = Form(default=None)):
         # The frontend records via MediaRecorder and POSTs the blob. Provider is
         # swappable in agents/transcribe.py — route stays identical.
         from ..agents.transcribe import TranscribeError, get_transcriber
