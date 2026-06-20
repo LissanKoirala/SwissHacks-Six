@@ -29,6 +29,7 @@ import type {
   TransactionsData,
   RMQueryBody,
   RMQueryResult,
+  MatchResolution,
   LinkPreview,
   MeUser,
   BriefingPrefsBody,
@@ -155,6 +156,12 @@ export const api = {
     post<CaptureFollowup>(`/clients/${id}/capture/followup`, body),
   query: (id: string, body: RMQueryBody) =>
     post<RMQueryResult>(`/clients/${id}/query`, body),
+  matchResolution: (id: string, matchId: string, holdingIsin?: string | null, refresh = false) =>
+    post<MatchResolution>(`/clients/${id}/matches/resolution`, {
+      match_id: matchId,
+      holding_isin: holdingIsin ?? null,
+      refresh,
+    }),
   linkPreview: (url: string) =>
     get<LinkPreview>(`/api/link-preview?url=${encodeURIComponent(url)}`),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),

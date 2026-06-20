@@ -442,6 +442,13 @@ class RMQueryRequest(BaseModel):
     exclude_isin: Optional[str] = None
 
 
+class MatchResolutionRequest(BaseModel):
+    """On-demand resolution draft for a single match (map holding popover)."""
+    match_id: str
+    holding_isin: Optional[str] = None
+    refresh: bool = False
+
+
 class ClientSummary(BaseModel):
     client_id: str
     name: str

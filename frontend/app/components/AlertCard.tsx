@@ -1,7 +1,9 @@
 "use client";
 
-import { ChevronRight, Hash, MessageSquareQuote, Newspaper } from "lucide-react";
-import type { Match, SourceType } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, ChevronRight, Hash, Loader2, MessageSquareQuote, Newspaper, Sparkles } from "lucide-react";
+import type { Match, MatchResolution, SourceType, Swap } from "@/lib/types";
+import { api } from "@/lib/api";
 import { chf, prettyDate, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { IssuerLogo } from "./IssuerLogo";
@@ -55,6 +57,12 @@ function WhySurfacedContent({ match }: { match: Match }) {
       ))}
     </div>
   );
+}
+
+/** CRM log excerpt vs news excerpt — used in alert cards and map holding popovers. */
+export function MatchCrmNewsContrast({ match }: { match: Match }) {
+  if (match.shared_topics.length === 0) return null;
+  return <WhySurfacedContent match={match} />;
 }
 
 function NewsPreview({ match }: { match: Match }) {
@@ -171,6 +179,296 @@ function sortMatchesByRecency(matches: Match[]): Match[] {
     (a, b) =>
       new Date(b.news.published_at).getTime() -
       new Date(a.news.published_at).getTime()
+  );
+}
+
+/** Best alert for a specific held position — direct issuer/conflict first, else thematic. */
+export function pickPrimaryMatchForHolding(
+  matches: Match[],
+  holdingIsin: string,
+): Match {
+  const direct = matches.filter(
+    (m) =>
+      m.affected_holding?.isin === holdingIsin ||
+      m.news.issuer_isin === holdingIsin,
+  );
+  if (direct.length > 0) return sortMatchesByRecency(direct)[0];
+  return sortMatchesByRecency(matches)[0];
+}
+
+/** Advisory matches tied to a held position (by ISIN). */
+export function matchesForHoldingIsin(isin: string, matches: Match[]): Match[] {
+  return sortMatchesByRecency(
+    matches.filter((m) => m.affected_holding?.isin === isin),
+  );
+}
+
+/** Map each held ISIN to advisory matches (direct + map story links). */
+export function buildHoldingAdvisoryIndex(
+  holdings: { id: string; isin: string }[],
+  matches: Match[],
+  stories: { id: string; linked_holding_ids: string[] }[],
+): Map<string, Match[]> {
+  const map = new Map<string, Match[]>();
+  const add = (isin: string, match: Match) => {
+    if (!map.has(isin)) map.set(isin, []);
+    const list = map.get(isin)!;
+    if (!list.some((m) => m.id === match.id)) list.push(match);
+  };
+
+  for (const m of matches) {
+    if (m.affected_holding?.isin) add(m.affected_holding.isin, m);
+    if (m.news.issuer_isin) add(m.news.issuer_isin, m);
+  }
+
+  for (const story of stories) {
+    const newsId = story.id.replace(/^(event|news):/, "");
+    const storyMatch = matches.find((m) => m.news.id === newsId);
+    if (!storyMatch) continue;
+    for (const hid of story.linked_holding_ids) {
+      const h = holdings.find((x) => x.id === hid);
+      if (h) add(h.isin, storyMatch);
+    }
+  }
+
+  for (const [isin, list] of map) {
+    map.set(isin, sortMatchesByRecency(list));
+  }
+  return map;
+}
+
+function SwapResolutionCard({ swap }: { swap: Swap }) {
+  if (swap.action === "HOLD" && !swap.sell_issuer && !swap.buy_issuer) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-md border border-border bg-card p-2.5">
+      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-foreground">
+        {swap.sell_issuer ? (
+          <>
+            <IssuerLogo issuer={swap.sell_issuer} isin={swap.sell_isin} size="sm" />
+            <span>{swap.sell_issuer}</span>
+          </>
+        ) : null}
+        {swap.sell_issuer && swap.buy_issuer ? (
+          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        ) : null}
+        {swap.buy_issuer ? (
+          <>
+            <IssuerLogo issuer={swap.buy_issuer} isin={swap.buy_isin} size="sm" />
+            <span>{swap.buy_issuer}</span>
+          </>
+        ) : null}
+        {swap.amount_chf > 0 ? (
+          <span className="ml-auto tabular-nums text-muted-foreground">{chf(swap.amount_chf)}</span>
+        ) : null}
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{swap.rationale}</p>
+      {swap.substitution?.vol_sell != null && swap.substitution?.vol_buy != null ? (
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Vol match: {(swap.substitution.vol_sell * 100).toFixed(0)}% →{" "}
+          {(swap.substitution.vol_buy * 100).toFixed(0)}%
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** On-demand resolution draft (deterministic substitution + optional small-model summary). */
+export function ResolutionSuggestion({
+  clientId,
+  matchId,
+  holdingIsin,
+}: {
+  clientId: string;
+  matchId: string;
+  holdingIsin: string;
+}) {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [resolution, setResolution] = useState<MatchResolution | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const requestSeq = useRef(0);
+
+  useEffect(() => {
+    requestSeq.current += 1;
+    setState("idle");
+    setResolution(null);
+    setError(null);
+  }, [clientId, matchId, holdingIsin]);
+
+  const load = async (refresh = false) => {
+    const seq = ++requestSeq.current;
+    setState("loading");
+    setError(null);
+    try {
+      const data = await api.matchResolution(clientId, matchId, holdingIsin, refresh);
+      if (seq !== requestSeq.current) return;
+      if (data.match_id !== matchId) {
+        throw new Error("Resolution returned the wrong match — try again.");
+      }
+      if (data.holding_isin && data.holding_isin !== holdingIsin) {
+        throw new Error("Resolution returned the wrong holding — try again.");
+      }
+      setResolution(data);
+      setState("done");
+    } catch (e) {
+      if (seq !== requestSeq.current) return;
+      setError(e instanceof Error ? e.message : "Could not load resolution");
+      setState("error");
+    }
+  };
+
+  const swap = resolution?.strategy_proposal.swaps.find(
+    (s) =>
+      s.action !== "HOLD" ||
+      s.sell_issuer ||
+      s.buy_issuer ||
+      (s.amount_chf ?? 0) > 0,
+  ) ?? null;
+
+  return (
+    <div className="border-t border-border pt-3">
+      {state === "idle" ? (
+        <button
+          type="button"
+          onClick={() => load()}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          Suggest a resolution
+        </button>
+      ) : null}
+
+      {state === "loading" ? (
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+          Drafting a CIO-approved substitution…
+        </p>
+      ) : null}
+
+      {state === "error" ? (
+        <div className="space-y-2">
+          <p className="text-xs text-destructive">{error}</p>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
+
+      {state === "done" && resolution ? (
+        <div className="space-y-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Suggested resolution
+            </p>
+            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              {resolution.source === "llm" ? "AI draft" : "Deterministic"}
+            </span>
+          </div>
+          <p className="text-sm leading-relaxed text-foreground">{resolution.summary}</p>
+          {swap ? <SwapResolutionCard swap={swap} /> : null}
+          <button
+            type="button"
+            onClick={() => load(true)}
+            className="text-[11px] font-medium text-muted-foreground hover:text-primary hover:underline"
+          >
+            Refresh draft
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Condensed alert summary for map holding popovers. */
+export function CondensedMatchPreview({
+  clientId,
+  holdingIsin,
+  matches,
+}: {
+  clientId: string;
+  holdingIsin: string;
+  matches: Match[];
+}) {
+  if (matches.length === 0) return null;
+  const primary = pickPrimaryMatchForHolding(matches, holdingIsin);
+  const { news } = primary;
+  const sourceUrl = news.url ?? news.provenance.url ?? null;
+  const signalTypes = Array.from(
+    new Set(
+      matches
+        .map((m) => m.news.signal_type)
+        .filter((t): t is string => !!t && t !== "news"),
+    ),
+  );
+  const reasonLabel =
+    primary.polarity === "conflict"
+      ? "Reason for conflict"
+      : primary.polarity === "opportunity"
+        ? "Why this is an opportunity"
+        : "Why this surfaced";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <PolarityChip polarity={primary.polarity} />
+        {signalTypes.map((type) => (
+          <SourceBadge key={type} type={type as SourceType} />
+        ))}
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {reasonLabel}
+        </p>
+        <p className="text-sm font-semibold leading-snug text-foreground">
+          {primary.headline}
+        </p>
+      </div>
+
+      <MatchCrmNewsContrast match={primary} />
+
+      <div className="rounded-md bg-muted/40 p-2.5">
+        <p className="text-xs font-medium leading-snug text-foreground">
+          {news.title}
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+          <span className="font-medium text-foreground/80">{news.source}</span>
+          <span className="font-mono tabular-nums">{prettyDate(news.published_at)}</span>
+          <SentimentChip label={news.sentiment.label} />
+        </div>
+      </div>
+
+      {matches.length > 1 ? (
+        <p className="text-[11px] text-muted-foreground">
+          {matches.length} related alert{matches.length === 1 ? "" : "s"} for this
+          holding
+        </p>
+      ) : null}
+
+      {sourceUrl ? (
+        <a
+          href={sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-xs font-medium text-primary hover:underline"
+        >
+          Read source article →
+        </a>
+      ) : null}
+
+      <ResolutionSuggestion
+        key={`${holdingIsin}:${primary.id}`}
+        clientId={clientId}
+        matchId={primary.id}
+        holdingIsin={holdingIsin}
+      />
+    </div>
   );
 }
 

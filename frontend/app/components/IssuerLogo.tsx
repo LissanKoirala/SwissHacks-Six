@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { issuerInitials, issuerLogoSources } from "@/lib/assets";
 
 export function IssuerLogo({
@@ -18,6 +18,11 @@ export function IssuerLogo({
 }) {
   const sources = issuerLogoSources({ isin, issuer, yahoo });
   const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    setIdx(0);
+  }, [isin, issuer, yahoo]);
+
   const exhausted = sources.length === 0 || idx >= sources.length;
   const src = exhausted ? null : sources[idx];
   const initials = issuerInitials(issuer);
@@ -35,6 +40,8 @@ export function IssuerLogo({
           src={src}
           alt=""
           className="h-full w-full object-contain p-0.5"
+          referrerPolicy="no-referrer"
+          loading="lazy"
           onError={() => setIdx((i) => i + 1)}
         />
       ) : (

@@ -414,9 +414,8 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
         swaps.append(SwapProposal(
             action="HOLD", same_sector=True, drift_safe=True, industry_group=sector,
             rationale=(
-                "Do NOT execute the rotation as recommended: it sells down the defensive staples/healthcare "
-                "the client explicitly values to buy exactly the abstract US tech/AI exposure he has repeatedly "
-                "rejected. Keep the defensive allocation."
+                f"Hold course — the recommended rotation into {_topic_labels(match)} "
+                f"conflicts with this client's documented preferences."
             ),
             provenance=prov,
         ))

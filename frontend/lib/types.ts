@@ -194,6 +194,17 @@ export interface StrategyProposal {
   provenance: Provenance[];
 }
 
+export interface MatchResolution {
+  client_id: string;
+  match_id: string;
+  holding_isin?: string | null;
+  summary: string;
+  source: "llm" | "template";
+  llm_used: boolean;
+  strategy_proposal: StrategyProposal;
+  generated_at: string;
+}
+
 export interface QueryAlternative {
   buy_isin: string;
   buy_issuer: string;
@@ -848,6 +859,7 @@ export interface GlobeHolding {
   city: string;
   verdict: "VIOLATION" | "WATCH" | "OK";
   weight: number;
+  yahoo?: string | null;
   provenance?: Provenance | null;
 }
 
@@ -862,6 +874,9 @@ export interface GlobeEvent {
   severity: "high" | "med" | "low";
   summary: string;
   linked_holding_ids: string[];
+  url?: string | null;
+  issuer_name?: string | null;
+  issuer_isin?: string | null;
   kind?: "alert" | "ambient";
   sentiment?: number;
   provenance?: Provenance | null;

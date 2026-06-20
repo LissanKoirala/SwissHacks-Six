@@ -25,6 +25,7 @@ from ..models import (
     CaptureFollowupRequest,
     EmailIngestRequest,
     RMQueryRequest,
+    MatchResolutionRequest,
     TaskCreateRequest,
     TaskSignoffRequest,
     TaskUpdateRequest,
@@ -198,13 +199,20 @@ def create_app() -> FastAPI:
     def client_portfolio(client_id: str):
         if client_id not in world.clients:
             raise HTTPException(404, "unknown client")
+        from ..logo_ticker import resolve_logo_ticker
+
         holdings = world.holdings_for_client(client_id)
         mandate = world.mandates.get(world.portfolio_of(client_id))
+        out_holdings = []
+        for h in holdings:
+            row = h.model_dump()
+            row["yahoo"] = resolve_logo_ticker(world, client_id, h) or h.yahoo
+            out_holdings.append(row)
         return {
             "portfolio": world.portfolio_of(client_id),
             "total_chf": round(sum(h.current_chf for h in holdings), 2),
             "mandate": mandate.model_dump() if mandate else None,
-            "holdings": [h.model_dump() for h in holdings],
+            "holdings": out_holdings,
         }
 
     @app.get("/clients/{client_id}/fundamentals")
@@ -327,6 +335,21 @@ def create_app() -> FastAPI:
         from ..agents.rm_interface import answer_query
         return answer_query(world, client_id, match_id=req.match_id,
                             question=req.question, exclude_isin=req.exclude_isin)
+
+    @app.post("/clients/{client_id}/matches/resolution")
+    def match_resolution(client_id: str, req: MatchResolutionRequest):
+        """Lazy resolution draft for one match: CIO substitution + optional small-model summary."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.resolution import suggest_resolution
+        try:
+            return suggest_resolution(
+                world, client_id, req.match_id,
+                holding_isin=req.holding_isin,
+                refresh=req.refresh,
+            )
+        except ValueError:
+            raise HTTPException(404, "unknown match")
 
     # --- RM Capture (the app's first POSTs — agent proposes, RM confirms) ---
 
@@ -644,6 +667,38 @@ def create_app() -> FastAPI:
             return unfurl_link(url).model_dump()
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/issuer-logo/{ticker:path}")
+    def issuer_logo(ticker: str):
+        """Proxy corporate logo images (same-origin) so the browser never blocks FMP/Parqet hotlinks."""
+        import httpx
+
+        safe = ticker.strip()
+        if not safe or len(safe) > 32:
+            raise HTTPException(400, "invalid ticker")
+        urls = [
+            f"https://assets.parqet.com/logos/symbol/{safe}",
+            f"https://financialmodelingprep.com/image-stock/{safe}.png",
+        ]
+        base = safe.split(".")[0]
+        if base != safe:
+            urls.extend([
+                f"https://assets.parqet.com/logos/symbol/{base}",
+                f"https://financialmodelingprep.com/image-stock/{base}.png",
+            ])
+        for url in urls:
+            try:
+                resp = httpx.get(url, follow_redirects=True, timeout=12.0)
+                ctype = resp.headers.get("content-type", "")
+                if resp.status_code == 200 and ctype.startswith("image"):
+                    return Response(
+                        content=resp.content,
+                        media_type=ctype.split(";")[0],
+                        headers={"Cache-Control": "public, max-age=86400"},
+                    )
+            except Exception:
+                continue
+        raise HTTPException(404, "logo not found")
 
     return app
 
