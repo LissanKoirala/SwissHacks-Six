@@ -5,7 +5,9 @@ import React from "react";
 import {
   AbsoluteFill,
   Easing,
+  Img,
   interpolate,
+  staticFile,
   useCurrentFrame,
 } from "remotion";
 import { COLORS, MONO } from "./theme";
@@ -329,6 +331,14 @@ export const Mono: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span style={{ fontFamily: MONO, fontSize: 22, color: COLORS.inkSoft }}>{children}</span>
 );
 
+// SwissHacks logo — required top-right mark on every slide (template element).
+export const SwissLogo: React.FC = () => (
+  <Img
+    src={staticFile("swisslogo.png")}
+    style={{ position: "absolute", top: 58, right: 140, width: 196, height: "auto" }}
+  />
+);
+
 /* ------------------------------------------------------------------ stage --- */
 
 // The standard scene frame: white paper, generous margins, persistent wordmark,
@@ -358,6 +368,7 @@ export const Stage: React.FC<{
           <Wordmark />
         </div>
       ) : null}
+      <SwissLogo />
     </AbsoluteFill>
   );
 };

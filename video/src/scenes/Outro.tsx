@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
-import { Appear, HL } from "../ui";
+import { Appear, HL, SwissLogo } from "../ui";
 import { COLORS } from "../theme";
 import { FONT } from "../fonts";
 import { enterExit } from "../ui";
@@ -47,6 +47,7 @@ export const OutroScene: React.FC<{ dur: number }> = ({ dur }) => {
           </div>
         </Appear>
       </div>
+      <SwissLogo />
     </AbsoluteFill>
   );
 };
