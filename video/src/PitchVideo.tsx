@@ -5,12 +5,14 @@ import { TitleScene } from "./scenes/Title";
 import { ProblemScene } from "./scenes/Problem";
 import { SolutionScene } from "./scenes/Solution";
 import { DeskScene } from "./scenes/Desk";
+import { NewsScene } from "./scenes/News";
 import { SchneiderScene } from "./scenes/Schneider";
 import { StrategyScene } from "./scenes/Strategy";
 import { DialogueScene } from "./scenes/Dialogue";
 import { RiskScene } from "./scenes/Risk";
 import { TrustScene } from "./scenes/Trust";
 import { TwinScene } from "./scenes/Twin";
+import { RendezvousScene } from "./scenes/Rendezvous";
 import { PipelineScene } from "./scenes/Pipeline";
 import { OutroScene } from "./scenes/Outro";
 
@@ -27,12 +29,14 @@ export const SCENES: SceneDef[] = [
   { C: ProblemScene, dur: 170 },
   { C: SolutionScene, dur: 185 },
   { C: DeskScene, dur: 220 },
+  { C: NewsScene, dur: 230 },
   { C: SchneiderScene, dur: 250 },
   { C: StrategyScene, dur: 260 },
   { C: DialogueScene, dur: 260 },
   { C: RiskScene, dur: 230 },
   { C: TrustScene, dur: 190 },
   { C: TwinScene, dur: 240 },
+  { C: RendezvousScene, dur: 235 },
   { C: PipelineScene, dur: 200 },
   { C: OutroScene, dur: 150 },
 ];

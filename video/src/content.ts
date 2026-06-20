@@ -21,6 +21,49 @@ export const DESK: {
   { name: "Marius Huber", mandate: "Defensive", alerts: 2, polarity: "opportunity", note: "Unilever acts on deforestation — values-aligned" },
 ];
 
+// News & signal watch — classify-once corpus over the seed/case-study book.
+export const NEWS = {
+  total: 21,
+  topics: 4,
+  sources: [
+    { label: "News", n: 6 },
+    { label: "SEC filings", n: 6 },
+    { label: "ESG", n: 2 },
+    { label: "Earnings", n: 2 },
+    { label: "Analyst", n: 1 },
+    { label: "Macro", n: 4 },
+  ],
+  items: [
+    { type: "NEWS", sentiment: "BEARISH" as const, score: "−0.62", topic: "Neuro research", title: "Biogen to wind down its neurodegenerative research division" },
+    { type: "ESG", sentiment: "BULLISH" as const, score: "+0.71", topic: "Deforestation", title: "Unilever cuts off palm-oil suppliers tied to deforestation" },
+    { type: "SEC FILING", sentiment: "BEARISH" as const, score: "−0.68", topic: "Labour governance", title: "PDD Holdings (Temu) hit with forced-labour allegations" },
+    { type: "ANALYST", sentiment: "BULLISH" as const, score: "+0.34", topic: "US tech / AI", title: "CIO tactical update: rotate into mega-cap US tech" },
+  ],
+};
+
+// Rendezvous — plan the client meeting, grounded in their record + optimised.
+export const RENDEZVOUS = {
+  client: "Eugen Räber",
+  interests: [
+    "Engineering & hardware",
+    "Quiet, classical tastes",
+    "Flims & the mountains",
+    "Dependable dividends",
+    "Wealth for the grandchildren",
+  ],
+  venues: [
+    { title: "Lunch at the Kronenhalle", city: "Zürich", when: "Weekday · 12:30", why: "Old-world, discreet and utterly dependable — tangible quality." },
+    { title: "Beyer Watch & Clock Museum", city: "Zürich", when: "By appointment", why: "He respects firms that build real, physical machinery." },
+    { title: "Evening at the Tonhalle", city: "Zürich", when: "Friday · 19:30", why: "A measured, classical evening matches his temperament." },
+  ],
+  optimiser: {
+    headline: "Fairest place to convene 3 attendees · Zürich",
+    chips: ["0 kg CO₂", "CHF 159 travel", "longest leg 0.2h"],
+    modes: ["Fairest", "Greenest"],
+    note: "live flight quotes · day/night globe",
+  },
+};
+
 // Client digital twin — a real "bounce then clear" loop for Julian Ammann
 // (Growth; non-negotiable stance on labour & supply-chain governance).
 export const TWIN = {
