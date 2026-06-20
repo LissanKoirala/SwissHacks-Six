@@ -7,6 +7,19 @@
 // gate. All edits are immutable patches lifted up to CaptureNote.
 // Light + dark via semantic tokens + shadcn primitives.
 
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Camera,
+  Mail,
+  Minus,
+  NotebookPen,
+  Phone,
+  Users,
+  Utensils,
+  Video,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   CaptureDraft,
   ProposedEdge,
@@ -32,40 +45,54 @@ const POLARITIES: Polarity[] = ["opportunity", "conflict", "neutral"];
 const FACETS = ["professional", "interests", "historical", "personality"] as const;
 
 const MINI_SELECT = "h-7 w-auto gap-1 px-2 py-1 text-xs";
-const ROW = "rounded-lg border p-3 transition-colors";
+const ROW = "rounded-md border p-3 transition-colors";
 const CHECKBOX =
   "mt-1 h-4 w-4 shrink-0 rounded border-border bg-transparent text-primary focus:ring-primary/30 accent-primary";
 
-// Direction → colour, matching the Risk Timeline lexicon.
-const DIR_HEX: Record<RiskPreview["direction"], string> = {
-  up: "#10b981",
-  down: "#f43f5e",
-  flat: "#94a3b8",
-};
+// Risk direction → appetite shift (risk-on / de-risk / flat). Not a P&L
+// gain/loss, so it must NOT use positive/negative (reserved for money):
+// risk-on reads as caution (warning), de-risk as the desk's settled state
+// (primary). This matches the Risk Timeline convention.
 const DIR_META: Record<
   RiskPreview["direction"],
-  { label: string; arrow: string; cls: string }
+  { label: string; icon: LucideIcon; cls: string; dot: string }
 > = {
   up: {
     label: "risk-on",
-    arrow: "▲",
-    cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20",
+    icon: ArrowUpRight,
+    cls: "bg-warning/10 text-warning ring-warning/20",
+    dot: "bg-warning",
   },
   down: {
     label: "de-risk",
-    arrow: "▼",
-    cls: "bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/20",
+    icon: ArrowDownRight,
+    cls: "bg-primary/10 text-primary ring-primary/20",
+    dot: "bg-primary",
   },
   flat: {
     label: "flat",
-    arrow: "■",
+    icon: Minus,
     cls: "bg-muted text-muted-foreground ring-border",
+    dot: "bg-muted-foreground",
   },
 };
+// Proposed-edge polarity tint — restrained, on-token (no rainbow).
 const POL_TINT: Record<Polarity, string> = {
-  opportunity: "text-emerald-600 dark:text-emerald-400",
-  conflict: "text-amber-600 dark:text-amber-400",
+  opportunity: "text-primary",
+  conflict: "text-destructive",
   neutral: "text-muted-foreground",
+};
+
+// Modality string → Lucide icon. The backend also ships an emoji, but we render
+// our own consistent icon set rather than raw emoji-as-icons.
+const MODALITY_ICON: Record<string, LucideIcon> = {
+  "Physical Meeting": Users,
+  "Phone Call": Phone,
+  "Video Call": Video,
+  Email: Mail,
+  Lunch: Utensils,
+  "File Note": NotebookPen,
+  "Physical Event": Camera,
 };
 
 function titleCaseFacet(f: string): string {
@@ -99,7 +126,7 @@ function MetaChip({ children }: { children: React.ReactNode }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <p className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground">
       {children}
     </p>
   );
@@ -134,11 +161,12 @@ function FacetSelect({
 
 function RiskPreviewBadge({ risk }: { risk: RiskPreview }) {
   const meta = DIR_META[risk.direction] ?? DIR_META.flat;
+  const Icon = meta.icon;
   const sign = risk.delta > 0 ? "+" : "";
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className={cn("chip ring-1 ring-inset", meta.cls)}>
-        <span className="text-[9px] leading-none">{meta.arrow}</span>
+        <Icon className="h-3 w-3" aria-hidden />
         Risk {meta.label}
         <span className="tabular-nums opacity-80">
           {sign}
@@ -151,8 +179,10 @@ function RiskPreviewBadge({ risk }: { risk: RiskPreview }) {
           className="chip bg-card text-muted-foreground ring-1 ring-inset ring-border"
         >
           <span
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ backgroundColor: DIR_HEX[s.direction] }}
+            className={cn(
+              "h-1.5 w-1.5 rounded-full",
+              (DIR_META[s.direction] ?? DIR_META.flat).dot
+            )}
           />
           {s.term}
         </span>
@@ -321,14 +351,14 @@ export function StagedPanel({
   return (
     <section className="card overflow-hidden">
       {/* golden-rule banner */}
-      <div className="flex items-start gap-2.5 border-b border-amber-500/20 bg-amber-500/10 px-5 py-3">
+      <div className="flex items-start gap-2.5 border-b border-warning/20 bg-warning/10 px-5 py-3">
         <span
-          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-[11px] font-bold text-amber-600 dark:text-amber-400"
+          className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-warning/20 text-[11px] font-bold text-warning"
           aria-hidden
         >
           !
         </span>
-        <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+        <p className="text-sm font-medium text-warning">
           Nothing is saved yet — review the draft below, edit or deselect anything,
           then confirm to append it.
         </p>
@@ -338,7 +368,10 @@ export function StagedPanel({
         {/* header: modality + dates + preview id */}
         <div className="flex flex-wrap items-center gap-2">
           <MetaChip>
-            <span aria-hidden>{draft.modality_icon}</span>
+            {(() => {
+              const Icon = MODALITY_ICON[draft.modality] ?? NotebookPen;
+              return <Icon className="h-3 w-3" aria-hidden />;
+            })()}
             {draft.modality}
           </MetaChip>
           <MetaChip>{prettyDate(draft.date)}</MetaChip>
@@ -352,7 +385,7 @@ export function StagedPanel({
         {/* normalised note */}
         <div>
           <SectionLabel>Note (normalised)</SectionLabel>
-          <p className="rounded-lg border border-border bg-muted/40 p-3 text-sm leading-relaxed text-foreground/80">
+          <p className="rounded-md border border-border bg-muted/40 p-3 text-sm leading-relaxed text-foreground/80">
             {draft.note}
           </p>
         </div>
@@ -388,10 +421,10 @@ export function StagedPanel({
         {/* proposed interest edges */}
         <div>
           <div className="mb-2 flex items-baseline justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Proposed interest edges
+            <p className="text-xs font-medium tracking-wide text-muted-foreground">
+              Proposed Interest Edges
             </p>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-[11px] tabular-nums text-muted-foreground">
               {selectedEdgeCount} of {edges.length} kept
             </span>
           </div>
@@ -409,10 +442,10 @@ export function StagedPanel({
         {/* proposed facet statements */}
         <div>
           <div className="mb-2 flex items-baseline justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Proposed profile statements
+            <p className="text-xs font-medium tracking-wide text-muted-foreground">
+              Proposed Profile Statements
             </p>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-[11px] tabular-nums text-muted-foreground">
               {selectedFacetCount} of {facets.length} kept
             </span>
           </div>
@@ -428,7 +461,7 @@ export function StagedPanel({
         </div>
 
         {error && (
-          <p className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400">
+          <p className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}
@@ -457,9 +490,10 @@ export function StagedPanel({
             Discard draft
           </Button>
           <span className="text-xs text-muted-foreground">
-            Will apply {selectedEdgeCount} edge{selectedEdgeCount === 1 ? "" : "s"} and{" "}
-            {selectedFacetCount} statement{selectedFacetCount === 1 ? "" : "s"}, then log
-            the note immutably.
+            Will apply <span className="tabular-nums">{selectedEdgeCount}</span> edge
+            {selectedEdgeCount === 1 ? "" : "s"} and{" "}
+            <span className="tabular-nums">{selectedFacetCount}</span> statement
+            {selectedFacetCount === 1 ? "" : "s"}, then log the note immutably.
           </span>
         </div>
       </div>

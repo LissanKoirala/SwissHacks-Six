@@ -28,11 +28,17 @@ export function ProfileView({ clientId }: { clientId: string }) {
   }, [clientId]);
 
   if (loading) {
-    return <p className="p-5 text-sm text-muted-foreground">Loading profile…</p>;
+    return (
+      <p className="p-5 text-sm text-muted-foreground">
+        Loading client profile from the CRM graph…
+      </p>
+    );
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600 dark:text-rose-400">Could not load profile: {error}</p>
+      <p className="p-5 text-sm text-destructive">
+        Could not load profile: {error}
+      </p>
     );
   }
   if (!data) return null;
@@ -49,7 +55,7 @@ export function ProfileView({ clientId }: { clientId: string }) {
     <div className="grid gap-5 md:grid-cols-2">
       {keys.map((k) => (
         <section key={k} className="card p-5">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">
+          <h3 className="mb-3 text-xs font-medium tracking-wide text-muted-foreground">
             {titleCase(k)}
           </h3>
           <div className="space-y-3">
@@ -65,7 +71,12 @@ export function ProfileView({ clientId }: { clientId: string }) {
         </section>
       ))}
       {keys.length === 0 && (
-        <p className="text-sm text-muted-foreground">No profile facets recorded.</p>
+        <p className="text-sm text-muted-foreground">
+          No profile facets recorded yet. The profile is built from confirmed
+          meeting notes — capture a note under Add Note, confirm the extracted
+          facts, and the professional, interests, historical and personality
+          facets will populate here.
+        </p>
       )}
     </div>
   );

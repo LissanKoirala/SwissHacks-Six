@@ -36,7 +36,7 @@ export function PortfolioView({
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600 dark:text-rose-400">
+      <p className="p-5 text-sm text-negative">
         Could not load portfolio: {error}
       </p>
     );
@@ -63,41 +63,41 @@ export function PortfolioView({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="text-base font-semibold text-foreground">
+        <h3 className="text-base font-semibold tracking-tight text-foreground">
           {data.mandate.name} mandate
         </h3>
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm tabular-nums text-muted-foreground">
           total {chf(data.total_chf)}
         </span>
       </div>
 
       {/* Mandate drift table */}
       <section className="card overflow-hidden">
-        <div className="border-b border-border px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Mandate drift · breach threshold ±2.0pp
+        <div className="border-b border-border px-4 py-2.5">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">
+            Mandate Drift · Breach Threshold ±2.0pp
           </p>
         </div>
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-2 font-medium">Sub-asset class</th>
-                <th className="px-4 py-2 text-right font-medium">Target</th>
-                <th className="px-4 py-2 text-right font-medium">Current</th>
-                <th className="px-4 py-2 text-right font-medium">Drift</th>
-                <th className="px-4 py-2 text-right font-medium">Status</th>
+              <tr className="text-left text-xs font-medium tracking-wide text-muted-foreground [&>th]:px-4 [&>th]:py-2 [&>th]:font-medium">
+                <th>Sub-Asset Class</th>
+                <th className="text-right">Target</th>
+                <th className="text-right">Current</th>
+                <th className="text-right">Drift</th>
+                <th className="text-right">Status</th>
               </tr>
             </thead>
             <tbody>
               {targets.map((t, i) => (
                 <tr
                   key={`${t.sub_asset_class}-${i}`}
-                  className={`border-t border-border/60 ${
-                    t.breach ? "bg-amber-500/10" : ""
+                  className={`border-t border-border/60 transition-colors ${
+                    t.breach ? "bg-warning/10" : "hover:bg-muted/50"
                   }`}
                 >
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-1.5">
                     <span className="font-medium text-foreground">
                       {t.sub_asset_class.trim()}
                     </span>
@@ -105,28 +105,26 @@ export function PortfolioView({
                       {t.asset_class}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
+                  <td className="px-4 py-1.5 text-right tabular-nums text-muted-foreground">
                     {pct(t.target_pct, 1)}
                   </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
+                  <td className="px-4 py-1.5 text-right tabular-nums text-muted-foreground">
                     {pct(t.current_pct, 1)}
                   </td>
                   <td
-                    className={`px-4 py-2 text-right tabular-nums font-medium ${
-                      t.breach
-                        ? "text-amber-600 dark:text-amber-400"
-                        : "text-muted-foreground"
+                    className={`px-4 py-1.5 text-right tabular-nums font-medium ${
+                      t.breach ? "text-warning" : "text-muted-foreground"
                     }`}
                   >
                     {signedPp(t.drift_pp)}
                   </td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="px-4 py-1.5 text-right">
                     {t.breach ? (
-                      <span className="chip bg-amber-500/10 text-amber-600 ring-1 ring-inset ring-amber-500/20 dark:text-amber-400">
+                      <span className="chip bg-warning/10 text-warning ring-1 ring-inset ring-warning/25">
                         Breach
                       </span>
                     ) : (
-                      <span className="chip bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400">
+                      <span className="chip bg-success/10 text-success ring-1 ring-inset ring-success/25">
                         Within
                       </span>
                     )}
@@ -140,35 +138,34 @@ export function PortfolioView({
 
       {/* Holdings table */}
       <section className="card overflow-hidden">
-        <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Holdings · {data.holdings.length}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2.5">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">
+            Holdings · <span className="tabular-nums">{data.holdings.length}</span>
           </p>
           {hasLive && (
             <span
-              className="chip bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400"
+              className="chip bg-success/10 text-success ring-1 ring-inset ring-success/25"
               title={
                 latestLiveTs
                   ? `Latest SIX close ${prettyDate(latestLiveTs)}`
                   : "Live SIX prices"
               }
             >
-              ● SIX live
+              <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
+              SIX live
               {latestLiveTs ? ` · ${prettyDate(latestLiveTs)}` : ""}
             </span>
           )}
         </div>
         <div className="scroll-thin max-h-[28rem] overflow-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-card">
-              <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-2 font-medium">Issuer</th>
-                <th className="px-4 py-2 font-medium">Industry group</th>
-                <th className="px-4 py-2 font-medium">Sub-asset class</th>
-                {hasLive && (
-                  <th className="px-4 py-2 text-right font-medium">Live (SIX)</th>
-                )}
-                <th className="px-4 py-2 text-right font-medium">Value</th>
+            <thead className="sticky top-0 z-10 bg-card">
+              <tr className="border-b border-border text-left text-xs font-medium tracking-wide text-muted-foreground [&>th]:px-4 [&>th]:py-2 [&>th]:font-medium">
+                <th>Issuer</th>
+                <th>Industry Group</th>
+                <th>Sub-Asset Class</th>
+                {hasLive && <th className="text-right">Live (SIX)</th>}
+                <th className="text-right">Value</th>
               </tr>
             </thead>
             <tbody>
@@ -178,11 +175,11 @@ export function PortfolioView({
                 return (
                   <tr
                     key={`${h.isin}-${i}`}
-                    className={`border-t border-border/60 ${
-                      affected ? "bg-amber-500/10" : "hover:bg-accent"
+                    className={`border-t border-border/60 transition-colors ${
+                      affected ? "bg-warning/10" : "hover:bg-muted/50"
                     }`}
                   >
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-1.5">
                       <div className="flex items-center gap-2">
                         <IssuerLogo
                           issuer={h.issuer}
@@ -193,7 +190,7 @@ export function PortfolioView({
                         <div>
                           <span className="font-medium text-foreground">{h.issuer}</span>
                           {affected && (
-                            <span className="ml-2 chip bg-amber-500/10 text-amber-600 ring-1 ring-inset ring-amber-500/20 dark:text-amber-400">
+                            <span className="ml-2 chip bg-warning/10 text-warning ring-1 ring-inset ring-warning/25">
                               In alert
                             </span>
                           )}
@@ -204,14 +201,14 @@ export function PortfolioView({
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-muted-foreground">
+                    <td className="px-4 py-1.5 text-muted-foreground">
                       {h.industry_group}
                     </td>
-                    <td className="px-4 py-2 text-muted-foreground">
+                    <td className="px-4 py-1.5 text-muted-foreground">
                       {h.sub_asset_class.trim()}
                     </td>
                     {hasLive && (
-                      <td className="px-4 py-2 text-right tabular-nums">
+                      <td className="px-4 py-1.5 text-right tabular-nums">
                         {h.live_price != null ? (
                           <div className="flex flex-col items-end leading-tight">
                             <span
@@ -228,10 +225,10 @@ export function PortfolioView({
                             </span>
                             {h.live_change_pct != null && (
                               <span
-                                className={`text-[11px] ${
+                                className={`text-[11px] tabular-nums ${
                                   h.live_change_pct >= 0
-                                    ? "text-emerald-600 dark:text-emerald-400"
-                                    : "text-rose-600 dark:text-rose-400"
+                                    ? "text-positive"
+                                    : "text-negative"
                                 }`}
                               >
                                 {h.live_change_pct >= 0 ? "▲" : "▼"}{" "}
@@ -244,7 +241,7 @@ export function PortfolioView({
                         )}
                       </td>
                     )}
-                    <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
+                    <td className="px-4 py-1.5 text-right tabular-nums text-foreground">
                       {chf(h.current_chf)}
                     </td>
                   </tr>

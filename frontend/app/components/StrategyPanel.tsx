@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight, Check, CircleDot } from "lucide-react";
 import type { StrategyProposal, Swap, SwapAction } from "@/lib/types";
 import { chf, price, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
@@ -9,10 +10,10 @@ import { ConfirmGate } from "./ConfirmGate";
 
 const ACTION_META: Record<SwapAction, string> = {
   SWAP: "bg-primary/10 text-primary ring-primary/30",
-  INCREASE: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20",
+  INCREASE: "bg-success/10 text-success ring-success/20",
   HOLD: "bg-muted text-muted-foreground ring-border",
-  DIVEST: "bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/20",
-  REDUCE: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20",
+  DIVEST: "bg-destructive/10 text-destructive ring-destructive/20",
+  REDUCE: "bg-warning/10 text-warning ring-warning/20",
 };
 
 function ActionChip({ action }: { action: SwapAction }) {
@@ -35,7 +36,7 @@ function SwapRow({ swap }: { swap: Swap }) {
       : swap.industry_group ?? "Position adjustment";
 
   return (
-    <div className="rounded-lg border border-border p-4">
+    <div className="rounded-md border border-border p-4">
       <div className="flex flex-wrap items-center gap-2">
         <ActionChip action={swap.action} />
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -43,9 +44,7 @@ function SwapRow({ swap }: { swap: Swap }) {
             <IssuerLogo issuer={swap.sell_issuer} isin={swap.sell_isin} size="sm" />
           )}
           {swap.sell_issuer && swap.buy_issuer && (
-            <span className="text-muted-foreground" aria-hidden>
-              →
-            </span>
+            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
           )}
           {swap.buy_issuer && (
             <IssuerLogo issuer={swap.buy_issuer} isin={swap.buy_isin} size="sm" />
@@ -59,11 +58,12 @@ function SwapRow({ swap }: { swap: Swap }) {
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {swap.drift_safe ? (
-          <span className="chip bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
-            ✓ Drift-safe
+          <span className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20">
+            <Check className="h-3.5 w-3.5" />
+            Drift-safe
           </span>
         ) : (
-          <span className="chip bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-inset ring-amber-500/20">
+          <span className="chip bg-warning/10 text-warning ring-1 ring-inset ring-warning/20">
             Minor drift
           </span>
         )}
@@ -74,15 +74,18 @@ function SwapRow({ swap }: { swap: Swap }) {
         )}
         {swap.buy_live_price != null && (
           <span
-            className="chip bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20"
+            className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20"
             title={
               swap.buy_live_ts
                 ? `SIX EOD · ${prettyDate(swap.buy_live_ts)}`
                 : "Live SIX price"
             }
           >
-            ● {swap.buy_issuer ? `${swap.buy_issuer} @ ` : "Live "}
-            {price(swap.buy_live_price, swap.buy_live_ccy)}
+            <CircleDot className="h-3.5 w-3.5" />
+            {swap.buy_issuer ? `${swap.buy_issuer} @ ` : "Live "}
+            <span className="tabular-nums">
+              {price(swap.buy_live_price, swap.buy_live_ccy)}
+            </span>
           </span>
         )}
       </div>
@@ -110,10 +113,10 @@ export function StrategyPanel({
   return (
     <section className="card flex flex-col">
       <header className="border-b border-border px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-          Strategy proposal
+        <p className="text-xs font-medium tracking-wide text-muted-foreground">
+          Strategy Proposal
         </p>
-        <h2 className="mt-1 text-sm font-medium leading-snug text-foreground/80">
+        <h2 className="mt-1 text-base font-semibold leading-snug tracking-tight text-foreground">
           {proposal?.headline ?? "No strategy action for this client."}
         </h2>
       </header>
@@ -143,7 +146,7 @@ export function StrategyPanel({
                       key={i}
                       className="flex items-start gap-2 text-sm text-foreground/80"
                     >
-                      <span className="mt-0.5 text-emerald-600 dark:text-emerald-400">✓</span>
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
                       <span>{c}</span>
                     </li>
                   ))}
@@ -159,7 +162,7 @@ export function StrategyPanel({
           <ConfirmGate
             action="Propose to client (RM approve)"
             confirmQuestion="Approve this proposal for the client conversation?"
-            approvedLabel="✓ Approved by RM — client decides"
+            approvedLabel="Approved by RM — client decides"
           />
         </footer>
       )}

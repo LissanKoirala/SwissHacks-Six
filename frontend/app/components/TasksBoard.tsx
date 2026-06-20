@@ -5,6 +5,7 @@ import { Plus, X } from "lucide-react";
 import type { ClientSummary } from "@/lib/types";
 import { ClientAvatar } from "./ClientAvatar";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,22 +37,23 @@ const STORAGE_KEY = "aw.tasks.v1";
 const COLUMNS: { id: TaskStatus; label: string }[] = [
   { id: "backlog", label: "Backlog" },
   { id: "started", label: "Started" },
-  { id: "in-progress", label: "In-progress" },
+  { id: "in-progress", label: "In Progress" },
   { id: "completed", label: "Completed" },
 ];
 
+// One badge style, differentiated by intensity rather than a rainbow of hues.
 const PRIORITY_META: Record<TaskPriority, { label: string; cls: string }> = {
   high: {
     label: "High",
-    cls: "bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/20",
+    cls: "border-destructive/30 bg-destructive/10 text-destructive",
   },
   medium: {
     label: "Medium",
-    cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20",
+    cls: "border-warning/30 bg-warning/10 text-warning",
   },
   low: {
     label: "Low",
-    cls: "bg-muted text-muted-foreground ring-border",
+    cls: "border-border bg-muted text-muted-foreground",
   },
 };
 
@@ -193,7 +195,9 @@ export function TasksBoard({ clients }: { clients: ClientSummary[] }) {
       <div className="mx-auto max-w-6xl px-8 py-6">
         {/* header */}
         <header className="mb-6">
-          <h1 className="text-2xl font-semibold text-foreground">Tasks</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Tasks
+          </h1>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
             Shared board across all clients — drag cards between columns.
           </p>
@@ -219,14 +223,14 @@ export function TasksBoard({ clients }: { clients: ClientSummary[] }) {
                 }}
                 onDrop={() => onDrop(col.id)}
                 className={cn(
-                  "flex min-w-[18rem] flex-1 flex-col rounded-xl border bg-muted/40 p-3 transition-colors",
+                  "flex min-w-[18rem] flex-1 flex-col rounded-md border bg-muted/40 p-3 transition-colors",
                   over
-                    ? "border-primary/40 ring-2 ring-inset ring-primary"
+                    ? "border-ring ring-2 ring-inset ring-ring"
                     : "border-border"
                 )}
               >
                 <div className="mb-3 flex items-center justify-between px-1">
-                  <h2 className="text-sm font-semibold text-foreground">
+                  <h2 className="text-xs font-medium tracking-wide text-muted-foreground">
                     {col.label}
                   </h2>
                   <span className="grid h-5 min-w-5 place-items-center rounded-full bg-card px-1.5 text-[11px] font-semibold text-muted-foreground ring-1 ring-inset ring-border tabular-nums">
@@ -255,8 +259,9 @@ export function TasksBoard({ clients }: { clients: ClientSummary[] }) {
                   ))}
 
                   {colTasks.length === 0 && addingTo !== col.id && (
-                    <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
-                      No tasks
+                    <p className="rounded-md border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
+                      Nothing in {col.label.toLowerCase()} — add a task or drag one
+                      here.
                     </p>
                   )}
                 </div>
@@ -272,7 +277,7 @@ export function TasksBoard({ clients }: { clients: ClientSummary[] }) {
                   <button
                     type="button"
                     onClick={() => setAddingTo(col.id)}
-                    className="mt-2.5 flex w-full items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-accent hover:text-primary"
+                    className="mt-2.5 flex w-full items-center gap-1.5 rounded-md border border-dashed border-border px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:focus-ring"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Add task
@@ -311,8 +316,8 @@ function TaskCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className={cn(
-        "group card cursor-grab p-3 transition-colors active:cursor-grabbing hover:bg-accent",
-        dragging && "opacity-50 ring-1 ring-inset ring-primary"
+        "group card cursor-grab p-3 transition-colors active:cursor-grabbing hover:bg-muted/50",
+        dragging && "opacity-50 ring-2 ring-inset ring-ring"
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -323,7 +328,7 @@ function TaskCard({
           type="button"
           onClick={onDelete}
           aria-label="Delete task"
-          className="-mr-1 -mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground/60 opacity-0 transition-colors hover:bg-muted hover:text-rose-600 dark:hover:text-rose-400 group-hover:opacity-100"
+          className="-mr-1 -mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground/60 opacity-0 transition-colors hover:bg-muted hover:text-destructive focus-visible:opacity-100 focus-visible:focus-ring group-hover:opacity-100"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -336,9 +341,12 @@ function TaskCard({
       )}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <span className={cn("chip ring-1 ring-inset", pri.cls)}>
+        <Badge
+          variant="outline"
+          className={cn("font-medium", pri.cls)}
+        >
           {pri.label}
-        </span>
+        </Badge>
         {task.clientId && (
           <span className="ml-auto flex items-center gap-1.5">
             <ClientAvatar

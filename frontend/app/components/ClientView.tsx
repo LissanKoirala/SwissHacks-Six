@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Info, Plus } from "lucide-react";
 import type { Insights } from "@/lib/types";
 import { api } from "@/lib/api";
 import { prettyDate } from "@/lib/format";
@@ -65,7 +66,7 @@ export function ClientView({ clientId }: { clientId: string }) {
     return (
       <div className="grid h-full place-items-center px-8 text-center">
         <div>
-          <p className="text-sm font-medium text-rose-600 dark:text-rose-400">
+          <p className="text-sm font-medium text-destructive">
             Could not reach the backend.
           </p>
           <p className="mt-1 text-xs text-muted-foreground">{error}</p>
@@ -92,11 +93,16 @@ export function ClientView({ clientId }: { clientId: string }) {
               name={client.name}
               size="lg"
             />
-            <h1 className="text-2xl font-semibold text-foreground">{client.name}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              {client.name}
+            </h1>
             <MandatePill mandate={client.mandate} />
             <span className="text-xs text-muted-foreground">
-              generated {prettyDate(insights.generated_at)} ·{" "}
-              {insights.llm_used ? "LLM" : "deterministic"}
+              Generated{" "}
+              <span className="font-mono tabular-nums">
+                {prettyDate(insights.generated_at)}
+              </span>{" "}
+              · {insights.llm_used ? "LLM" : "deterministic"}
             </span>
           </div>
           <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-foreground/80">
@@ -105,11 +111,8 @@ export function ClientView({ clientId }: { clientId: string }) {
         </header>
 
         {/* advisory-only banner — golden rule */}
-        <div className="mb-6 flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2.5 text-sm text-primary ring-1 ring-inset ring-primary/20">
-          <svg className="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3" />
-            <path d="M8 7.2v4M8 5.2h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+        <div className="mb-6 flex items-center gap-2 rounded-md bg-primary/10 px-4 py-2.5 text-sm text-primary ring-1 ring-inset ring-primary/20">
+          <Info className="h-4 w-4 shrink-0" aria-hidden />
           <span>
             <span className="font-semibold">Advisory only</span> — the RM
             approves, the client decides. Nothing here is auto-executed or
@@ -131,9 +134,15 @@ export function ClientView({ clientId }: { clientId: string }) {
                 ["network", "CRM Network"],
                 ["rendezvous", "Rendezvous"],
                 ["profile", "Profile"],
-                ["capture", "＋ Add Note"],
-              ] as [Tab, string][]).map(([id, label]) => (
-                <TabsTrigger key={id} value={id} className="shrink-0">
+                [
+                  "capture",
+                  <span key="cap" className="flex items-center gap-1.5">
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Note
+                  </span>,
+                ],
+              ] as [Tab, ReactNode][]).map(([id, label]) => (
+                <TabsTrigger key={id as string} value={id as string} className="shrink-0">
                   {label}
                 </TabsTrigger>
               ))}
@@ -144,9 +153,11 @@ export function ClientView({ clientId }: { clientId: string }) {
           <TabsContent value="advisory" className="mt-0">
             <div className="space-y-6">
               {insights.matches.length === 0 ? (
-                <div className="card p-6 text-sm text-muted-foreground">
-                  No active alerts. The profile is being watched against incoming
-                  news and the CIO list.
+                <div className="card p-5 text-sm text-muted-foreground">
+                  No signals matched this client&rsquo;s profile against today&rsquo;s
+                  news and the CIO list. New alerts appear here as incoming items
+                  intersect a profile topic. Capture a meeting note to broaden the
+                  topics watched.
                 </div>
               ) : (
                 <div className="space-y-4">

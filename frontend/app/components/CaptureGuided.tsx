@@ -7,19 +7,33 @@
 // it never mutates anything itself.
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Mic, Plus } from "lucide-react";
+import {
+  BarChart3,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
+  Compass,
+  MessageSquare,
+  Mic,
+  Plus,
+  Repeat,
+  Scale,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import type { CapturePrompt } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-const KIND_ICON: Record<string, string> = {
-  opener: "💬",
-  position: "🔁",
-  risk: "⚖️",
-  life: "👪",
-  holdings: "📊",
-  values: "🧭",
-  closer: "✅",
+const KIND_ICON: Record<string, LucideIcon> = {
+  opener: MessageSquare,
+  position: Repeat,
+  risk: Scale,
+  life: Users,
+  holdings: BarChart3,
+  values: Compass,
+  closer: Check,
 };
 
 export function GuidedPrompts({
@@ -54,10 +68,10 @@ export function GuidedPrompts({
   };
 
   return (
-    <section className="mb-4 rounded-xl border border-primary/20 bg-primary/10 p-4">
+    <section className="mb-4 rounded-md border border-primary/20 bg-primary/[0.06] p-4">
       <header className="flex items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-          Guided capture
+        <span className="text-xs font-medium tracking-wide text-muted-foreground">
+          Guided Capture
         </span>
         <span className="hidden text-xs text-muted-foreground sm:inline">
           — work the prompts for a richer log
@@ -65,7 +79,7 @@ export function GuidedPrompts({
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="ml-auto text-xs font-medium text-primary hover:underline"
+          className="ml-auto rounded-md text-xs font-medium text-primary transition-colors hover:underline focus-visible:focus-ring"
           aria-expanded={open}
         >
           {open ? "Hide" : "Show"}
@@ -75,19 +89,27 @@ export function GuidedPrompts({
       {open && (
         <>
           {/* teleprompter — the current quest prompt */}
-          <div className="mt-3 rounded-lg bg-card p-4 ring-1 ring-inset ring-border">
+          <div className="mt-3 rounded-md bg-card p-4 ring-1 ring-inset ring-border">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>
+              <span className="tabular-nums">
                 Prompt {idx + 1} / {prompts.length}
               </span>
-              <span>{used.size} added to note</span>
+              <span className="tabular-nums">{used.size} added to note</span>
             </div>
             <p className="mt-1 flex items-start gap-2 text-base font-semibold leading-snug text-foreground">
-              <span aria-hidden>{KIND_ICON[cur.kind] ?? "❓"}</span>
+              {(() => {
+                const Icon = KIND_ICON[cur.kind] ?? CircleHelp;
+                return (
+                  <Icon
+                    className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                  />
+                );
+              })()}
               <span>{cur.question}</span>
             </p>
             {cur.hint && (
-              <p className="mt-1 pl-7 text-xs text-muted-foreground">{cur.hint}</p>
+              <p className="mt-1 pl-6 text-xs text-muted-foreground">{cur.hint}</p>
             )}
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -114,7 +136,7 @@ export function GuidedPrompts({
                 }
                 className={cn(
                   listening &&
-                    "border-rose-500/30 bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 hover:text-rose-600 dark:text-rose-400"
+                    "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive"
                 )}
               >
                 <Mic className="h-3.5 w-3.5" />
@@ -146,25 +168,33 @@ export function GuidedPrompts({
 
           {/* all prompts — jump dots, tick the ones already added */}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {prompts.map((p, i) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => go(i)}
-                title={p.question}
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[11px] ring-1 ring-inset transition-colors",
-                  i === idx
-                    ? "bg-primary text-primary-foreground ring-primary"
-                    : used.has(i)
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20"
-                    : "bg-card text-muted-foreground ring-border hover:bg-accent"
-                )}
-              >
-                <span aria-hidden>{KIND_ICON[p.kind] ?? "•"}</span>{" "}
-                {used.has(i) ? "✓" : i + 1}
-              </button>
-            ))}
+            {prompts.map((p, i) => {
+              const Icon = KIND_ICON[p.kind] ?? CircleHelp;
+              const added = used.has(i);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => go(i)}
+                  title={p.question}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] tabular-nums ring-1 ring-inset transition-colors focus-visible:focus-ring",
+                    i === idx
+                      ? "bg-primary text-primary-foreground ring-primary"
+                      : added
+                      ? "bg-primary/10 text-primary ring-primary/20"
+                      : "bg-card text-muted-foreground ring-border hover:bg-accent"
+                  )}
+                >
+                  {added ? (
+                    <Check className="h-3 w-3" aria-hidden />
+                  ) : (
+                    <Icon className="h-3 w-3" aria-hidden />
+                  )}
+                  {i + 1}
+                </button>
+              );
+            })}
           </div>
         </>
       )}

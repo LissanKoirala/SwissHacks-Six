@@ -6,7 +6,12 @@
 // (the only mutation). Light + dark via semantic tokens + shadcn primitives.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Check, Mic } from "lucide-react";
+import {
+  Camera,
+  Check,
+  Mic,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   CaptureDraft,
   CapturePrompt,
@@ -397,13 +402,13 @@ export function CaptureNote({
       <section className="card p-6">
         <div className="flex items-start gap-3">
           <span
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400"
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
             aria-hidden
           >
             <Check className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-foreground">
+            <h3 className="text-base font-semibold tracking-tight text-foreground">
               Note appended to the meeting log
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -414,13 +419,14 @@ export function CaptureNote({
               <span className="chip bg-primary/10 font-mono text-[11px] text-primary ring-1 ring-inset ring-primary/20">
                 {result.entry_id}
               </span>
-              <span className="chip bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
-                applied {result.applied.edges} edge
-                {result.applied.edges === 1 ? "" : "s"} / {result.applied.facets}{" "}
-                facet{result.applied.facets === 1 ? "" : "s"}
-              </span>
               <MetaChip>
-                {result.log_count} log entr
+                <span className="tabular-nums">{result.applied.edges}</span> edge
+                {result.applied.edges === 1 ? "" : "s"} ·{" "}
+                <span className="tabular-nums">{result.applied.facets}</span> facet
+                {result.applied.facets === 1 ? "" : "s"} applied
+              </MetaChip>
+              <MetaChip>
+                <span className="tabular-nums">{result.log_count}</span> log entr
                 {result.log_count === 1 ? "y" : "ies"} total
               </MetaChip>
             </div>
@@ -442,10 +448,10 @@ export function CaptureNote({
       {/* ---------------------------------------------------- input card --- */}
       <section className="card p-5">
         <header className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-            New interaction note
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">
+            New Interaction Note
           </p>
-          <h2 className="mt-1 text-base font-semibold text-foreground">
+          <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">
             Capture by text, voice or photo
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -465,8 +471,8 @@ export function CaptureNote({
 
         {/* mode buttons */}
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Add via
+          <span className="text-xs font-medium tracking-wide text-muted-foreground">
+            Add Via
           </span>
 
           {/* Dictate */}
@@ -485,7 +491,7 @@ export function CaptureNote({
             }
             className={cn(
               listening &&
-                "border-rose-500/30 bg-rose-500/10 text-rose-600 hover:bg-rose-500/15 hover:text-rose-600 dark:text-rose-400"
+                "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive"
             )}
           >
             <Mic className="h-4 w-4" />
@@ -493,8 +499,8 @@ export function CaptureNote({
               <span className="flex items-center gap-1.5">
                 Listening
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
                 </span>
               </span>
             ) : (
@@ -636,7 +642,7 @@ export function CaptureNote({
         </div>
 
         {error && !draft && (
-          <p className="mt-3 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-600 dark:text-rose-400">
+          <p className="mt-3 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}

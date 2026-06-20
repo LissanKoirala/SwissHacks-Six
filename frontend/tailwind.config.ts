@@ -25,6 +25,13 @@ const config: Config = {
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
+        positive: "hsl(var(--success))",
+        negative: "hsl(var(--negative))",
+        surface: {
+          1: "hsl(var(--surface-1))",
+          2: "hsl(var(--surface-2))",
+          3: "hsl(var(--surface-3))",
+        },
         ink: { DEFAULT: "hsl(var(--foreground))", soft: "hsl(var(--muted-foreground))" },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar))",
@@ -34,12 +41,15 @@ const config: Config = {
       },
       borderRadius: { lg: "var(--radius)", md: "calc(var(--radius) - 2px)", sm: "calc(var(--radius) - 4px)" },
       fontFamily: {
-        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        sans: ["var(--font-hanken)", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
+        mono: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)",
+        card: "0 1px 2px rgba(0,0,0,0.05)",
         pop: "0 8px 24px rgba(0,0,0,0.18)",
+      },
+      transitionTimingFunction: {
+        standard: "cubic-bezier(0.2,0,0,1)",
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },

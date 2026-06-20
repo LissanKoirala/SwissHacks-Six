@@ -1,5 +1,6 @@
 "use client";
 
+import { MessageCircle, ListChecks, Quote, Globe } from "lucide-react";
 import type { DialogueSuggestion } from "@/lib/types";
 import { ProvenanceTag } from "./Provenance";
 import { ConfirmGate } from "./ConfirmGate";
@@ -12,10 +13,10 @@ export function DialoguePanel({
   return (
     <section className="card flex flex-col">
       <header className="border-b border-border px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-          Dialogue suggestion
+        <p className="text-xs font-medium tracking-wide text-muted-foreground">
+          Dialogue Suggestion
         </p>
-        <h2 className="mt-1 text-sm font-medium leading-snug text-foreground/80">
+        <h2 className="mt-1 text-base font-semibold leading-snug tracking-tight text-foreground">
           Conversation the RM can have with the client.
         </h2>
       </header>
@@ -28,16 +29,20 @@ export function DialoguePanel({
         ) : (
           <>
             {dialogue.style && (
-              <div className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
-                <span className="font-semibold">Tone — </span>
-                {dialogue.style}
+              <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
+                <MessageCircle className="h-4 w-4 shrink-0" />
+                <span>
+                  <span className="font-semibold">Tone — </span>
+                  {dialogue.style}
+                </span>
               </div>
             )}
 
             {/* talking points */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Talking points
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+                <ListChecks className="h-3.5 w-3.5" />
+                Talking Points
               </p>
               <ul className="space-y-2">
                 {dialogue.talking_points.map((tp, i) => (
@@ -57,19 +62,21 @@ export function DialoguePanel({
 
             {/* draft message */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Draft message
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+                <Quote className="h-3.5 w-3.5" />
+                Draft Message
               </p>
-              <blockquote className="rounded-lg border-l-4 border-primary bg-muted/40 px-4 py-3 text-sm italic leading-relaxed text-foreground/80">
+              <blockquote className="rounded-md bg-muted/40 px-4 py-3 text-sm leading-relaxed text-foreground/80">
                 {dialogue.draft_message}
               </blockquote>
             </div>
 
             {/* market context footnotes */}
             {dialogue.market_context.length > 0 && (
-              <div className="rounded-lg border border-dashed border-border p-3">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  General market context · discussion only
+              <div className="rounded-md border border-dashed border-border p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+                  <Globe className="h-3.5 w-3.5" />
+                  General Market Context · Discussion Only
                 </p>
                 <ul className="space-y-1.5">
                   {dialogue.market_context.map((mc, i) => (
@@ -96,7 +103,7 @@ export function DialoguePanel({
           <ConfirmGate
             action="Send draft (RM approve)"
             confirmQuestion="Approve sending this draft to the client?"
-            approvedLabel="✓ Approved by RM — client decides"
+            approvedLabel="Approved by RM — client decides"
           />
         </footer>
       )}
