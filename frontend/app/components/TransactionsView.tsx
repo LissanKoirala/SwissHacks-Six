@@ -7,10 +7,55 @@ import type {
   LedgerPosition,
   LedgerCashFlow,
 } from "@/lib/types";
+import { ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
 import { chf, pct, price, prettyDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { IssuerLogo } from "./IssuerLogo";
+import { Collapsible } from "./ui";
 import { ProvenanceTag } from "./Provenance";
+
+/* ------------------------------------------------------- collapsible bar --- */
+
+// A card-section header that toggles its body. Keeps the existing uppercase bar
+// look; the border only shows while open so a collapsed header reads as one row.
+function CardToggle({
+  open,
+  toggle,
+  label,
+  count,
+}: {
+  open: boolean;
+  toggle: () => void;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-expanded={open}
+      className={cn(
+        "flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-slate-50",
+        open && "border-b border-slate-200",
+      )}
+    >
+      <ChevronRight
+        className={cn(
+          "h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform",
+          open && "rotate-90",
+        )}
+        aria-hidden
+      />
+      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </span>
+      {typeof count === "number" && (
+        <span className="ml-auto text-xs tabular-nums text-slate-400">{count}</span>
+      )}
+    </button>
+  );
+}
 
 /* --------------------------------------------------------------- figures --- */
 
@@ -163,11 +208,17 @@ export function TransactionsView({ clientId }: { clientId: string }) {
 
       {/* 2. Positions · cost basis vs market ----------------------------- */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Positions · cost basis vs market
-          </p>
-        </div>
+        <Collapsible
+          defaultOpen
+          trigger={(open, toggle) => (
+            <CardToggle
+              open={open}
+              toggle={toggle}
+              label="Positions · cost basis vs market"
+              count={positions.length}
+            />
+          )}
+        >
         <div className="scroll-thin overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -235,6 +286,7 @@ export function TransactionsView({ clientId }: { clientId: string }) {
             </tbody>
           </table>
         </div>
+        </Collapsible>
       </section>
 
       {/* 3. Transaction history ------------------------------------------ */}
@@ -314,11 +366,17 @@ export function TransactionsView({ clientId }: { clientId: string }) {
 
       {/* 4. Cash flows --------------------------------------------------- */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Cash flows · {cashflows.length}
-          </p>
-        </div>
+        <Collapsible
+          defaultOpen
+          trigger={(open, toggle) => (
+            <CardToggle
+              open={open}
+              toggle={toggle}
+              label="Cash flows"
+              count={cashflows.length}
+            />
+          )}
+        >
         {cashflows.length === 0 ? (
           <p className="px-4 py-6 text-sm text-slate-400">
             No cash flows recorded.
@@ -355,6 +413,7 @@ export function TransactionsView({ clientId }: { clientId: string }) {
             })}
           </ul>
         )}
+        </Collapsible>
       </section>
     </div>
   );

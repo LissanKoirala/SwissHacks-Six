@@ -6,7 +6,7 @@
 // any client name drills into ClientView. This view decides nothing; it orients the RM.
 
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, FileText, Rocket } from "lucide-react";
+import { BarChart3, ChevronRight, FileText, Rocket } from "lucide-react";
 import type {
   Overview,
   OverviewTask,
@@ -19,8 +19,9 @@ import type {
 } from "@/lib/types";
 import { api } from "@/lib/api";
 import { chf, prettyDate, titleCase } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { ClientAvatar } from "./ClientAvatar";
-import { MandatePill, PolarityChip } from "./ui";
+import { Collapsible, MandatePill, PolarityChip } from "./ui";
 import { ProvenanceTag } from "./Provenance";
 
 /* ---------------------------------------------------------------- tokens --- */
@@ -210,6 +211,92 @@ function TaskCard({
         </button>
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------- priority grouping §1 --- */
+
+const SEV_ORDER: Record<Severity, number> = { high: 0, med: 1, low: 2 };
+
+interface ClientTaskGroupData {
+  client_id: string;
+  client_name: string;
+  mandate: string;
+  tasks: OverviewTask[];
+  top_severity: Severity;
+}
+
+function groupTasksByClient(tasks: OverviewTask[]): ClientTaskGroupData[] {
+  const map = new Map<string, ClientTaskGroupData>();
+  for (const t of tasks) {
+    const g =
+      map.get(t.client_id) ??
+      {
+        client_id: t.client_id,
+        client_name: t.client_name,
+        mandate: t.mandate,
+        tasks: [],
+        top_severity: "low" as Severity,
+      };
+    g.tasks.push(t);
+    map.set(t.client_id, g);
+  }
+  for (const g of map.values()) {
+    g.tasks.sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
+    g.top_severity = g.tasks[0].severity;
+  }
+  // most urgent clients first, then by how many issues they carry
+  return [...map.values()].sort(
+    (a, b) =>
+      SEV_ORDER[a.top_severity] - SEV_ORDER[b.top_severity] ||
+      b.tasks.length - a.tasks.length,
+  );
+}
+
+function ClientTaskGroup({
+  group,
+  onOpen,
+}: {
+  group: ClientTaskGroupData;
+  onOpen: (id: string) => void;
+}) {
+  const sev = SEVERITY[group.top_severity];
+  return (
+    <Collapsible
+      defaultOpen
+      trigger={(open, toggle) => (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
+            open && "rounded-b-none",
+          )}
+        >
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-90",
+            )}
+            aria-hidden
+          />
+          <ClientAvatar clientId={group.client_id} name={group.client_name} size="sm" />
+          <span className="text-sm font-semibold text-ink">{group.client_name}</span>
+          <MandatePill mandate={group.mandate} />
+          <span className={`chip ring-1 ring-inset ${sev.chip}`}>{sev.label}</span>
+          <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
+            {group.tasks.length}
+          </span>
+        </button>
+      )}
+    >
+      <div className="space-y-3 rounded-b-lg border border-t-0 border-border p-3">
+        {group.tasks.map((t) => (
+          <TaskCard key={t.id} task={t} onOpen={onOpen} />
+        ))}
+      </div>
+    </Collapsible>
   );
 }
 
@@ -477,24 +564,50 @@ export function OverviewDashboard({
 
         <KpiStrip o={o} />
 
-        {/* §1 priority tasks */}
+        {/* §1 priority tasks — collapsible section, grouped per client */}
         <section className="mt-7">
-          <SectionHeader
-            title="Priority — touch base"
-            count={o.priority_tasks.length}
-            hint="a world event hit their profile"
-          />
-          {o.priority_tasks.length === 0 ? (
-            <div className="card p-5 text-sm text-muted-foreground">
-              Nothing flagged across the book this morning.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {o.priority_tasks.map((t) => (
-                <TaskCard key={t.id} task={t} onOpen={onOpenClient} />
-              ))}
-            </div>
-          )}
+          <Collapsible
+            defaultOpen
+            trigger={(open, toggle) => (
+              <div className="mb-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-expanded={open}
+                  className="group flex items-center gap-2"
+                >
+                  <ChevronRight
+                    className={cn(
+                      "h-4 w-4 text-muted-foreground transition-transform",
+                      open && "rotate-90",
+                    )}
+                    aria-hidden
+                  />
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground transition-colors group-hover:text-primary">
+                    Priority — touch base
+                  </h2>
+                </button>
+                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
+                  {o.priority_tasks.length}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  a world event hit their profile
+                </span>
+              </div>
+            )}
+          >
+            {o.priority_tasks.length === 0 ? (
+              <div className="card p-5 text-sm text-muted-foreground">
+                Nothing flagged across the book this morning.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {groupTasksByClient(o.priority_tasks).map((g) => (
+                  <ClientTaskGroup key={g.client_id} group={g} onOpen={onOpenClient} />
+                ))}
+              </div>
+            )}
+          </Collapsible>
         </section>
 
         {/* §2 meetings + §3 market moves */}

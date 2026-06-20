@@ -1,0 +1,13 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.gmail_token.json
+.gmail_client_secret.json
+data/.gmail_history.json
+data/tasks.json
+data/captured_entries.json
+.cache/
+tests/
