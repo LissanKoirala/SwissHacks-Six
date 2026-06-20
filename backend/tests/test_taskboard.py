@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from workbench import taskboard
 from workbench.agents import email_triage, news_watch
 from workbench.api import create_app
+from workbench.config import settings
 from workbench.models import EmailMessage, Provenance
 from workbench.seed import build_world
 
@@ -209,3 +210,39 @@ def test_api_drop_in_raw_email_creates_task():
     t = out["created"][0]
     assert t["client_id"] == "huber"
     assert t["kind"] == "investment_review"
+
+
+# --- instant push (Gmail watch → Pub/Sub → /gmail/push) ---------------------
+# Gmail itself can't run offline, so we mock the history sync to return one new message and assert
+# the webhook ingests it into a task. This is exactly the path that runs when deployed.
+
+def test_gmail_push_webhook_ingests(monkeypatch):
+    from workbench.ingestion import gmail_push
+
+    def _fake_sync():
+        return [EmailMessage(
+            id="gmail:abc123", from_name="Mr Schneider", from_email="s@example.com",
+            subject="[workbench] sell my pharma position",
+            body="Please get me out of that pharma name today.",
+            provenance=Provenance(source_type="crm_log", source_id="email:gmail:abc123", excerpt="x"),
+        )]
+
+    monkeypatch.setattr(gmail_push, "sync_new_messages", _fake_sync)
+    client = TestClient(create_app())
+
+    # a Pub/Sub push envelope (contents are ignored — we sync off our stored historyId)
+    envelope = {"message": {"data": "", "messageId": "1"}, "subscription": "x"}
+    out = client.post("/gmail/push", json=envelope).json()
+    assert out["ok"] and out["ingested"] == 1 and out["tasks_created"] == 1
+
+    # the message became a real task on the board
+    tasks = client.get("/tasks").json()
+    assert any(t["kind"] == "investment_review" and "pharma" in t["title"].lower() for t in tasks)
+
+
+def test_gmail_push_webhook_rejects_bad_token(monkeypatch):
+    monkeypatch.setattr(settings, "gmail_push_token", "s3cret")
+    client = TestClient(create_app())
+    # no token → 403; correct token would pass through to the (no-op) sync
+    assert client.post("/gmail/push?token=wrong", json={}).status_code == 403
+    assert client.post("/gmail/push?token=s3cret", json={}).status_code == 200

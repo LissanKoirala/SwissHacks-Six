@@ -102,6 +102,18 @@ class Settings:
     # Gmail search query the scan uses (Gmail syntax). Defaults to unread workbench-tagged mail.
     gmail_query = os.getenv("GMAIL_QUERY", "subject:[workbench] is:unread").strip()
 
+    # --- INSTANT push: Gmail watch → Pub/Sub → webhook (EMAIL_PROVIDER=gmail) ---------------------
+    # With these set, Gmail notifies the backend the moment mail arrives (no polling). Needs a
+    # public HTTPS webhook (POST /gmail/push) and a Pub/Sub topic — see docs/DEPLOY.md. Without
+    # them, the backend falls back to the interval poller. Filled in by a teammate at deploy time.
+    gmail_pubsub_topic = _clean(os.getenv("GMAIL_PUBSUB_TOPIC"))  # projects/<proj>/topics/<topic>
+    gmail_watch_labels = [s.strip() for s in os.getenv("GMAIL_WATCH_LABELS", "INBOX").split(",") if s.strip()]
+    # Only ingest pushed messages whose subject contains this marker ("" = ingest all). Mirrors the
+    # poll query's subject gate so push and poll behave the same.
+    gmail_subject_filter = os.getenv("GMAIL_SUBJECT_FILTER", "[workbench]").strip()
+    # Shared secret echoed in the webhook URL (?token=...) so only Pub/Sub can post to /gmail/push.
+    gmail_push_token = _clean(os.getenv("GMAIL_PUSH_TOKEN"))
+
     # --- The Front Door: autonomous poller (turns pull-based intake into a live trigger) ---
     # A background loop re-scans the inbox + news/risk watch on an interval so new mail and material
     # world events open tasks on their own — no manual POST needed. On by default so it just works;
@@ -169,6 +181,12 @@ class Settings:
         if self.gmail_token_file and _os.path.exists(self.gmail_token_file):
             return True
         return bool(self.gmail_client_id and self.gmail_client_secret and self.gmail_refresh_token)
+
+    @property
+    def gmail_push_enabled(self) -> bool:
+        """Instant push is wired: Gmail provider live + a Pub/Sub topic to watch."""
+        return (self.email_enabled and self.email_provider == "gmail"
+                and bool(self.gmail_pubsub_topic))
 
     @property
     def email_enabled(self) -> bool:

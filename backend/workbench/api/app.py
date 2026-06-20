@@ -2,7 +2,7 @@
 Renders the orchestrator's output; nothing here makes decisions."""
 from __future__ import annotations
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..agents.orchestrator import get_insights
@@ -34,16 +34,33 @@ def create_app() -> FastAPI:
     app.state.world = world
 
     @app.on_event("startup")
-    async def _start_front_door_poller():
-        # Autonomous intake: re-scan the inbox + news/risk watch on an interval so new mail and
-        # material world events open tasks on their own. Both scans are idempotent (dedup keys),
-        # so re-running is safe. Advisory only — it CREATES + DRAFTS; the RM sign-off gate is intact.
+    async def _start_front_door():
+        # Autonomous intake. Two modes, picked by config:
+        #   • INSTANT push (Gmail watch→Pub/Sub→/gmail/push): register the watch and renew it daily
+        #     (Gmail expires it after 7 days). New mail then arrives via the webhook, not a poll.
+        #   • POLL (everything else): re-scan inbox + news on an interval.
+        # Both are idempotent (dedup keys). Advisory only — CREATE + DRAFT; RM sign-off gate intact.
+        import asyncio
+
+        if settings.gmail_push_enabled:
+            from ..ingestion.gmail_push import register_watch
+
+            async def _watch_loop():
+                while True:
+                    try:
+                        await asyncio.to_thread(register_watch)
+                    except Exception:
+                        pass
+                    await asyncio.sleep(6 * 60 * 60)  # renew every 6h, well under the 7-day expiry
+
+            app.state.poller_task = asyncio.create_task(_watch_loop())
+            return
+
         if not settings.poll_enabled:
             return
-        import asyncio
         from ..taskboard import ingest_email, ingest_news
 
-        async def _loop():
+        async def _poll_loop():
             while True:
                 await asyncio.sleep(settings.front_door_poll_seconds)
                 try:  # one bad scan must never kill the loop
@@ -52,13 +69,32 @@ def create_app() -> FastAPI:
                 except Exception:
                     pass
 
-        app.state.poller_task = asyncio.create_task(_loop())
+        app.state.poller_task = asyncio.create_task(_poll_loop())
 
     @app.on_event("shutdown")
-    async def _stop_front_door_poller():
+    async def _stop_front_door():
         task = getattr(app.state, "poller_task", None)
         if task is not None:
             task.cancel()
+
+    @app.post("/gmail/push")
+    async def gmail_push(request: Request):
+        """Pub/Sub push endpoint — Gmail notifies us here the instant mail arrives. Verifies the
+        shared-secret token, pulls everything new since the last historyId, and ingests it. Returns
+        fast so Pub/Sub doesn't retry. Read-only + advisory: it only opens tasks for the RM."""
+        import asyncio
+        if settings.gmail_push_token and request.query_params.get("token") != settings.gmail_push_token:
+            raise HTTPException(status_code=403, detail="invalid push token")
+        from ..ingestion.gmail_push import sync_new_messages
+        from ..taskboard import ingest_email
+
+        msgs = await asyncio.to_thread(sync_new_messages)
+        created = []
+        for m in msgs:
+            created += await asyncio.to_thread(
+                ingest_email, world, raw_email=m, execute=True, use_llm=False
+            )
+        return {"ok": True, "ingested": len(msgs), "tasks_created": len(created)}
 
     @app.get("/health")
     def health():
@@ -93,9 +129,11 @@ def create_app() -> FastAPI:
              "live": settings.email_enabled,
              "mode": (f"live {settings.email_provider}" if settings.email_enabled
                       else "seed inbox fixtures")},
-            {"name": "Front Door poller", "configured": True, "live": settings.poll_enabled,
-             "mode": (f"autonomous · every {settings.front_door_poll_seconds}s"
-                      if settings.poll_enabled else "on-demand (boot + POST /ingest/*)")},
+            {"name": "Front Door intake", "configured": True,
+             "live": settings.gmail_push_enabled or settings.poll_enabled,
+             "mode": ("instant (Gmail push → /gmail/push)" if settings.gmail_push_enabled
+                      else f"autonomous poll · every {settings.front_door_poll_seconds}s" if settings.poll_enabled
+                      else "on-demand (boot + POST /ingest/*)")},
         ]
         return {"use_live": settings.use_live, "probes": probes, "stt": {
             "provider": settings.stt_provider, "enabled": settings.stt_enabled,

@@ -15,6 +15,8 @@ CH56655-api2026hack22.zip
 .gmail_client_secret.json
 backend/.gmail_token.json
 backend/.gmail_client_secret.json
+.gmail_history.json
+backend/data/.gmail_history.json
 
 # python
 __pycache__/
