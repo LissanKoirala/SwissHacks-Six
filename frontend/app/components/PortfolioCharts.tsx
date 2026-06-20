@@ -23,6 +23,7 @@ import type {
 import { api } from "@/lib/api";
 import { chf, pct, signedPp } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
+import { FigureCard } from "./ui";
 
 /* ---------------------------------------------------------------- palette --- */
 
@@ -108,39 +109,6 @@ function SectorTooltip({ active, payload }: TooltipProps<number, string>) {
       <p className="mt-0.5 tabular-nums text-foreground/80">{pct(d.pct, 1)}</p>
       <p className="tabular-nums text-muted-foreground">{chf(d.current_chf)}</p>
     </ChartTooltip>
-  );
-}
-
-/* --------------------------------------------------------------- figures --- */
-
-function FigureCard({
-  label,
-  value,
-  tone = "ink",
-}: {
-  label: string;
-  value: string;
-  tone?: "ink" | "amber" | "green" | "red";
-}) {
-  const toneCls =
-    tone === "amber"
-      ? "text-warning"
-      : tone === "green"
-      ? "text-positive"
-      : tone === "red"
-      ? "text-negative"
-      : "text-foreground";
-  // KPI tiles read denser and quieter than the bordered data panels: a flat
-  // surface step, hairline ring, label-first stacking.
-  return (
-    <div className="rounded-md bg-surface-2 px-3.5 py-3 ring-1 ring-inset ring-border/70">
-      <p className="text-[11px] font-medium tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className={`mt-1 text-2xl font-semibold tabular-nums leading-none ${toneCls}`}>
-        {value}
-      </p>
-    </div>
   );
 }
 
@@ -277,6 +245,11 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
           title="Asset allocation"
           subtitle={`${data.by_asset_class.length} asset classes`}
         >
+          {data.by_asset_class.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No allocation data
+            </p>
+          ) : (
           <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-center">
             <div className="relative h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -335,6 +308,7 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
               ))}
             </ul>
           </div>
+          )}
         </SectionCard>
 
         {/* Mandate drift */}
@@ -342,6 +316,12 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
           title="Mandate drift"
           subtitle="Per sub-asset class · breach threshold ±2.0pp"
         >
+          {driftRows.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No drift data
+            </p>
+          ) : (
+          <>
           <div style={{ height: Math.max(256, driftRows.length * 30) }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -410,6 +390,8 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
               ±2.0pp
             </span>
           </div>
+          </>
+          )}
         </SectionCard>
       </div>
 
@@ -418,6 +400,11 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
         title="Sector exposure"
         subtitle={`Top ${sectorRows.length} by weight`}
       >
+        {sectorRows.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            No sector data
+          </p>
+        ) : (
         <div style={{ height: Math.max(256, sectorRows.length * 34) }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -455,6 +442,7 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
             </BarChart>
           </ResponsiveContainer>
         </div>
+        )}
       </SectionCard>
 
       {/* 5. Top holdings ------------------------------------------------- */}

@@ -11,6 +11,14 @@ import type {
   Rendezvous,
   RendezvousInterest,
 } from "@/lib/types";
+import {
+  Plane,
+  Train,
+  Car,
+  CalendarDays,
+  MapPin,
+  AlertTriangle,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { Provenance, ProvenanceTag } from "./Provenance";
 import { RendezvousGlobe } from "./RendezvousGlobe";
@@ -29,10 +37,10 @@ const KIND_LABEL: Record<string, string> = {
   other: "Other",
 };
 
-const MODE_ICON: Record<FlightLeg["mode"], string> = {
-  flight: "✈",
-  train: "🚆",
-  local: "🚗",
+const MODE_ICON: Record<FlightLeg["mode"], typeof Plane> = {
+  flight: Plane,
+  train: Train,
+  local: Car,
 };
 
 const CABIN_LABEL: Record<FlightQuote["cabin"], string> = {
@@ -56,9 +64,9 @@ function StatTile({
   tone?: "slate" | "emerald" | "amber" | "accent";
 }) {
   const tones: Record<string, string> = {
-    slate: "bg-slate-50 text-ink",
-    emerald: "bg-emerald-50 text-emerald-800",
-    amber: "bg-amber-50 text-amber-900",
+    slate: "bg-muted text-foreground",
+    emerald: "bg-success/10 text-success",
+    amber: "bg-warning/10 text-warning",
     accent: "bg-accent-soft text-accent-ink",
   };
   return (
@@ -86,11 +94,11 @@ function FlightQuoteRow({ q }: { q: FlightQuote }) {
         isClient ? "font-medium" : ""
       }`}
     >
-      <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+      <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         {ROLE_LABEL[q.role] ?? q.role}
       </span>
       <span className="min-w-0 flex-1 truncate text-ink">{q.participant_name}</span>
-      <span className="font-mono text-[11px] text-slate-500">
+      <span className="font-mono text-[11px] text-muted-foreground">
         {q.from_iata}→{q.to_iata}
       </span>
       {q.search_url && (
@@ -104,13 +112,13 @@ function FlightQuoteRow({ q }: { q: FlightQuote }) {
           Search
         </a>
       )}
-      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+      <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
         {CABIN_LABEL[q.cabin]}
       </span>
       <span className="w-24 shrink-0 text-right tabular-nums text-ink">
         CHF {q.price_chf.toLocaleString()}
         {q.price_source === "google_flights" && (
-          <span className="ml-1 text-[9px] font-medium uppercase tracking-wide text-emerald-600">
+          <span className="ml-1 text-[9px] font-medium uppercase tracking-wide text-success">
             live
           </span>
         )}
@@ -123,23 +131,24 @@ function FlightQuoteRow({ q }: { q: FlightQuote }) {
 }
 
 function FlightLegRow({ leg }: { leg: FlightLeg }) {
+  const ModeIcon = MODE_ICON[leg.mode];
   return (
     <div className="flex items-center gap-2 py-1 text-xs">
-      <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+      <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         {ROLE_LABEL[leg.role] ?? leg.role}
       </span>
       <span className="min-w-0 flex-1 truncate font-medium text-ink">
         {leg.participant_name}
       </span>
-      <span className="font-mono text-[11px] text-slate-500">
+      <span className="font-mono text-[11px] text-muted-foreground">
         {leg.from_iata}
-        <span className="mx-1 text-slate-300">→</span>
+        <span className="mx-1 text-border">→</span>
         {leg.to_iata}
       </span>
-      <span className="w-16 shrink-0 text-right tabular-nums text-slate-600">
-        {MODE_ICON[leg.mode]} {leg.travel_hours}h
+      <span className="flex w-16 shrink-0 items-center justify-end gap-1 tabular-nums text-muted-foreground">
+        <ModeIcon className="h-3.5 w-3.5" aria-hidden /> {leg.travel_hours}h
       </span>
-      <span className="w-20 shrink-0 text-right tabular-nums text-slate-500">
+      <span className="w-20 shrink-0 text-right tabular-nums text-muted-foreground">
         {Math.round(leg.co2_kg)} kg
       </span>
     </div>
@@ -156,7 +165,7 @@ function ModeToggle({
   onChange: (m: MeetingOptimization["mode"]) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1">
+    <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
       {(["fairness", "environmental"] as const).map((m) => {
         const active = mode === m;
         const isDefault = defaultMode === m;
@@ -168,9 +177,9 @@ function ModeToggle({
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               active
                 ? m === "environmental"
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "bg-white text-ink shadow-sm"
-                : "text-slate-600 hover:text-ink"
+                  ? "bg-success text-white shadow-sm"
+                  : "bg-card text-ink shadow-sm"
+                : "text-muted-foreground hover:text-ink"
             }`}
           >
             {m === "environmental" ? "CO₂-first" : "Fairness-first"}
@@ -206,9 +215,10 @@ function DatePicker({
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-start gap-2 rounded-xl bg-accent-soft/50 px-3 py-2.5 text-left transition-colors hover:bg-accent-soft/70"
       >
-        <span aria-hidden className="text-base">
-          🗓️
-        </span>
+        <CalendarDays
+          aria-hidden
+          className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink"
+        />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-ink">{slot.label}</p>
           <p className="mt-0.5 text-[11px] text-ink-soft">{slot.rationale}</p>
@@ -216,8 +226,8 @@ function DatePicker({
         </div>
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+        <div className="absolute z-20 mt-2 w-full rounded-xl border border-border bg-card p-3 shadow-pop">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Viable windows
           </p>
           <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
@@ -225,7 +235,7 @@ function DatePicker({
               <li key={o.start}>
                 <button
                   type="button"
-                  className={`w-full rounded-lg px-2 py-1.5 text-left text-xs hover:bg-slate-50 ${
+                  className={`w-full rounded-lg px-2 py-1.5 text-left text-xs hover:bg-muted ${
                     o.start === slot.start ? "bg-accent-soft/50 font-medium" : ""
                   }`}
                   onClick={() => {
@@ -238,8 +248,8 @@ function DatePicker({
               </li>
             ))}
           </ul>
-          <div className="mt-3 border-t border-slate-100 pt-3">
-            <label className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+          <div className="mt-3 border-t border-border pt-3">
+            <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Custom date &amp; time
             </label>
             <div className="mt-1 flex gap-2">
@@ -247,7 +257,7 @@ function DatePicker({
                 type="datetime-local"
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs"
+                className="min-w-0 flex-1 rounded-lg border border-border px-2 py-1.5 text-xs"
               />
               <button
                 type="button"
@@ -304,20 +314,22 @@ function CandidateTable({
         className={`w-full rounded-xl border px-3 py-2.5 text-left text-xs transition-colors ${
           active
             ? "border-accent/40 bg-accent-soft/60 ring-1 ring-inset ring-accent/25"
-            : "border-slate-200 bg-white hover:bg-slate-50"
+            : "border-border bg-card hover:bg-muted"
         }`}
       >
         <div className="flex items-center justify-between gap-2">
-          <span className="font-medium text-ink">
-            {c.is_optimal && <span className="mr-1" aria-hidden>📍</span>}
+          <span className="inline-flex items-center font-medium text-ink">
+            {c.is_optimal && (
+              <MapPin className="mr-1 h-3.5 w-3.5 shrink-0" aria-hidden />
+            )}
             {c.city}{" "}
-            <span className="font-mono text-[10px] text-slate-400">{c.iata}</span>
+            <span className="ml-1 font-mono text-[10px] text-muted-foreground">{c.iata}</span>
           </span>
-          <span className="tabular-nums text-slate-500">
+          <span className="tabular-nums text-muted-foreground">
             CHF {formatChf(c)}
           </span>
         </div>
-        <div className="mt-1 flex gap-3 tabular-nums text-[10px] text-slate-500">
+        <div className="mt-1 flex gap-3 tabular-nums text-[10px] text-muted-foreground">
           <span>{Math.round(c.total_co2_kg)} kg CO₂</span>
           <span>{c.max_travel_hours}h max</span>
           <span>σ {c.fairness_score}</span>
@@ -329,10 +341,10 @@ function CandidateTable({
   return (
     <div>
       <div className="space-y-2 md:hidden">{candidates.map(row)}</div>
-      <div className="hidden overflow-x-auto rounded-xl ring-1 ring-inset ring-slate-200 md:block">
+      <div className="hidden overflow-x-auto rounded-xl ring-1 ring-inset ring-border md:block">
         <table className="w-full min-w-[480px] text-xs">
           <thead>
-            <tr className="bg-slate-50 text-left text-[10px] uppercase tracking-wide text-slate-400">
+            <tr className="bg-muted text-left text-[10px] uppercase tracking-wide text-muted-foreground">
               <th className="px-3 py-2 font-semibold">Candidate</th>
               <th className="px-2 py-2 text-right font-semibold">CO₂</th>
               <th className="px-2 py-2 text-right font-semibold">Max</th>
@@ -347,14 +359,16 @@ function CandidateTable({
                 <tr
                   key={c.iata}
                   onClick={() => onSelect(c.iata)}
-                  className={`cursor-pointer border-t border-slate-100 transition-colors hover:bg-slate-50 ${
-                    active ? "bg-accent-soft/60" : c.is_optimal ? "bg-amber-50/30" : ""
+                  className={`cursor-pointer border-t border-border transition-colors hover:bg-muted ${
+                    active ? "bg-accent-soft/60" : c.is_optimal ? "bg-warning/5" : ""
                   }`}
                 >
                   <td className="px-3 py-2 font-medium text-ink">
-                    {c.is_optimal && <span className="mr-1">📍</span>}
+                    {c.is_optimal && (
+                      <MapPin className="mr-1 inline h-3.5 w-3.5 align-text-bottom" aria-hidden />
+                    )}
                     {c.city}{" "}
-                    <span className="font-mono text-[10px] text-slate-400">{c.iata}</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">{c.iata}</span>
                   </td>
                   <td className="px-2 py-2 text-right tabular-nums">{Math.round(c.total_co2_kg)}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{c.max_travel_hours}h</td>
@@ -368,7 +382,7 @@ function CandidateTable({
           </tbody>
         </table>
       </div>
-      <p className="mt-1.5 text-[10px] text-slate-400">
+      <p className="mt-1.5 text-[10px] text-muted-foreground">
         Tap a city to preview · ranked by {sortKey}
       </p>
     </div>
@@ -418,7 +432,7 @@ function OptimiserHero({
 
         <div className="card overflow-hidden p-0">
           {briefing?.image_url && (
-            <div className="relative h-44 w-full bg-slate-200 sm:h-52">
+            <div className="relative h-44 w-full bg-muted sm:h-52">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={briefing.image_url}
@@ -446,7 +460,7 @@ function OptimiserHero({
           <div className="p-4">
             {!briefing?.image_url && (
               <>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {selected.is_optimal && !pinned
                     ? greenest
                       ? "Greenest place to convene"
@@ -455,14 +469,14 @@ function OptimiserHero({
                 </p>
                 <h3 className="mt-0.5 text-xl font-semibold text-ink">
                   {selected.city}
-                  <span className="ml-2 font-mono text-sm font-normal text-slate-400">
+                  <span className="ml-2 font-mono text-sm font-normal text-muted-foreground">
                     {selected.iata}
                   </span>
                 </h3>
               </>
             )}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {selected.country} · {meeting.participants.length} attendees
               </p>
               <ModeToggle
@@ -500,7 +514,7 @@ function OptimiserHero({
               </p>
             )}
             {briefing?.weather?.label && (
-              <p className="mt-1 text-[11px] text-slate-500">
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 {briefing.weather.kind === "forecast" ? "Forecast" : "Climate"}:{" "}
                 {briefing.weather.label}
                 {briefing.weather.precipitation_mm != null &&
@@ -524,34 +538,34 @@ function OptimiserHero({
         {showPriceCrunch && (
           <div className="card p-4">
             <div className="flex items-baseline justify-between gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Travel price crunch · {selected.city}
               </p>
               <p className="text-sm font-semibold tabular-nums text-ink">
                 {quotesPending ? (
-                  <span className="text-slate-400">…</span>
+                  <span className="text-muted-foreground">…</span>
                 ) : selected.total_travel_cost_chf != null ? (
                   <>CHF {selected.total_travel_cost_chf.toLocaleString()}</>
                 ) : (
-                  <span className="text-slate-400">—</span>
+                  <span className="text-muted-foreground">—</span>
                 )}
               </p>
             </div>
             {quotesPending ? (
               <div className="mt-4 space-y-2">
-                <p className="text-xs text-slate-500">Fetching live fares…</p>
-                <div className="h-2 animate-pulse rounded bg-slate-100" />
-                <div className="h-2 w-4/5 animate-pulse rounded bg-slate-100" />
-                <div className="h-2 w-3/5 animate-pulse rounded bg-slate-100" />
+                <p className="text-xs text-muted-foreground">Fetching live fares…</p>
+                <div className="h-2 animate-pulse rounded bg-muted" />
+                <div className="h-2 w-4/5 animate-pulse rounded bg-muted" />
+                <div className="h-2 w-3/5 animate-pulse rounded bg-muted" />
               </div>
             ) : (
               <>
-                <div className="mt-2 divide-y divide-slate-100">
+                <div className="mt-2 divide-y divide-border">
                   {selected.flight_quotes?.map((q) => (
                     <FlightQuoteRow key={q.participant_id} q={q} />
                   ))}
                 </div>
-                <p className="mt-2 text-[10px] text-slate-400">
+                <p className="mt-2 text-[10px] text-muted-foreground">
                   Client cabin from profile interests
                 </p>
               </>
@@ -561,10 +575,10 @@ function OptimiserHero({
 
         {selected.legs.length > 0 && (
           <div className="card p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Travel legs · {selected.city}
             </p>
-            <div className="mt-2 divide-y divide-slate-100">
+            <div className="mt-2 divide-y divide-border">
               {selected.legs.map((leg) => (
                 <FlightLegRow key={leg.participant_id} leg={leg} />
               ))}
@@ -603,7 +617,7 @@ function ActivityCard({
   return (
     <article className="card overflow-hidden p-0">
       {activity.image_url && !imgFailed ? (
-        <div className="relative h-44 w-full bg-slate-100">
+        <div className="relative h-44 w-full bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={activity.image_url}
@@ -611,7 +625,7 @@ function ActivityCard({
             className="h-full w-full object-cover"
             onError={() => setImgFailed(true)}
           />
-          <span className="absolute left-3 top-3 rounded-md bg-white/90 px-2 py-0.5 text-[10px] font-medium text-ink shadow-sm">
+          <span className="absolute left-3 top-3 rounded-md bg-card/90 px-2 py-0.5 text-[10px] font-medium text-ink shadow-sm">
             {KIND_LABEL[activity.kind] ?? activity.kind}
           </span>
         </div>
@@ -649,7 +663,7 @@ function ActivityCard({
             <span className="font-medium">{activity.venue}</span>
           )}
         </p>
-        <p className="mt-0.5 text-[11px] text-slate-500">{activity.when}</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">{activity.when}</p>
         <p className="mt-2.5 text-xs leading-relaxed text-ink-soft">{activity.why}</p>
         {matched.length > 0 && (
           <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -665,7 +679,7 @@ function ActivityCard({
         )}
         {activity.prep.length > 0 && (
           <details className="group mt-2.5">
-            <summary className="cursor-pointer list-none text-[11px] font-medium text-slate-500 hover:text-ink">
+            <summary className="cursor-pointer list-none text-[11px] font-medium text-muted-foreground hover:text-ink">
               Prep checklist
             </summary>
             <ul className="mt-2 space-y-1">
@@ -690,7 +704,7 @@ function InterestsStrip({ interests }: { interests: RendezvousInterest[] }) {
   const open = interests.find((i) => i.id === openId);
   return (
     <section className="card p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         What we know they enjoy
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -708,7 +722,7 @@ function InterestsStrip({ interests }: { interests: RendezvousInterest[] }) {
               className={`chip ring-1 ring-inset transition-colors ${
                 active
                   ? "bg-accent-soft text-accent-ink ring-accent/30"
-                  : "bg-white text-ink-soft ring-slate-200 hover:bg-slate-50"
+                  : "bg-card text-ink-soft ring-border hover:bg-muted"
               } ${hasProv ? "cursor-pointer" : "cursor-default opacity-90"}`}
             >
               <span aria-hidden>{i.icon}</span>
@@ -729,13 +743,13 @@ function InterestsStrip({ interests }: { interests: RendezvousInterest[] }) {
 function TalkingPoints({ points }: { points: Rendezvous["talking_points"] }) {
   return (
     <section className="card p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Conversation openers
       </p>
       <ul className="mt-3 space-y-2.5">
         {points.map((p, i) => (
           <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
             <span className="text-ink-soft">
               {p.text}
               {p.provenance && <ProvenanceTag prov={p.provenance} />}
@@ -749,15 +763,15 @@ function TalkingPoints({ points }: { points: Rendezvous["talking_points"] }) {
 
 function SteerAround({ avoid }: { avoid: string[] }) {
   return (
-    <section className="card border-amber-200 bg-amber-50/60 p-4">
-      <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-800">
-        <span aria-hidden>⚠️</span> Steer around
+    <section className="card border-warning/30 bg-warning/5 p-4">
+      <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-warning">
+        <AlertTriangle aria-hidden className="h-3.5 w-3.5" /> Steer around
       </p>
       <ul className="mt-3 space-y-2.5">
         {avoid.map((a, i) => (
           <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-            <span className="text-amber-900">{a}</span>
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />
+            <span className="text-warning">{a}</span>
           </li>
         ))}
       </ul>
@@ -863,11 +877,11 @@ export function RendezvousView({ clientId }: { clientId: string }) {
   }, [clientId, highlightIata, eventIso, meeting?.live_flight_quotes_deferred]);
 
   if (loading) {
-    return <p className="p-5 text-sm text-slate-500">Planning the next rendezvous…</p>;
+    return <p className="p-5 text-sm text-muted-foreground">Planning the next rendezvous…</p>;
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600">
+      <p className="p-5 text-sm text-destructive">
         Could not load the rendezvous plan: {error}
       </p>
     );
@@ -911,10 +925,10 @@ export function RendezvousView({ clientId }: { clientId: string }) {
 
       {activities.length > 0 && selectedCandidate && (
         <section>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             What to do once you&apos;re together
           </p>
-          <p className="mb-3 text-xs text-slate-400">
+          <p className="mb-3 text-xs text-muted-foreground">
             In {selectedCandidate.city} — matched to this client&apos;s cited interests
           </p>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -944,10 +958,10 @@ export function RendezvousView({ clientId }: { clientId: string }) {
         </div>
       )}
 
-      <footer className="border-t border-slate-200 pt-4 text-xs leading-relaxed text-slate-500">
+      <footer className="border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
         <p>
           Where to convene{" "}
-          <span className="font-medium text-slate-600">{data.client_name}</span> and
+          <span className="font-medium text-foreground">{data.client_name}</span> and
           their party — pick a candidate city to preview venues, weather and travel
           quotes.
         </p>

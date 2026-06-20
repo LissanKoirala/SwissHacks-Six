@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import type { ClientDetail } from "@/lib/types";
 import { api } from "@/lib/api";
 import { titleCase } from "@/lib/format";
-import { Provenance } from "./Provenance";
+import { ProvenanceTag } from "./Provenance";
+import { MandatePill } from "./ui";
 
 const FACET_ORDER = ["professional", "interests", "historical", "personality"];
 
@@ -51,27 +52,60 @@ export function ProfileView({ clientId }: { clientId: string }) {
     ),
   ];
 
+  const name = data.profile.name;
+  const mandate = data.profile.mandate || data.mandate;
+  const headline = data.profile.headline;
+  const factCount = keys.reduce((n, k) => n + (facets[k]?.length ?? 0), 0);
+  // One-line digest of what the profile holds, reusing existing data only.
+  const digest =
+    keys.length > 0
+      ? `${factCount} ${factCount === 1 ? "fact" : "facts"} across ${
+          keys.length
+        } ${keys.length === 1 ? "facet" : "facets"}`
+      : null;
+
   return (
-    <div className="grid gap-5 md:grid-cols-2">
-      {keys.map((k) => (
-        <section key={k} className="card p-5">
-          <h3 className="mb-3 text-xs font-medium tracking-wide text-muted-foreground">
-            {titleCase(k)}
-          </h3>
-          <div className="space-y-3">
-            {facets[k].map((entry, i) => (
-              <div key={i}>
-                <p className="mb-1.5 text-sm leading-relaxed text-foreground">
-                  {entry.text}
-                </p>
-                <Provenance prov={entry.provenance} />
-              </div>
-            ))}
+    <div className="space-y-5">
+      {keys.length > 0 && (
+        <header className="card p-5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <h2 className="text-base font-semibold text-foreground">{name}</h2>
+            {mandate && <MandatePill mandate={mandate} />}
+            {digest && (
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {digest}
+              </span>
+            )}
           </div>
-        </section>
-      ))}
+          {headline && (
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              {headline}
+            </p>
+          )}
+        </header>
+      )}
+      <div className="grid gap-5 md:grid-cols-2">
+        {keys.map((k) => (
+          <section key={k} className="card p-5">
+            <h3 className="mb-3 text-xs font-medium tracking-wide text-muted-foreground">
+              {titleCase(k)}
+            </h3>
+            <div className="space-y-3">
+              {facets[k].map((entry, i) => (
+                <p
+                  key={i}
+                  className="text-sm leading-relaxed text-foreground"
+                >
+                  {entry.text}
+                  <ProvenanceTag prov={entry.provenance} />
+                </p>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
       {keys.length === 0 && (
-        <div className="md:col-span-2">
+        <div>
           <h3 className="font-display text-4xl font-light tracking-tight text-foreground">
             No profile yet
           </h3>

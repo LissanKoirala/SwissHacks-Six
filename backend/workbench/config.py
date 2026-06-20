@@ -77,8 +77,35 @@ class Settings:
     fred_key = _clean(os.getenv("FRED_API_KEY"))
     macro_url = os.getenv("MACRO_API_URL", "https://api.frankfurter.dev/v1").strip()
 
+    # --- Auth (Google sign-in, identity only), sessions & persistence (spec §4–§6) ---
+    google_client_id = _clean(os.getenv("GOOGLE_CLIENT_ID"))
+    google_client_secret = _clean(os.getenv("GOOGLE_CLIENT_SECRET"))
+    google_redirect_uri = os.getenv(
+        "GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback"
+    ).strip()
+    session_secret = os.getenv("SESSION_SECRET", "dev-insecure-change-me").strip() or "dev-insecure-change-me"
+    session_https_only = os.getenv("SESSION_HTTPS_ONLY", "0").strip() in ("1", "true", "True")
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000").strip() or "http://localhost:3000"
+    database_url = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR / 'workbench.db'}").strip()
+
+    # --- Twilio SMS morning briefing (spec §6–§8) ---
+    twilio_account_sid = _clean(os.getenv("TWILIO_ACCOUNT_SID"))
+    twilio_auth_token = _clean(os.getenv("TWILIO_AUTH_TOKEN"))
+    twilio_from_number = _clean(os.getenv("TWILIO_FROM_NUMBER"))
+    briefing_composer = (os.getenv("BRIEFING_COMPOSER", "deterministic").strip().lower() or "deterministic")
+    briefing_tz = os.getenv("BRIEFING_TZ", "Europe/Zurich").strip() or "Europe/Zurich"
+    scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "1").strip() in ("1", "true", "True")
+
     # Google Flights via the ``flights`` (fli) library — no API key; can be slow on first load.
     live_flights = os.getenv("USE_LIVE_FLIGHTS", "0").strip() in ("1", "true", "True")
+
+    @property
+    def google_enabled(self) -> bool:
+        return bool(self.google_client_id and self.google_client_secret)
+
+    @property
+    def twilio_enabled(self) -> bool:
+        return bool(self.twilio_account_sid and self.twilio_auth_token and self.twilio_from_number)
 
     @property
     def stt_enabled(self) -> bool:

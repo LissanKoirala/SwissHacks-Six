@@ -2,14 +2,22 @@
 Renders the orchestrator's output; nothing here makes decisions."""
 from __future__ import annotations
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from starlette.middleware.sessions import SessionMiddleware
 
 from ..agents.orchestrator import get_insights
 from ..analytics import build_analytics
-from ..config import settings
+from ..auth import init_oauth, require_user
+from ..auth import router as auth_router
+from ..briefing_service import compose_for, send_briefing
 from ..agents.flight_fli import _fli_installed
+from ..config import settings
+from ..db import get_db, init_db
+from ..db_models import RmUser
 from ..graph.crm_graph import build_crm_graph
 from ..models import (
     CaptureConfirmRequest,
@@ -18,6 +26,7 @@ from ..models import (
     RMQueryRequest,
     TTSRequest,
 )
+from ..scheduler import start_scheduler
 from ..seed import build_world
 
 
@@ -27,7 +36,15 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         # any localhost port in dev — Next.js may fall back to 3001/3002 if 3000 is taken
         allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+        allow_credentials=True,  # session cookie travels with /auth + /briefing calls
         allow_methods=["*"], allow_headers=["*"],
+    )
+    # Signed session cookie (holds only the user id); no Google tokens are stored.
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret,
+        same_site="lax",
+        https_only=settings.session_https_only,
     )
     world = build_world(use_live_news=settings.news_enabled)
     app.state.world = world
@@ -142,6 +159,12 @@ def create_app() -> FastAPI:
     @app.get("/news")
     def news():
         return [n.model_dump() for n in world.news]
+
+    @app.get("/overview")
+    def overview():
+        """RM morning landing — aggregates across all clients (docs/OVERVIEW_CONTRACT.md)."""
+        from ..agents.overview import build_overview
+        return build_overview(world)
 
     # --- ported features (builders lazy-imported so the app boots even mid-build) ---
 
@@ -293,6 +316,50 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "unknown client")
         from ..agents.capture import next_followup
         return next_followup(world, client_id, req.note, req.asked)
+
+    # --- Auth (Google sign-in) + Twilio morning briefing -------------------------
+    init_db()
+    init_oauth()
+    app.include_router(auth_router)
+
+    class BriefingPrefs(BaseModel):
+        phone_e164: str | None = None
+        briefing_hour: int | None = None
+        briefing_enabled: bool | None = None
+
+    @app.put("/me/briefing")
+    def update_briefing(
+        prefs: BriefingPrefs,
+        user: RmUser = Depends(require_user),
+        db: Session = Depends(get_db),
+    ):
+        if prefs.phone_e164 is not None:
+            user.phone_e164 = prefs.phone_e164.strip() or None
+        if prefs.briefing_hour is not None:
+            user.briefing_hour = max(0, min(23, prefs.briefing_hour))
+        if prefs.briefing_enabled is not None:
+            user.briefing_enabled = prefs.briefing_enabled
+        db.commit()
+        return {
+            "ok": True,
+            "phone_e164": user.phone_e164,
+            "briefing_hour": user.briefing_hour,
+            "briefing_enabled": user.briefing_enabled,
+        }
+
+    @app.post("/briefing/send-test")
+    def briefing_send_test(
+        user: RmUser = Depends(require_user), db: Session = Depends(get_db)
+    ):
+        """Compose + send the morning briefing now — the demo trigger (no 09:00 wait)."""
+        return send_briefing(db, world, user, force=True)
+
+    @app.get("/briefing/preview")
+    def briefing_preview():
+        """The composed briefing text over the seed book — visible even logged-out."""
+        return {"text": compose_for(world)}
+
+    start_scheduler(world)
 
     return app
 
