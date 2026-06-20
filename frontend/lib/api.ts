@@ -27,6 +27,7 @@ import type {
   TransactionsData,
   RMQueryBody,
   RMQueryResult,
+  LinkPreview,
   MeUser,
   BriefingPrefsBody,
   BriefingPrefsResult,
@@ -150,6 +151,8 @@ export const api = {
     post<CaptureFollowup>(`/clients/${id}/capture/followup`, body),
   query: (id: string, body: RMQueryBody) =>
     post<RMQueryResult>(`/clients/${id}/query`, body),
+  linkPreview: (url: string) =>
+    get<LinkPreview>(`/api/link-preview?url=${encodeURIComponent(url)}`),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
 
   // --- auth (Google sign-in, identity only) + Twilio morning briefing ---

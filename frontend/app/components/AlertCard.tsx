@@ -6,9 +6,11 @@ import { chf, prettyDate, titleCase } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
 import { PolarityChip, SentimentChip, SourceBadge, Expander } from "./ui";
 import { Provenance } from "./Provenance";
+import { LinkPreviewThumb } from "./LinkPreviewThumb";
 
 export function AlertCard({ match }: { match: Match }) {
   const { news } = match;
+  const sourceUrl = news.url ?? news.provenance.url ?? null;
   return (
     <article className="card overflow-hidden">
       <div className="p-5">
@@ -42,26 +44,28 @@ export function AlertCard({ match }: { match: Match }) {
           </h3>
         </div>
 
-        {/* news item */}
+        {/* news preview — title/meta + thumbnail; full excerpt lives in expander */}
         <div className="mt-3 rounded-md bg-muted/40 p-3">
-          <p className="text-sm font-medium text-foreground">{news.title}</p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground/80">{news.source}</span>
-            <span>·</span>
-            <span className="font-mono tabular-nums">{prettyDate(news.published_at)}</span>
-            <SentimentChip label={news.sentiment.label} />
-            <span className="text-muted-foreground">
-              score{" "}
-              <span className="tabular-nums">
-                {news.sentiment.score.toFixed(2)}
-              </span>
-            </span>
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground">{news.title}</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground/80">{news.source}</span>
+                <span>·</span>
+                <span className="font-mono tabular-nums">{prettyDate(news.published_at)}</span>
+                <SentimentChip label={news.sentiment.label} />
+                <span className="text-muted-foreground">
+                  score{" "}
+                  <span className="tabular-nums">
+                    {news.sentiment.score.toFixed(2)}
+                  </span>
+                </span>
+              </div>
+            </div>
+            {sourceUrl ? (
+              <LinkPreviewThumb url={sourceUrl} layout="thumbnail" />
+            ) : null}
           </div>
-          {news.body && (
-            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-foreground/80">
-              {news.body}
-            </p>
-          )}
         </div>
 
         {/* affected holding */}

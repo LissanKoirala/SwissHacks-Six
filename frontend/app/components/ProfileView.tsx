@@ -5,6 +5,7 @@ import type { ClientDetail } from "@/lib/types";
 import { api } from "@/lib/api";
 import { titleCase } from "@/lib/format";
 import { ProvenanceTag } from "./Provenance";
+import { LinkPreviewThumb } from "./LinkPreviewThumb";
 import { MandatePill } from "./ui";
 
 const FACET_ORDER = ["professional", "interests", "historical", "personality"];
@@ -92,13 +93,22 @@ export function ProfileView({ clientId }: { clientId: string }) {
             </h3>
             <div className="space-y-3">
               {facets[k].map((entry, i) => (
-                <p
+                <article
                   key={i}
-                  className="text-sm leading-relaxed text-foreground"
+                  className="flex gap-3 rounded-lg border border-border bg-muted/20 p-3"
                 >
-                  {entry.text}
-                  <ProvenanceTag prov={entry.provenance} />
-                </p>
+                  {entry.provenance.url ? (
+                    <LinkPreviewThumb url={entry.provenance.url} />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm leading-relaxed text-foreground">
+                      {entry.text}
+                    </p>
+                    <div className="mt-2">
+                      <ProvenanceTag prov={entry.provenance} />
+                    </div>
+                  </div>
+                </article>
               ))}
             </div>
           </section>

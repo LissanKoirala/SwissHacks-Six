@@ -612,6 +612,16 @@ def create_app() -> FastAPI:
         created = ingest_news(world)
         return {"created": [t.model_dump() for t in created], "count": len(created)}
 
+    @app.get("/api/link-preview")
+    def link_preview(url: str):
+        """OG/Twitter thumbnail or favicon fallback for provenance source cards."""
+        from ..link_unfurl import unfurl_link
+
+        try:
+            return unfurl_link(url).model_dump()
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
     return app
 
 

@@ -33,6 +33,15 @@ export interface Provenance {
   timestamp?: string | null;
 }
 
+export interface LinkPreview {
+  url: string;
+  image_url?: string | null;
+  favicon_url?: string | null;
+  title?: string | null;
+  site_name?: string | null;
+  preview_kind: "thumbnail" | "favicon" | "none";
+}
+
 export interface Sentiment {
   score: number;
   label: string;
