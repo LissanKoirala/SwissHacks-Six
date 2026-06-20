@@ -101,30 +101,57 @@ function SoonButton({ label, title }: { label: string; title: string }) {
   );
 }
 
-function SectionHeader({
+// A collapsible desk section: chevron + uppercase title toggle, with count / hint
+// and an optional right-aligned action that stays clickable (outside the toggle).
+function CollapsibleSection({
   title,
   count,
   hint,
   action,
+  defaultOpen = true,
+  children,
 }: {
   title: string;
   count?: number;
   hint?: string;
   action?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
 }) {
   return (
-    <div className="mb-3 flex items-center gap-2">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h2>
-      {typeof count === "number" && (
-        <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
-          {count}
-        </span>
+    <Collapsible
+      defaultOpen={defaultOpen}
+      trigger={(open, toggle) => (
+        <div className="mb-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={open}
+            className="group flex items-center gap-2"
+          >
+            <ChevronRight
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform",
+                open && "rotate-90",
+              )}
+              aria-hidden
+            />
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground transition-colors group-hover:text-primary">
+              {title}
+            </h2>
+          </button>
+          {typeof count === "number" && (
+            <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
+              {count}
+            </span>
+          )}
+          {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+          {action && <div className="ml-auto">{action}</div>}
+        </div>
       )}
-      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
-      {action && <div className="ml-auto">{action}</div>}
-    </div>
+    >
+      {children}
+    </Collapsible>
   );
 }
 
@@ -566,35 +593,10 @@ export function OverviewDashboard({
 
         {/* §1 priority tasks — collapsible section, grouped per client */}
         <section className="mt-7">
-          <Collapsible
-            defaultOpen
-            trigger={(open, toggle) => (
-              <div className="mb-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggle}
-                  aria-expanded={open}
-                  className="group flex items-center gap-2"
-                >
-                  <ChevronRight
-                    className={cn(
-                      "h-4 w-4 text-muted-foreground transition-transform",
-                      open && "rotate-90",
-                    )}
-                    aria-hidden
-                  />
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground transition-colors group-hover:text-primary">
-                    Priority — touch base
-                  </h2>
-                </button>
-                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
-                  {o.priority_tasks.length}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  a world event hit their profile
-                </span>
-              </div>
-            )}
+          <CollapsibleSection
+            title="Priority — touch base"
+            count={o.priority_tasks.length}
+            hint="a world event hit their profile"
           >
             {o.priority_tasks.length === 0 ? (
               <div className="card p-5 text-sm text-muted-foreground">
@@ -607,66 +609,70 @@ export function OverviewDashboard({
                 ))}
               </div>
             )}
-          </Collapsible>
+          </CollapsibleSection>
         </section>
 
         {/* §2 meetings + §3 market moves */}
         <div className="mt-7 grid gap-6 lg:grid-cols-2">
           <section>
-            <SectionHeader
+            <CollapsibleSection
               title="Meetings coming up"
               count={o.meetings.length}
               action={<SoonButton label="Connect Google Calendar" title="Calendar sync" />}
-            />
-            <div className="card space-y-2.5 p-4">
-              {o.meetings.map((m) => (
-                <MeetingRow key={m.id} m={m} onOpen={onOpenClient} />
-              ))}
-            </div>
+            >
+              <div className="card space-y-2.5 p-4">
+                {o.meetings.map((m) => (
+                  <MeetingRow key={m.id} m={m} onOpen={onOpenClient} />
+                ))}
+              </div>
+            </CollapsibleSection>
           </section>
 
           <section>
-            <SectionHeader
+            <CollapsibleSection
               title="Big market moves"
               count={o.market_moves.length}
               hint="macro · dialogue only"
-            />
-            <div className="card space-y-2.5 p-4">
-              {o.market_moves.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No notable macro moves.</p>
-              ) : (
-                o.market_moves.map((mv) => <MarketMoveRow key={mv.id} mv={mv} />)
-              )}
-            </div>
+            >
+              <div className="card space-y-2.5 p-4">
+                {o.market_moves.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No notable macro moves.</p>
+                ) : (
+                  o.market_moves.map((mv) => <MarketMoveRow key={mv.id} mv={mv} />)
+                )}
+              </div>
+            </CollapsibleSection>
           </section>
         </div>
 
         {/* §4 portfolio events + §5 news wire */}
         <div className="mt-7 grid gap-6 lg:grid-cols-2">
           <section>
-            <SectionHeader
+            <CollapsibleSection
               title="On your holdings"
               count={o.portfolio_events.length}
               hint="earnings · filings · IPOs"
-            />
-            <div className="card space-y-2.5 p-4">
-              {o.portfolio_events.map((e) => (
-                <PortfolioEventRow key={e.id} e={e} onOpen={onOpenClient} />
-              ))}
-            </div>
+            >
+              <div className="card space-y-2.5 p-4">
+                {o.portfolio_events.map((e) => (
+                  <PortfolioEventRow key={e.id} e={e} onOpen={onOpenClient} />
+                ))}
+              </div>
+            </CollapsibleSection>
           </section>
 
           <section>
-            <SectionHeader
+            <CollapsibleSection
               title="News wire"
               count={o.news.length}
               hint="tagged to who it touches"
-            />
-            <div className="card space-y-2.5 p-4">
-              {o.news.map((n) => (
-                <NewsRow key={n.id} n={n} onOpen={onOpenClient} />
-              ))}
-            </div>
+            >
+              <div className="card space-y-2.5 p-4">
+                {o.news.map((n) => (
+                  <NewsRow key={n.id} n={n} onOpen={onOpenClient} />
+                ))}
+              </div>
+            </CollapsibleSection>
           </section>
         </div>
 

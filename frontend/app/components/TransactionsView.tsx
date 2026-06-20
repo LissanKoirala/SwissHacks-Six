@@ -291,11 +291,17 @@ export function TransactionsView({ clientId }: { clientId: string }) {
 
       {/* 3. Transaction history ------------------------------------------ */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Transaction history · {s.txn_count}
-          </p>
-        </div>
+        <Collapsible
+          defaultOpen
+          trigger={(open, toggle) => (
+            <CardToggle
+              open={open}
+              toggle={toggle}
+              label="Transaction history"
+              count={s.txn_count}
+            />
+          )}
+        >
         <div className="scroll-thin max-h-[28rem] overflow-auto">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-white">
@@ -362,6 +368,7 @@ export function TransactionsView({ clientId }: { clientId: string }) {
             </tbody>
           </table>
         </div>
+        </Collapsible>
       </section>
 
       {/* 4. Cash flows --------------------------------------------------- */}
