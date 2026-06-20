@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Globe2, MapPin, Newspaper, Radio } from "lucide-react";
+import { ChevronRight, Globe2, MapPin, Newspaper, Radio } from "lucide-react";
 import type {
   Globe as GlobeData,
   GlobeHolding,
@@ -10,6 +10,8 @@ import type {
 } from "@/lib/types";
 import { api } from "@/lib/api";
 import { chf, prettyDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { Collapsible } from "./ui";
 import { Provenance, ProvenanceTag } from "./Provenance";
 
 /* The globe.gl instance is only created in the browser (dynamic import inside
@@ -535,18 +537,34 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
 
         <div className="space-y-4">
           {data.events.length > 0 && (
-            <div>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
-                <Radio className="h-3.5 w-3.5" aria-hidden />
-                Live Signals
-                <span className="tabular-nums">· {data.events.length}</span>
-              </p>
-              <div className="space-y-3">
+            <Collapsible
+              defaultOpen
+              trigger={(open, toggle) => (
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-expanded={open}
+                  className="flex w-full items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <ChevronRight
+                    className={cn(
+                      "h-3.5 w-3.5 shrink-0 transition-transform",
+                      open && "rotate-90",
+                    )}
+                    aria-hidden
+                  />
+                  <Radio className="h-3.5 w-3.5" aria-hidden />
+                  Live Signals
+                  <span className="tabular-nums">· {data.events.length}</span>
+                </button>
+              )}
+            >
+              <div className="mt-2 space-y-3">
                 {data.events.map((e) => (
                   <EventCard key={e.id} event={e} />
                 ))}
               </div>
-            </div>
+            </Collapsible>
           )}
 
           {data.news && data.news.length > 0 && (
