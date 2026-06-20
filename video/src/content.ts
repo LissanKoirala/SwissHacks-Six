@@ -21,6 +21,33 @@ export const DESK: {
   { name: "Marius Huber", mandate: "Defensive", alerts: 2, polarity: "opportunity", note: "Unilever acts on deforestation — values-aligned" },
 ];
 
+// Client digital twin — a real "bounce then clear" loop for Julian Ammann
+// (Growth; non-negotiable stance on labour & supply-chain governance).
+export const TWIN = {
+  client: "Julian Ammann",
+  concern: {
+    quote: "My national brand equity is built on clean labour — that's non-negotiable.",
+    date: "Jun 2023",
+    source: "ammann#…#3",
+  },
+  attempt1: {
+    move: "Rebalance the consumer sleeve into PDD Holdings",
+    verdict: "Likely to object",
+    reason:
+      "Buys into labour-risk — conflicts with his stance on labour & supply-chain governance.",
+    says: "Not after the supply-chain reports.",
+    source: "ammann#…#3",
+  },
+  attempt2: {
+    move: "Same sector — Cie Financière Richemont instead",
+    amount: "CHF 95,688",
+    verdict: "Likely receptive",
+    reason:
+      "Clean-governance, comparable risk (+1.1% vol) — it backs exactly what he champions.",
+    source: "cio_list",
+  },
+};
+
 export const SCHNEIDER = {
   name: "Hubertus Schneider",
   mandate: "Balanced",

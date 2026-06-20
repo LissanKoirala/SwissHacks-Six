@@ -32,7 +32,7 @@ export const SCENES: SceneDef[] = [
   { C: DialogueScene, dur: 260 },
   { C: RiskScene, dur: 230 },
   { C: TrustScene, dur: 190 },
-  { C: TwinScene, dur: 200 },
+  { C: TwinScene, dur: 240 },
   { C: PipelineScene, dur: 200 },
   { C: OutroScene, dur: 150 },
 ];
