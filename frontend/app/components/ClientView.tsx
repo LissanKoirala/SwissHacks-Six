@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertCard } from "./AlertCard";
 import { StrategyPanel } from "./StrategyPanel";
 import { DialoguePanel } from "./DialoguePanel";
+import { TwinPanel } from "./TwinPanel";
 import { PortfolioView } from "./PortfolioView";
 import { ProfileView } from "./ProfileView";
 import { PortfolioCharts } from "./PortfolioCharts";
@@ -374,6 +375,9 @@ export function ClientView({ clientId }: { clientId: string }) {
                   />
                   <DialoguePanel dialogue={insights.dialogue_suggestion} />
                 </div>
+
+                {/* digital twin — pre-mortem on the proposal */}
+                <TwinPanel clientId={clientId} />
 
                 {/* additional proposals — collapsed by default */}
                 {insights.additional_proposals &&

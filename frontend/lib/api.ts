@@ -4,6 +4,7 @@
 import type {
   ClientSummary,
   Insights,
+  ClientTwin,
   Portfolio,
   ClientDetail,
   Fundamentals,
@@ -78,6 +79,7 @@ export const api = {
   overview: () => get<Overview>("/overview"),
   clients: () => get<ClientSummary[]>("/clients"),
   insights: (id: string) => get<Insights>(`/clients/${id}/insights`),
+  twin: (id: string) => get<ClientTwin>(`/clients/${id}/twin`),
   portfolio: (id: string) => get<Portfolio>(`/clients/${id}/portfolio`),
   fundamentals: (id: string) =>
     get<Fundamentals[]>(`/clients/${id}/fundamentals`),
