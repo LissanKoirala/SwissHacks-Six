@@ -515,6 +515,163 @@ export interface RendezvousInterest {
   provenance?: Provenance | null;
 }
 
+export type TravelMode = "local" | "train" | "flight";
+export type ParticipantRole = "rm" | "client" | "family";
+
+export interface RendezvousParticipant {
+  id: string;
+  name: string;
+  role: ParticipantRole;
+  city: string;
+  country: string;
+  iata: string;
+  lat: number;
+  lng: number;
+}
+
+export interface FlightLeg {
+  participant_id: string;
+  participant_name: string;
+  role: ParticipantRole;
+  from_city: string;
+  from_iata: string;
+  to_city: string;
+  to_iata: string;
+  distance_km: number;
+  travel_hours: number;
+  co2_kg: number;
+  mode: TravelMode;
+  timezone_shift_h: number;
+}
+
+export interface FlightQuote {
+  participant_id: string;
+  participant_name: string;
+  role: ParticipantRole;
+  from_iata: string;
+  to_iata: string;
+  mode: TravelMode;
+  cabin: "economy" | "premium_economy" | "business" | "first";
+  price_chf: number;
+  price_usd: number;
+  co2_kg: number;
+  travel_hours: number;
+  note?: string;
+  search_url?: string | null;
+  price_source?: "estimate" | "google_flights";
+}
+
+export interface CityActivity {
+  id: string;
+  kind: RendezvousKind;
+  icon: string;
+  title: string;
+  venue: string;
+  when: string;
+  why: string;
+  matched_interest_ids: string[];
+  prep: string[];
+  score?: number;
+  image_url?: string | null;
+  url?: string | null;
+}
+
+export interface CityWeather {
+  kind: string;
+  temp_min_c?: number | null;
+  temp_max_c?: number | null;
+  temp_typical_c?: number | null;
+  precipitation_mm?: number | null;
+  label: string;
+  event_date?: string | null;
+}
+
+export interface CityBriefing {
+  city: string;
+  country: string;
+  summary: string;
+  image_url?: string | null;
+  weather: CityWeather;
+  sources: string[];
+}
+
+export interface CandidateFlightQuotes {
+  iata: string;
+  flight_quotes: FlightQuote[];
+  total_travel_cost_chf: number;
+}
+
+export interface CandidateCity {
+  city: string;
+  country: string;
+  iata: string;
+  lat: number;
+  lng: number;
+  total_co2_kg: number;
+  max_travel_hours: number;
+  avg_travel_hours: number;
+  fairness_score: number;
+  composite_score: number;
+  is_optimal: boolean;
+  legs: FlightLeg[];
+  activities?: CityActivity[];
+  flight_quotes?: FlightQuote[];
+  total_travel_cost_chf?: number;
+  city_briefing?: CityBriefing;
+  globe?: RendezvousGlobeData;
+}
+
+export interface RendezvousCalendarSlot {
+  label: string;
+  start: string;
+  end: string;
+  rationale: string;
+}
+
+export interface RendezvousGlobePoint {
+  id: string;
+  kind: "origin" | "meeting";
+  label: string;
+  lat: number;
+  lng: number;
+  color: string;
+  role?: ParticipantRole | null;
+}
+
+export interface RendezvousGlobeArc {
+  id: string;
+  from_lat: number;
+  from_lng: number;
+  to_lat: number;
+  to_lng: number;
+  label: string;
+  color: string;
+  travel_hours: number;
+  mode: TravelMode;
+}
+
+export interface RendezvousGlobeData {
+  points: RendezvousGlobePoint[];
+  arcs: RendezvousGlobeArc[];
+  focus_lat: number;
+  focus_lng: number;
+}
+
+export interface MeetingOptimization {
+  mode: "fairness" | "environmental";
+  default_mode: "fairness" | "environmental";
+  summary: string;
+  participants: RendezvousParticipant[];
+  candidates: CandidateCity[];
+  optimal_city?: string | null;
+  optimal_country?: string | null;
+  optimal_iata?: string | null;
+  calendar_slot?: RendezvousCalendarSlot | null;
+  calendar_options?: RendezvousCalendarSlot[];
+  globe: RendezvousGlobeData;
+  live_flight_quotes_deferred?: boolean;
+}
+
 export interface RendezvousSuggestion {
   id: string;
   kind: RendezvousKind;
@@ -537,6 +694,7 @@ export interface Rendezvous {
   suggestions: RendezvousSuggestion[];
   talking_points: { text: string; provenance?: Provenance | null }[];
   avoid: string[];
+  meeting?: MeetingOptimization;
 }
 
 // --- Decision Flow (layered "why this call" DAG over the insights data) ---

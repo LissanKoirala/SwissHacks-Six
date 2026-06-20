@@ -70,6 +70,9 @@ class Settings:
     fred_key = _clean(os.getenv("FRED_API_KEY"))
     macro_url = os.getenv("MACRO_API_URL", "https://api.frankfurter.dev/v1").strip()
 
+    # Google Flights via the ``flights`` (fli) library — no API key; can be slow on first load.
+    live_flights = os.getenv("USE_LIVE_FLIGHTS", "0").strip() in ("1", "true", "True")
+
     @property
     def stt_enabled(self) -> bool:
         if self.stt_provider == "elevenlabs":
@@ -82,6 +85,10 @@ class Settings:
         if self.ocr_provider == "phoeniqs":
             return bool(self.phoeniqs_key)
         return False
+
+    @property
+    def flights_enabled(self) -> bool:
+        return self.live_flights
 
     @property
     def llm_enabled(self) -> bool:
