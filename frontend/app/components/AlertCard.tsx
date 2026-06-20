@@ -1,14 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, ChevronRight, Hash, Loader2, MessageSquareQuote, Newspaper, Sparkles } from "lucide-react";
-import type { Match, MatchResolution, SourceType, Swap } from "@/lib/types";
+import {
+  ArrowRight,
+  ChevronRight,
+  Glasses,
+  Hash,
+  Loader2,
+  MessageSquareQuote,
+  Newspaper,
+  PartyPopper,
+  Sparkles,
+} from "lucide-react";
+import type { LensFraming, Match, MatchResolution, RelevanceScore, SourceType, Swap } from "@/lib/types";
 import { api } from "@/lib/api";
 import { chf, prettyDate, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { IssuerLogo } from "./IssuerLogo";
-import { PolarityChip, SentimentChip, SourceBadge, Collapsible, Expander } from "./ui";
-import { Provenance } from "./Provenance";
+import {
+  PolarityChip,
+  RelevanceMeter,
+  SentimentChip,
+  SourceBadge,
+  Collapsible,
+  Expander,
+} from "./ui";
+import { Provenance, ProvenanceTag } from "./Provenance";
 import { LinkPreviewThumb } from "./LinkPreviewThumb";
 
 /** Group matches that share the same alert headline into one card. */
@@ -23,6 +40,98 @@ export function groupMatchesByHeadline(matches: Match[]): Match[][] {
     groups.get(match.headline)!.push(match);
   }
   return order.map((headline) => groups.get(headline)!);
+}
+
+/**
+ * The Client Lens (#1): the same generic news, rewritten through THIS client's documented
+ * worldview — quoting their own prior words back to them. The hero of the card: the news adapts to
+ * the reader. Both the client's quote and the news are cited (Trust, §2).
+ */
+function LensHero({ lens, celebrate }: { lens: LensFraming; celebrate: boolean }) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border p-4",
+        celebrate
+          ? "border-success/30 bg-success/5"
+          : "border-primary/30 bg-primary/[0.06]"
+      )}
+    >
+      <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium tracking-wide text-primary">
+        <Glasses className="h-3.5 w-3.5" />
+        Through the client&rsquo;s lens
+        {lens.draft_source === "llm" && (
+          <span className="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary ring-1 ring-inset ring-primary/20">
+            AI-framed
+          </span>
+        )}
+      </p>
+      <h3 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
+        {lens.headline}
+      </h3>
+      <p className="mt-2 text-sm leading-relaxed text-foreground/80">
+        {lens.narrative}
+      </p>
+      {lens.provenance.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] text-muted-foreground">Grounded in</span>
+          {lens.provenance.map((p, i) => (
+            <ProvenanceTag
+              key={`${p.source_id}-${i}`}
+              prov={p}
+              label={p.source_type === "crm_log" ? "their words" : "the news"}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The conviction-weighted relevance breakdown (#2): why this item scored what it did FOR THIS
+ * CLIENT — every factor a tinted bar with its own source. The breakdown, not the bare number, is
+ * the trust surface (CLAUDE.md §2).
+ */
+function RelevanceBreakdown({ relevance }: { relevance: RelevanceScore }) {
+  return (
+    <div className="mt-3">
+      <Expander
+        label={`Why it scored ${relevance.score}`}
+        summary="conviction · exposure · sentiment · freshness"
+      >
+        <div className="space-y-2.5 rounded-md border border-border p-3">
+          {relevance.components.map((c, i) => {
+            const pct = c.max_points > 0 ? (c.points / c.max_points) * 100 : 0;
+            return (
+              <div key={`${c.label}-${i}`}>
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-medium text-foreground/80">{c.label}</span>
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <span className="tabular-nums text-foreground/80">
+                      {c.points.toFixed(1)}
+                    </span>
+                    <span className="text-[10px]">/ {c.max_points}</span>
+                    {c.provenance && <ProvenanceTag prov={c.provenance} />}
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary/70"
+                    style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
+                  />
+                </div>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">{c.detail}</p>
+              </div>
+            );
+          })}
+          <p className="border-t border-border/60 pt-2 text-[11px] tabular-nums text-muted-foreground">
+            {relevance.summary}
+          </p>
+        </div>
+      </Expander>
+    </div>
+  );
 }
 
 function WhySurfacedContent({ match }: { match: Match }) {
@@ -473,10 +582,22 @@ export function CondensedMatchPreview({
 }
 
 export function AlertCard({ matches }: { matches: Match[] }) {
-  const sorted = sortMatchesByRecency(matches);
+  // Lead with the highest-relevance match in the group (backend already ranks by it); recency
+  // breaks ties so the freshest of an equally-relevant pair shows first.
+  const sorted = [...matches].sort((a, b) => {
+    const ra = a.relevance?.score ?? 0;
+    const rb = b.relevance?.score ?? 0;
+    if (rb !== ra) return rb - ra;
+    return (
+      new Date(b.news.published_at).getTime() -
+      new Date(a.news.published_at).getTime()
+    );
+  });
   const primary = sorted[0];
-  const moreStories = sorted.slice(1);
-  const grouped = matches.length > 1;
+  const moreStories = sortMatchesByRecency(sorted.slice(1));
+  const celebrate = !!primary.celebrate;
+  const lens = primary.lens ?? null;
+  const relevance = primary.relevance ?? null;
   const topics = Array.from(
     new Set(matches.flatMap((m) => m.news.topics))
   ).sort();
@@ -489,9 +610,20 @@ export function AlertCard({ matches }: { matches: Match[] }) {
   );
 
   return (
-    <article className="card overflow-hidden">
+    <article
+      className={cn(
+        "card overflow-hidden",
+        celebrate && "ring-1 ring-inset ring-success/30"
+      )}
+    >
+      {celebrate && (
+        <div className="flex items-center gap-2 bg-success/10 px-5 py-2 text-sm font-semibold text-success">
+          <PartyPopper className="h-4 w-4 shrink-0" aria-hidden />
+          Call to celebrate — the good news this client asked to hear.
+        </div>
+      )}
       <div className="p-5">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <PolarityChip polarity={primary.polarity} />
           {signalTypes.map((type) => (
             <SourceBadge key={type} type={type as SourceType} />
@@ -504,22 +636,35 @@ export function AlertCard({ matches }: { matches: Match[] }) {
               #{t}
             </span>
           ))}
+          {relevance && (
+            <span className="ml-auto">
+              <RelevanceMeter score={relevance.score} />
+            </span>
+          )}
         </div>
 
-        <div className="flex items-start gap-3">
-          {!grouped && primary.affected_holding && (
-            <IssuerLogo
-              issuer={primary.affected_holding.issuer}
-              isin={primary.affected_holding.isin}
-              yahoo={primary.affected_holding.yahoo}
-              size="lg"
-              className="mt-0.5"
-            />
-          )}
-          <h3 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
-            {primary.headline}
-          </h3>
-        </div>
+        {/* Hero: the news reframed through the client's worldview (#1) */}
+        {lens ? (
+          <LensHero lens={lens} celebrate={celebrate} />
+        ) : (
+          <div className="flex items-start gap-3">
+            {matches.length === 1 && primary.affected_holding && (
+              <IssuerLogo
+                issuer={primary.affected_holding.issuer}
+                isin={primary.affected_holding.isin}
+                yahoo={primary.affected_holding.yahoo}
+                size="lg"
+                className="mt-0.5"
+              />
+            )}
+            <h3 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
+              {primary.headline}
+            </h3>
+          </div>
+        )}
+
+        {/* The cited score breakdown (#2) */}
+        {relevance && <RelevanceBreakdown relevance={relevance} />}
 
         <div className="mt-3 space-y-3">
           <AlertStory match={primary} />

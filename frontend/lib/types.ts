@@ -125,6 +125,31 @@ export interface Holding {
   provenance?: Provenance | null; // pointer to the Sample Portfolio workbook row
 }
 
+// --- Worldview engine: the client as a living model, not a topic set ---
+
+export interface ScoreComponent {
+  label: string;
+  detail: string;
+  points: number;
+  max_points: number;
+  provenance?: Provenance | null;
+}
+
+export interface RelevanceScore {
+  score: number; // 0–100
+  components: ScoreComponent[];
+  summary: string;
+}
+
+export interface LensFraming {
+  headline: string;
+  narrative: string;
+  client_quote?: string | null;
+  quote_date?: string | null;
+  draft_source: "llm" | "template";
+  provenance: Provenance[];
+}
+
 export interface Match {
   id: string;
   client_id: string;
@@ -134,6 +159,29 @@ export interface Match {
   shared_topics: SharedTopic[];
   affected_holding?: Holding | null;
   why: Provenance[];
+  // worldview enrichment (deterministic, computed at match time)
+  relevance?: RelevanceScore | null; // conviction-weighted 0–100 + cited breakdown
+  lens?: LensFraming | null; // the item reframed through this client's own words
+  celebrate: boolean; // a genuine 'call to celebrate' good-news moment, not a warning
+}
+
+export interface ReactionPrediction {
+  predicted_objection: string;
+  emotional_register: string;
+  suggested_rebuttal: string;
+  confidence: "grounded" | "inferred";
+  draft_source: "llm" | "template";
+  provenance: Provenance[];
+}
+
+export interface LifeEventSignal {
+  label: string;
+  date: string;
+  months_ago: number;
+  topic?: string | null;
+  facet?: string | null;
+  implication: string;
+  provenance: Provenance;
 }
 
 export interface SubstitutionMetrics {
@@ -246,7 +294,7 @@ export interface DialogueSuggestion {
   draft_message: string;
   // How the draft was produced: "llm" (Phoeniqs, style-tuned) or "template" (deterministic,
   // style-aware fallback) — surfaced so the prose's provenance is honest.
-  draft_source?: "llm" | "template";
+  draft_source: "llm" | "template";
   market_context: MarketContextItem[];
   provenance: Provenance[];
 }
@@ -265,6 +313,9 @@ export interface Insights {
   strategy_proposal: StrategyProposal | null;
   dialogue_suggestion: DialogueSuggestion | null;
   additional_proposals?: StrategyProposal[];
+  // worldview engine outputs (per opened client, lazily)
+  reaction?: ReactionPrediction | null; // digital-twin reaction to the primary proposal
+  life_events?: LifeEventSignal[]; // recent dated values-shift signals
   generated_at: string;
   llm_used: boolean;
 }

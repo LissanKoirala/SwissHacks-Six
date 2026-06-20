@@ -224,6 +224,52 @@ export function FigureCard({
   );
 }
 
+/* --------------------------------------------------------- relevance meter --- */
+
+/**
+ * Conviction-weighted relevance, 0–100. The number + tinted bar give the RM an at-a-glance read of
+ * how strongly an item fits THIS client; the full cited breakdown lives in the AlertCard expander.
+ */
+export function RelevanceMeter({
+  score,
+  className,
+}: {
+  score: number;
+  className?: string;
+}) {
+  const clamped = Math.max(0, Math.min(100, Math.round(score)));
+  const tier =
+    clamped >= 70 ? "text-primary" : clamped >= 45 ? "text-foreground" : "text-muted-foreground";
+  const bar =
+    clamped >= 70
+      ? "bg-primary"
+      : clamped >= 45
+      ? "bg-foreground/70"
+      : "bg-muted-foreground/50";
+  return (
+    <div
+      className={cn("flex items-center gap-2", className)}
+      title="Conviction-weighted relevance for this client (0–100)"
+    >
+      <span className="text-[10px] font-medium tracking-wide text-muted-foreground">
+        Relevance
+      </span>
+      <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
+        <div
+          className={cn("h-full rounded-full", bar)}
+          style={{ width: `${clamped}%` }}
+        />
+      </div>
+      <span className="flex items-baseline gap-0.5">
+        <span className={cn("text-base font-semibold leading-none tabular-nums", tier)}>
+          {clamped}
+        </span>
+        <span className="text-[10px] font-medium text-muted-foreground">/100</span>
+      </span>
+    </div>
+  );
+}
+
 export function MandatePill({ mandate }: { mandate: string }) {
   return (
     <Badge

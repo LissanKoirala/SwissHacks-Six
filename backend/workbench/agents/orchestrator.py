@@ -10,6 +10,7 @@ from ..models import ClientInsights, ClientSummary
 from .advisory import build_dialogue, build_opportunity_proposal, build_strategy
 from .matcher import match_client
 from .opportunities import build_opportunities
+from .worldview import detect_life_events, predict_reaction
 
 
 def _now() -> str:
@@ -51,16 +52,25 @@ def get_insights(world: World, client_id: str, *, refresh: bool = False) -> Clie
 
     strategy = None
     dialogue = None
+    reaction = None
     llm_used = False
     additional: list = []
     if primary is not None:
         strategy = build_strategy(world, client_id, primary)
         dialogue, llm_used = build_dialogue(world, client_id, primary)
+        # Reaction Simulator (#3): forecast how the client reacts to the primary proposal so the RM
+        # is prepared — strong model lazily on the opened match (§9), grounded fallback otherwise.
+        reaction, r_llm = predict_reaction(world, client_id, primary)
+        llm_used = llm_used or r_llm
         # Proposals for the other distinct salient matches (HI5) — only those with a real action.
         for m in distinct[1:]:
             sp = build_strategy(world, client_id, m)
             if sp.swaps:
                 additional.append(sp)
+
+    # Life-event-aware timing (#5): deterministic scan of dated facets/edges vs today — surfaced as
+    # a banner even when there is no news match, so the desk notices the human moment.
+    life_events = detect_life_events(world, client_id)
 
     # Proactive (news-independent) opportunity: surface the single best-fitting unheld CIO BUY as a
     # sized, drift-checked, RM-approvable proposal — the mission's "personal asset selection 24/7",
@@ -89,6 +99,8 @@ def get_insights(world: World, client_id: str, *, refresh: bool = False) -> Clie
         strategy_proposal=strategy,
         dialogue_suggestion=dialogue,
         additional_proposals=additional,
+        reaction=reaction,
+        life_events=life_events,
         generated_at=_now(),
         llm_used=llm_used,
     )
@@ -111,6 +123,10 @@ def get_overview_insights(world: World, client_id: str) -> ClientInsights:
 
     meta = world.clients.get(client_id, {})
     matches = match_client(world, client_id)
+    # Life-event timing is deterministic and free (§9) — surface it on the LLM-free overview too, so
+    # the human moment shows even for a client with no news match today. Reaction stays None here:
+    # it is the one strong-model call and runs only when the RM opens the client (full get_insights).
+    life_events = detect_life_events(world, client_id)
     return ClientInsights(
         client=ClientSummary(
             client_id=client_id,
@@ -123,6 +139,8 @@ def get_overview_insights(world: World, client_id: str) -> ClientInsights:
         strategy_proposal=None,
         dialogue_suggestion=None,
         additional_proposals=[],
+        reaction=None,
+        life_events=life_events,
         generated_at=_now(),
         llm_used=False,
     )

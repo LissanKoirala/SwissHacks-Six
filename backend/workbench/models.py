@@ -339,6 +339,42 @@ class TopicMatch(BaseModel):
     news_provenance: Provenance     # the news tag
 
 
+# --- Worldview engine -------------------------------------------------------
+# The differentiator (CLAUDE.md §1): we do NOT reduce the client to a topic set at the match
+# boundary. Each signal is scored, reframed, and reacted-to through a living model of the client's
+# worldview — their convictions (weighted, corroborated, dated edges), exposure (portfolio),
+# memory (their own past words), and predicted reaction. All deterministic and fully cited, so
+# personalisation survives offline and every number/sentence points back to a source (§2/§9).
+
+class ScoreComponent(BaseModel):
+    """One factor behind the conviction-weighted relevance score, with its contribution + a cite.
+    The breakdown is the trust surface: the RM sees *why* an item out-ranked the others."""
+    label: str                      # "Conviction" / "Exposure" / "Sentiment" / "Freshness" / "Signal"
+    detail: str                     # human-readable basis, e.g. "personality conviction · logged 2026-03-05"
+    points: float                   # points this factor added to the 0–100 score
+    max_points: float               # the cap for this factor (so the bar can be drawn)
+    provenance: Optional[Provenance] = None
+
+
+class RelevanceScore(BaseModel):
+    """A transparent 0–100 relevance for THIS (client, item) pair — every term cited (§2).
+    Replaces binary match/no-match: conviction × exposure × news strength × freshness × signal."""
+    score: int                      # 0–100
+    components: list[ScoreComponent] = Field(default_factory=list)
+    summary: str                    # one-line plain-English additive story of the score
+
+
+class LensFraming(BaseModel):
+    """The 'Client Lens' (#1): the same generic news rewritten through THIS client's documented
+    worldview — quoting their own prior words back to them. The news adapts to the reader."""
+    headline: str                   # the reframed, client-specific headline
+    narrative: str                  # 1–2 sentences tying the news to their own documented stance
+    client_quote: Optional[str] = None   # the exact prior quote being echoed
+    quote_date: Optional[str] = None
+    draft_source: Literal["llm", "template"] = "template"
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
 class Match(BaseModel):
     id: str
     client_id: str
@@ -348,6 +384,10 @@ class Match(BaseModel):
     shared_topics: list[TopicMatch] = Field(default_factory=list)
     affected_holding: Optional[Holding] = None  # the held name the news is about, if any
     why: list[Provenance] = Field(default_factory=list)
+    # --- worldview enrichment (deterministic, free — computed at match time, §9) ---
+    relevance: Optional[RelevanceScore] = None   # conviction-weighted 0–100 score + cited breakdown
+    lens: Optional[LensFraming] = None           # the item reframed through this client's worldview
+    celebrate: bool = False         # a genuine 'call to celebrate' good-news moment (#4), not a warning
 
 
 # --- Advisory outputs (CLAUDE.md §1: two things) ----------------------------
@@ -457,6 +497,32 @@ class ClientSummary(BaseModel):
     alert_count: int = 0
 
 
+class ReactionPrediction(BaseModel):
+    """The 'Reaction Simulator' (#3): how this client is likely to react to the proposal, predicted
+    from their personality facet + their own past words — so the RM walks in prepared, not surprised.
+    Advisory only and clearly labelled 'RM judgement required' (§2): it never speaks AS the client,
+    it forecasts FOR the RM. Strong model lazily, deterministic fallback keeps it offline (§9)."""
+    predicted_objection: str        # the pushback the RM should expect, in the client's own register
+    emotional_register: str         # a short tag, e.g. "anxious · feels betrayed" / "sceptical" / "proud"
+    suggested_rebuttal: str         # how the RM can meet it, grounded in what the client respects
+    confidence: Literal["grounded", "inferred"] = "grounded"  # grounded = anchored to a real quote
+    draft_source: Literal["llm", "template"] = "template"
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
+class LifeEventSignal(BaseModel):
+    """Life-event-aware timing (#5): a dated event/belief shift that recently reshaped the client's
+    priorities. Mines the *dates* on facets/edges vs today, so the desk notices the human moment and
+    asks whether the stated mandate still reflects the revealed priorities."""
+    label: str                      # short banner label, e.g. "Recent diagnosis in the family"
+    date: str                       # ISO date of the event
+    months_ago: int
+    topic: Optional[str] = None     # the value topic it shifted, if any
+    facet: Optional[str] = None     # which DNA facet recorded it
+    implication: str                # the desk action it implies (verify mandate, anticipate, …)
+    provenance: Provenance
+
+
 class ClientInsights(BaseModel):
     """GET /clients/{id}/insights"""
     client: ClientSummary
@@ -466,6 +532,9 @@ class ClientInsights(BaseModel):
     # Proposals for the other DISTINCT salient matches (HI5) — a client with two genuine triggers
     # (e.g. a conflict on one holding + an opportunity on another) gets a proposal for each.
     additional_proposals: list[StrategyProposal] = Field(default_factory=list)
+    # --- worldview engine outputs (per opened client, lazily; §9) ---
+    reaction: Optional[ReactionPrediction] = None          # digital-twin reaction to the primary match
+    life_events: list[LifeEventSignal] = Field(default_factory=list)  # values-shift timing signals
     generated_at: str
     llm_used: bool = False
 

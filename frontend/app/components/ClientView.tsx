@@ -2,10 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Info, Plus } from "lucide-react";
+import { ArrowLeft, CalendarClock, Info, Plus } from "lucide-react";
 import type {
   Insights,
   Analytics,
+  LifeEventSignal,
   StrategyProposal,
   SwapAction,
 } from "@/lib/types";
@@ -14,10 +15,12 @@ import { prettyDate, chf } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill, FigureCard, Expander, PolarityChip } from "./ui";
+import { ProvenanceTag } from "./Provenance";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertCard, groupMatchesByHeadline } from "./AlertCard";
 import { StrategyPanel } from "./StrategyPanel";
 import { DialoguePanel } from "./DialoguePanel";
+import { ReactionPanel } from "./ReactionPanel";
 import { PortfolioView } from "./PortfolioView";
 import { ProfileView } from "./ProfileView";
 import { PortfolioCharts } from "./PortfolioCharts";
@@ -214,6 +217,43 @@ function RecommendationStrip({
   );
 }
 
+/* ----------------------------------------------------- life-event banner --- */
+
+/**
+ * Life-event-aware timing (#5): a documented event/belief-shift that recently reshaped this
+ * client's priorities — mined from the *dates* on their DNA vs today. Prompts the desk to check the
+ * stated mandate still matches the revealed priorities. Every line cites the log it came from (§2).
+ */
+function LifeEventBanner({ events }: { events: LifeEventSignal[] }) {
+  if (!events.length) return null;
+  return (
+    <div className="mb-6 rounded-md border border-primary/20 bg-primary/[0.06] px-4 py-3">
+      <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-primary">
+        <CalendarClock className="h-3.5 w-3.5" aria-hidden />
+        Life-event timing — verify the mandate still fits who he is now
+      </p>
+      <ul className="mt-2 space-y-2">
+        {events.map((e, i) => (
+          <li key={`${e.date}-${i}`} className="text-sm text-foreground/80">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className="font-semibold text-foreground">{e.label}</span>
+              <span className="text-xs text-muted-foreground">
+                {e.months_ago <= 0
+                  ? "this month"
+                  : `${e.months_ago} month${e.months_ago === 1 ? "" : "s"} ago`}
+              </span>
+            </span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+              {e.implication}
+              <ProvenanceTag prov={e.provenance} label="CRM" />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------ component --- */
 
 export function ClientView({ clientId }: { clientId: string }) {
@@ -325,6 +365,11 @@ export function ClientView({ clientId }: { clientId: string }) {
           </div>
         )}
 
+        {/* life-event timing (#5) — the human moment, surfaced even with no news match */}
+        {insights.life_events && insights.life_events.length > 0 && (
+          <LifeEventBanner events={insights.life_events} />
+        )}
+
         {/* advisory-only banner — golden rule */}
         <div className="mb-6 flex items-center gap-2 rounded-md bg-primary/10 px-4 py-2.5 text-sm text-primary ring-1 ring-inset ring-primary/20">
           <Info className="h-4 w-4 shrink-0" aria-hidden />
@@ -395,6 +440,11 @@ export function ClientView({ clientId }: { clientId: string }) {
                   <DialoguePanel dialogue={insights.dialogue_suggestion} />
                 </div>
 
+                {/* the digital twin's predicted reaction to the proposal (#3) */}
+                {insights.reaction && (
+                  <ReactionPanel reaction={insights.reaction} />
+                )}
+
                 {/* additional proposals — collapsed by default */}
                 {insights.additional_proposals &&
                   insights.additional_proposals.length > 0 && (
@@ -404,7 +454,7 @@ export function ClientView({ clientId }: { clientId: string }) {
                     >
                       <div className="grid gap-5 lg:grid-cols-2">
                         {insights.additional_proposals.map((p, i) => (
-                          <StrategyPanel key={`add-${i}`} proposal={p} />
+                          <StrategyPanel key={`${p.headline}-${i}`} proposal={p} />
                         ))}
                       </div>
                     </Expander>
