@@ -95,13 +95,24 @@
   /* Signature Wordsmith treatments — blue selection & focus */
   ::selection { background: hsl(var(--primary)); color: #fff; }
   :focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+
+  /* Honour the OS "reduce motion" setting — neutralise decorative/perpetual
+     motion (the decision-flow dashes, entrance transitions) for users who ask. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
-/* Blue scrollbar — thin, transparent track */
+/* Blue scrollbar — thin, transparent track. Scoped to .scroll-thin only, so the
+   saturated action-blue isn't painted on every incidental overflow container. */
 .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
 .scroll-thin::-webkit-scrollbar-thumb { background: hsl(var(--primary)); border-radius: 8px; }
 .scroll-thin::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(var(--primary)); }
 
 @layer components {
   .card { @apply rounded-lg border border-border bg-card text-card-foreground shadow-card dark:shadow-none; }

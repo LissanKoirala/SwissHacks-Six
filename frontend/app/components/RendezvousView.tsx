@@ -26,6 +26,7 @@ import type {
   RendezvousSuggestion,
 } from "@/lib/types";
 import { api } from "@/lib/api";
+import { Expander } from "./ui";
 import { Provenance, ProvenanceList, ProvenanceTag } from "./Provenance";
 
 /* ----------------------------------------------------------------- copy --- */
@@ -157,7 +158,96 @@ function ConfidenceChip({
 
 /* -------------------------------------------------------------- suggestion --- */
 
-function SuggestionCard({
+// The collapsible body shared by the top pick and the ranked list: the "why",
+// the matched-interest rationale, the prep checklist and the sources — each one
+// click away, summary-peeked while collapsed so the RM knows detail exists.
+function SuggestionDetail({
+  suggestion,
+  matched,
+  defaultOpen = false,
+}: {
+  suggestion: RendezvousSuggestion;
+  matched: RendezvousInterest[];
+  defaultOpen?: boolean;
+}) {
+  const sourceNames = suggestion.provenance
+    .map((p) => p.source_id)
+    .filter(Boolean);
+
+  return (
+    <div className="space-y-3">
+      {/* why + why-this-fits, collapsed with a one-line peek of the rationale */}
+      {(suggestion.why || matched.length > 0) && (
+        <Expander
+          label="Why this fits"
+          summary={matched.map((m) => m.label).join(", ") || undefined}
+          defaultOpen={defaultOpen}
+        >
+          {suggestion.why && (
+            <p className="text-sm leading-relaxed text-foreground/80">
+              {suggestion.why}
+            </p>
+          )}
+          {matched.length > 0 && (
+            <div className={suggestion.why ? "mt-3" : ""}>
+              <div className="flex flex-wrap gap-1.5">
+                {matched.map((m) => {
+                  const MatchIcon = kindIcon(m.category);
+                  return (
+                    <span
+                      key={m.id}
+                      className="chip bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
+                    >
+                      <MatchIcon className="h-3.5 w-3.5" aria-hidden />
+                      {m.label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </Expander>
+      )}
+
+      {/* prep checklist, collapsed with a count */}
+      {suggestion.prep.length > 0 && (
+        <Expander
+          label="Prep"
+          count={suggestion.prep.length}
+          summary={suggestion.prep[0]}
+        >
+          <ul className="space-y-1">
+            {suggestion.prep.map((p, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-2 text-sm text-foreground/80"
+              >
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+        </Expander>
+      )}
+
+      {/* sources, collapsed with a peek of the source ids */}
+      {suggestion.provenance.length > 0 && (
+        <Expander
+          label="Sources"
+          count={suggestion.provenance.length}
+          summary={sourceNames.join(", ") || undefined}
+        >
+          <ProvenanceList items={suggestion.provenance} />
+        </Expander>
+      )}
+    </div>
+  );
+}
+
+// The single best-fit suggestion, elevated above the ranked list. Its glance
+// shows title + venue/city + when + a confidence chip; its rationale opens by
+// default (it is the recommendation), prep and sources stay one click away.
+function TopSuggestionCard({
   suggestion,
   interestLabels,
 }: {
@@ -170,9 +260,10 @@ function SuggestionCard({
   const Icon = kindIcon(suggestion.kind);
 
   return (
-    <article className="card flex flex-col p-5">
-      {/* header */}
-      <div className="flex items-start gap-3">
+    <article className="card flex flex-col p-5 ring-1 ring-inset ring-primary/20">
+      <p className="text-xs font-medium tracking-wide text-primary">Top Pick</p>
+      {/* header — the glance */}
+      <div className="mt-2 flex items-start gap-3">
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"
           aria-hidden
@@ -201,61 +292,67 @@ function SuggestionCard({
         </div>
       </div>
 
-      {/* why */}
-      <p className="mt-3 text-sm leading-relaxed text-foreground/80">
-        {suggestion.why}
-      </p>
-
-      {/* why this fits — matched interests */}
-      {matched.length > 0 && (
-        <div className="mt-3">
-          <p className="text-xs font-medium tracking-wide text-muted-foreground">
-            Why This Fits
-          </p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {matched.map((m) => {
-              const MatchIcon = kindIcon(m.category);
-              return (
-                <span
-                  key={m.id}
-                  className="chip bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
-                >
-                  <MatchIcon className="h-3.5 w-3.5" aria-hidden />
-                  {m.label}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* prep list */}
-      {suggestion.prep.length > 0 && (
-        <div className="mt-3">
-          <p className="text-xs font-medium tracking-wide text-muted-foreground">
-            Prep
-          </p>
-          <ul className="mt-1.5 space-y-1">
-            {suggestion.prep.map((p, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-2 text-sm text-foreground/80"
-              >
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
-                <span>{p}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* provenance */}
-      {suggestion.provenance.length > 0 && (
-        <div className="mt-auto border-t border-border pt-3">
-          <ProvenanceList items={suggestion.provenance} />
-        </div>
-      )}
+      {/* detail — rationale open by default, prep + sources one click away */}
+      <div className="mt-4 border-t border-border pt-3">
+        <SuggestionDetail suggestion={suggestion} matched={matched} defaultOpen />
+      </div>
     </article>
+  );
+}
+
+// A compact ranked list row: the glance (rank, title, venue/city, when, kind,
+// confidence) on one line; the why/prep/sources collapsed beneath it.
+function SuggestionRow({
+  suggestion,
+  rank,
+  interestLabels,
+}: {
+  suggestion: RendezvousSuggestion;
+  rank: number;
+  interestLabels: Map<string, RendezvousInterest>;
+}) {
+  const matched = suggestion.matched_interest_ids
+    .map((id) => interestLabels.get(id))
+    .filter((i): i is RendezvousInterest => Boolean(i));
+  const Icon = kindIcon(suggestion.kind);
+
+  return (
+    <li className="flex items-start gap-3 px-4 py-3">
+      <span className="mt-0.5 w-4 shrink-0 text-right text-xs font-medium tabular-nums text-muted-foreground">
+        {rank}
+      </span>
+      <span
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"
+        aria-hidden
+      >
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        {/* glance */}
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="truncate text-sm font-semibold tracking-tight text-foreground">
+            {suggestion.title}
+          </h4>
+          <ConfidenceChip confidence={suggestion.confidence} />
+        </div>
+        <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
+          <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+          <span className="font-medium text-foreground/80">{suggestion.venue}</span>
+          <span> · {suggestion.city}</span>
+          <span className="mx-1 text-border">·</span>
+          <Clock className="h-3 w-3 shrink-0" aria-hidden />
+          <span className="tabular-nums">{suggestion.when}</span>
+          <span className="ml-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+            {KIND_LABEL[suggestion.kind] ?? suggestion.kind}
+          </span>
+        </p>
+
+        {/* detail — all collapsed by default */}
+        <div className="mt-2.5">
+          <SuggestionDetail suggestion={suggestion} matched={matched} />
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -338,6 +435,26 @@ export function RendezvousView({ clientId }: { clientId: string }) {
     [data]
   );
 
+  // Rank the suggestions: surface the single best-fit (the first "grounded"
+  // one, else the first overall) as the top pick; the rest become the list.
+  const { topSuggestion, restSuggestions } = useMemo(() => {
+    const all = data?.suggestions ?? [];
+    if (all.length === 0) {
+      return {
+        topSuggestion: null as RendezvousSuggestion | null,
+        restSuggestions: [] as RendezvousSuggestion[],
+      };
+    }
+    const topIndex = Math.max(
+      0,
+      all.findIndex((s) => s.confidence === "grounded")
+    );
+    return {
+      topSuggestion: all[topIndex],
+      restSuggestions: all.filter((_, i) => i !== topIndex),
+    };
+  }, [data]);
+
   if (loading) {
     return <p className="p-5 text-sm text-muted-foreground">Loading the rendezvous plan…</p>;
   }
@@ -386,16 +503,30 @@ export function RendezvousView({ clientId }: { clientId: string }) {
         <InterestsStrip interests={data.interests} />
       )}
 
-      {/* suggestions grid */}
-      {hasSuggestions ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {data.suggestions.map((s) => (
-            <SuggestionCard
-              key={s.id}
-              suggestion={s}
-              interestLabels={interestById}
-            />
-          ))}
+      {/* suggestions — top pick elevated, the rest a compact ranked list */}
+      {hasSuggestions && topSuggestion ? (
+        <div className="space-y-4">
+          <TopSuggestionCard
+            suggestion={topSuggestion}
+            interestLabels={interestById}
+          />
+          {restSuggestions.length > 0 && (
+            <section className="card overflow-hidden p-0">
+              <p className="px-4 pt-4 text-xs font-medium tracking-wide text-muted-foreground">
+                More Suggestions
+              </p>
+              <ul className="mt-2 divide-y divide-border">
+                {restSuggestions.map((s, i) => (
+                  <SuggestionRow
+                    key={s.id}
+                    suggestion={s}
+                    rank={i + 2}
+                    interestLabels={interestById}
+                  />
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
       ) : (
         <div className="card p-6">

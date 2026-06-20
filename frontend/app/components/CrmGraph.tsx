@@ -29,18 +29,53 @@ const TYPE_LABELS: Record<NodeType, string> = {
   theme: "Theme",
 };
 
-// Wordsmith-Blue-led canvas palette (the dark surface keeps its own fills; these
-// stay legible on the near-black canvas). Blue leads the relationship core
-// (RM/client); distinct semantic categories take the brand accents — teal for
-// channels, purple for themes — with neutral greys for structural nodes.
-const TYPE_COLOR: Record<NodeType, string> = {
-  rm: "#2f7ce6", // Wordsmith Blue (primary, dark)
-  client: "#5b9bf0", // lighter Wordsmith Blue — the focal client
-  person: "#9a9aa2", // neutral grey
-  medium: "#1aa899", // teal accent — channels (distinct category)
-  interaction: "#6e6e76", // neutral grey
-  theme: "#9d4dff", // purple accent — recurring themes (distinct category)
-};
+/* Theme-aware NEUTRAL palette read from CSS custom properties at runtime, so the
+ * canvas tracks light/dark. Blue (`--primary`) is reserved for the RM root and the
+ * active/selected node only — the sole accent; everything else is hue-neutral.
+ * Read at draw time (and recomputed on `.dark` class changes) so a theme toggle
+ * is picked up without a remount. */
+interface Palette {
+  fg: string; // --foreground
+  muted: string; // --muted-foreground
+  border: string; // --border
+  primary: string; // --primary (the sole accent)
+  card: string; // --card
+  background: string; // --background
+}
+
+function readPalette(): Palette {
+  // Guard against SSR / detached environments.
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return {
+      fg: "#181818",
+      muted: "#717179",
+      border: "#ededed",
+      primary: "#0060df",
+      card: "#ffffff",
+      background: "#ffffff",
+    };
+  }
+  const css = getComputedStyle(document.documentElement);
+  const v = (name: string, fallback: string) => {
+    const raw = css.getPropertyValue(name).trim();
+    return raw ? `hsl(${raw})` : fallback;
+  };
+  return {
+    fg: v("--foreground", "#181818"),
+    muted: v("--muted-foreground", "#717179"),
+    border: v("--border", "#ededed"),
+    primary: v("--primary", "#0060df"),
+    card: v("--card", "#ffffff"),
+    background: v("--background", "#ffffff"),
+  };
+}
+
+// Per-type accent for the React legend/detail chips. Hue-neutral by default —
+// the RM root carries Wordsmith Blue (primary) as the sole accent; every other
+// type is muted-foreground. Resolved from CSS tokens so it tracks the theme.
+function legendColor(t: NodeType): string {
+  return t === "rm" ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))";
+}
 
 // Per-type Lucide glyph for the legend chips (replaces emoji entirely).
 const TYPE_ICON: Record<NodeType, LucideIcon> = {
@@ -75,7 +110,7 @@ interface SimLink {
   source: SimNode;
   target: SimNode;
   strength: number; // 0..1 → line width + alpha
-  recency: number; // 0..1 → warmth/glow (1 = most recent)
+  recency: number; // 0..1 → opacity (1 = most recent, more present)
 }
 
 /* Loaded avatar bitmap + its load state, keyed by node id. */
@@ -105,6 +140,10 @@ interface SimState {
   H: number;
   DPR: number;
   tooltip: { x: number; y: number; text: string } | null;
+  palette: Palette; // theme-aware neutral colours, re-read on theme change
+  reduceMotion: boolean; // honour prefers-reduced-motion
+  settled: boolean; // true once the simulation has cooled — stops the rAF loop
+  kick: (reheat?: number) => void; // restart the (gated) render loop on demand
 }
 
 /* Coloured ring around each circular avatar, per node type. */
@@ -205,12 +244,16 @@ export function CrmGraph({ clientId }: { clientId: string }) {
   useEffect(() => {
     if (simRef.current) {
       simRef.current.enabled = enabledTypes;
-      simRef.current.alpha = Math.max(simRef.current.alpha, 0.25);
+      // a filter change re-lays-out the graph — reheat (unless motion is reduced)
+      simRef.current.kick(simRef.current.reduceMotion ? 0.01 : 0.25);
     }
   }, [enabledTypes]);
 
   useEffect(() => {
-    if (simRef.current) simRef.current.query = query.trim().toLowerCase();
+    if (simRef.current) {
+      simRef.current.query = query.trim().toLowerCase();
+      simRef.current.kick(0); // repaint the search highlight even when settled
+    }
   }, [query]);
 
   // Track whether this graph tab is on-screen so the keyboard zoom only hijacks
@@ -322,6 +365,14 @@ export function CrmGraph({ clientId }: { clientId: string }) {
       H: initH,
       DPR: 1,
       tooltip: null,
+      palette: readPalette(),
+      reduceMotion:
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function"
+          ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          : false,
+      settled: false,
+      kick: () => {}, // replaced with the real loop-restarter below
     };
     simRef.current = sim;
 
@@ -341,7 +392,11 @@ export function CrmGraph({ clientId }: { clientId: string }) {
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     }
     resize();
-    const ro = new ResizeObserver(() => resize());
+    const ro = new ResizeObserver(() => {
+      resize();
+      // a resize clears the backing store — repaint even if the loop had settled
+      if (simRef.current) kick(0);
+    });
     ro.observe(container);
 
     // ---- view transform helpers ----
@@ -381,11 +436,11 @@ export function CrmGraph({ clientId }: { clientId: string }) {
     function selectNode(n: SimNode | null) {
       sim.selNode = n;
       setSelected(n);
+      kick(); // selection changes the focus highlight — repaint
     }
 
     // ---- force simulation tick ----
     function tick() {
-      if (sim.alpha < 0.005) sim.alpha = 0.005;
       const ns = sim.nodes;
       // repulsion (O(n^2); fine for this size)
       for (let i = 0; i < ns.length; i++) {
@@ -438,18 +493,44 @@ export function CrmGraph({ clientId }: { clientId: string }) {
       sim.alpha *= 0.992;
     }
 
+    // Run the physics to rest synchronously, then freeze it. Used when motion is
+    // reduced so the graph appears settled without a continuous animation.
+    function settleNow() {
+      for (let i = 0; i < 600 && sim.alpha > 0.01; i++) tick();
+      sim.alpha = 0;
+    }
+
+    // Convert "hsl(H S% L%)" / hex from the palette into a colour with an alpha,
+    // so opacity carries recency/dimming on an otherwise neutral stroke.
+    function withAlpha(colour: string, alpha: number): string {
+      const a = Math.max(0, Math.min(1, alpha));
+      const hsl = colour.match(/^hsl\(([^)]+)\)$/i);
+      if (hsl) return `hsla(${hsl[1]}, ${a})`;
+      const hex = colour.match(/^#([0-9a-f]{6})$/i);
+      if (hex) {
+        const n = parseInt(hex[1], 16);
+        return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+      }
+      return colour;
+    }
+
     // ---- render ----
     function render() {
       tick();
       if (!ctx) return;
+      // Re-read theme tokens each frame so a light/dark toggle is reflected live.
+      const C = sim.palette;
       ctx.clearRect(0, 0, sim.W, sim.H);
       ctx.save();
 
       const focus = sim.selNode || sim.hoverNode;
       const neigh = focus ? sim.adj.get(focus.id) : null;
 
-      // links — width + alpha from strength, warmth/glow from recency.
+      // links — neutral stroke; recency/strength carried by opacity + width only
+      // (no warm hue, no glow). The focused node's edges lift to the primary blue
+      // as the sole accent.
       ctx.lineCap = "round";
+      ctx.shadowBlur = 0;
       for (const l of sim.links) {
         const a = l.source;
         const b = l.target;
@@ -459,34 +540,26 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         const active = focus && (a === focus || b === focus);
         const dimLink = focus && !active;
 
-        const s = l.strength; // 0..1
-        const rec = l.recency; // 0..1 (1 = most recent → warmer)
-        // recent contact warms cool slate (210°) toward warm amber (38°)
-        const hue = 210 - 172 * rec;
-        const sat = 24 + 56 * rec;
-        const baseA = (0.16 + 0.5 * s) * (0.45 + 0.55 * rec);
-        const alpha = active ? Math.min(0.95, baseA + 0.4) : dimLink ? 0.06 : baseA;
+        const s = l.strength; // 0..1 → width + base presence
+        const rec = l.recency; // 0..1 → opacity (more recent = more present)
+        const baseA = (0.16 + 0.42 * s) * (0.4 + 0.6 * rec);
+        const alpha = active
+          ? Math.min(0.95, baseA + 0.4)
+          : dimLink
+            ? 0.06
+            : baseA;
 
         ctx.lineWidth = (0.6 + 2.6 * s) * (active ? 1.6 : 1);
-        // warm recent edges glow softly
-        if (rec > 0.6 && !dimLink) {
-          ctx.shadowColor = `hsla(${hue}, ${sat}%, 62%, ${0.5 * rec})`;
-          ctx.shadowBlur = 6 * rec * Math.sqrt(sim.view.k);
-        } else {
-          ctx.shadowBlur = 0;
-        }
-        // Active edges (touching the focused node) lead on Wordsmith Blue so the
-        // selection reads as the primary accent; idle edges keep the recency
-        // warmth ramp as an ambient cue.
+        // muted-foreground reads against both the light and dark canvas surface;
+        // the opacity ramp (not hue) carries recency/strength.
         ctx.strokeStyle = active
-          ? `hsla(215, 79%, 62%, ${alpha})`
-          : `hsla(${hue}, ${sat}%, ${56 + 12 * rec}%, ${alpha})`;
+          ? withAlpha(C.primary, alpha)
+          : withAlpha(C.muted, alpha);
         ctx.beginPath();
         ctx.moveTo(pa.x, pa.y);
         ctx.lineTo(pb.x, pb.y);
         ctx.stroke();
       }
-      ctx.shadowBlur = 0;
 
       // nodes
       for (const n of sim.nodes) {
@@ -504,12 +577,15 @@ export function CrmGraph({ clientId }: { clientId: string }) {
 
         const nodeAlpha = dim ? 0.18 : sim.query && !hit ? 0.12 : 1;
         ctx.globalAlpha = nodeAlpha;
-        const ring = n.color || TYPE_COLOR[n.type] || "#888";
+        // Neutral by default; the RM root carries the primary blue as the sole
+        // accent. Backend-supplied n.color is intentionally ignored to keep the
+        // canvas hue-neutral.
+        const ring = n.type === "rm" ? C.primary : C.muted;
         const av = sim.avatars.get(n.id);
         const hasFace = n.type === "rm" || n.type === "person";
 
         if (hasFace) {
-          // ---- circular avatar (image or initials) with a coloured ring ----
+          // ---- circular avatar (image or initials) with a neutral ring ----
           const ir = r * 0.92; // inner photo radius, leaving room for the ring
           if (av && av.ready) {
             ctx.save();
@@ -525,35 +601,35 @@ export function CrmGraph({ clientId }: { clientId: string }) {
             // initials fallback (loading or missing/failed image)
             ctx.beginPath();
             ctx.arc(p.x, p.y, ir, 0, Math.PI * 2);
-            ctx.fillStyle = ring;
-            ctx.globalAlpha = nodeAlpha * 0.28;
+            ctx.fillStyle = withAlpha(ring, nodeAlpha * 0.28);
             ctx.fill();
             ctx.globalAlpha = nodeAlpha;
-            ctx.fillStyle = "#16140f";
+            ctx.fillStyle = C.fg;
             ctx.font = `600 ${Math.max(8, ir * 0.95)}px ui-sans-serif, system-ui, sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText(initials(n), p.x, p.y + 0.5);
             ctx.textBaseline = "alphabetic";
           }
-          // coloured ring around the avatar
+          // neutral ring around the avatar
           ctx.beginPath();
           ctx.arc(p.x, p.y, ir, 0, Math.PI * 2);
           ctx.lineWidth = Math.max(1.5, r * 0.16);
           ctx.strokeStyle = ring;
           ctx.stroke();
         } else {
-          // ---- plain coloured disc for non-face nodes ----
+          // ---- plain neutral disc for non-face nodes ----
           ctx.beginPath();
           ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
           ctx.fillStyle = ring;
           ctx.fill();
           // Lucide glyph (mapped from node type) on medium / theme / interaction
-          // nodes — never the raw backend emoji.
+          // nodes — never the raw backend emoji. Stroked in the card colour so it
+          // reads against the neutral disc in both themes.
           const glyph = CANVAS_ICON[n.type];
           if (glyph && r > 6) {
             ctx.globalAlpha = nodeAlpha;
-            drawCanvasIcon(ctx, glyph, p.x, p.y, r * 1.05, "#16140f");
+            drawCanvasIcon(ctx, glyph, p.x, p.y, r * 1.05, C.card);
           }
         }
 
@@ -561,14 +637,14 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
           ctx.lineWidth = 2;
-          ctx.strokeStyle = "#ece9e2"; // warm paper foreground (dark)
+          ctx.strokeStyle = C.fg; // foreground ring marks a search hit
           ctx.stroke();
         }
         if (n === sim.selNode) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, r + (hasFace ? 2 : 0), 0, Math.PI * 2);
           ctx.lineWidth = 2.5;
-          ctx.strokeStyle = "#2f7ce6"; // Wordsmith Blue — active/selected ring
+          ctx.strokeStyle = C.primary; // Wordsmith Blue — active/selected ring
           ctx.stroke();
         }
 
@@ -581,7 +657,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           !dim;
         if (showLabel) {
           ctx.globalAlpha = dim ? 0.2 : 0.92;
-          ctx.fillStyle = "#d8d3c8"; // warm paper, slightly muted
+          ctx.fillStyle = C.muted; // neutral muted-foreground label
           ctx.font = `${Math.max(
             10,
             Math.min(14, 10 * sim.view.k)
@@ -600,15 +676,64 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         setZoomPct(pct);
       }
 
-      rafRef.current = requestAnimationFrame(render);
+      // Gate the loop: keep ticking only while the simulation still has energy or
+      // the user is actively interacting; otherwise let it settle and STOP rather
+      // than burning a rAF every frame forever. A `kick()` re-arms it on demand.
+      const busy =
+        sim.dragNode !== null || sim.panning || sim.alpha > 0.01;
+      if (busy) {
+        sim.settled = false;
+        rafRef.current = requestAnimationFrame(render);
+      } else {
+        sim.settled = true;
+        rafRef.current = null;
+      }
     }
     let lastPct = 100;
-    rafRef.current = requestAnimationFrame(render);
 
-    // gentle reheat so it settles nicely
-    const reheat = window.setTimeout(() => {
-      sim.alpha = 1;
-    }, 50);
+    // (Re)start the render loop if it has settled. Cheap to call on any event.
+    function kick(reheat = 0) {
+      if (reheat > 0) sim.alpha = Math.max(sim.alpha, reheat);
+      if (rafRef.current == null) {
+        rafRef.current = requestAnimationFrame(render);
+      }
+    }
+    sim.kick = kick; // let React-side handlers (reset/zoom) wake the loop too
+
+    // Honour prefers-reduced-motion: solve the layout up front and render one
+    // static frame instead of animating the force settle.
+    let reheat: number | undefined;
+    if (sim.reduceMotion) {
+      settleNow();
+      rafRef.current = requestAnimationFrame(render); // single settled frame
+    } else {
+      rafRef.current = requestAnimationFrame(render);
+      // gentle reheat so it settles nicely
+      reheat = window.setTimeout(() => kick(1), 50);
+    }
+
+    // Recompute the theme palette when the documentElement class flips (light/
+    // dark toggle) and repaint with the fresh tokens.
+    const themeObserver = new MutationObserver(() => {
+      sim.palette = readPalette();
+      kick(sim.reduceMotion ? 0 : 0.02);
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+    });
+
+    // Track live changes to the motion preference.
+    const motionMql =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)")
+        : null;
+    const onMotionChange = (e: MediaQueryListEvent) => {
+      sim.reduceMotion = e.matches;
+      if (e.matches) settleNow();
+      kick(e.matches ? 0 : 0.1);
+    };
+    motionMql?.addEventListener?.("change", onMotionChange);
 
     // ---- pointer interaction ----
     function onMouseDown(e: MouseEvent) {
@@ -622,6 +747,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         sim.panning = true;
       }
       sim.last = { x: e.clientX, y: e.clientY };
+      kick(); // wake the (possibly settled) loop for this interaction
     }
 
     function onMouseMove(e: MouseEvent) {
@@ -634,14 +760,17 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         sim.dragNode.vy = 0;
         sim.alpha = Math.max(sim.alpha, 0.3);
         sim.dragMoved = true;
+        kick();
       } else if (sim.panning) {
         sim.view.x += e.clientX - sim.last.x;
         sim.view.y += e.clientY - sim.last.y;
         sim.last = { x: e.clientX, y: e.clientY };
         sim.dragMoved = true;
+        kick();
       } else {
         const pos = localPos(e);
         const n = nodeAt(pos.x, pos.y);
+        const changed = n !== sim.hoverNode;
         sim.hoverNode = n;
         if (n) {
           const text =
@@ -653,6 +782,8 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           setTooltip(null);
           if (canvas) canvas.style.cursor = "grab";
         }
+        // a hover changes the focus highlight — repaint even when settled
+        if (changed) kick(0.0);
       }
     }
 
@@ -667,6 +798,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         selectNode(n || null);
       }
       sim.panning = false;
+      kick(); // settle/repaint after the gesture ends
     }
 
     // Zoom by a factor about a screen-space anchor (default: viewport centre).
@@ -676,6 +808,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
       sim.view.k = Math.max(0.15, Math.min(5, sim.view.k * f));
       sim.view.x = pos.x - w.x * sim.view.k;
       sim.view.y = pos.y - w.y * sim.view.k;
+      kick(); // repaint at the new zoom even if the layout had settled
     }
 
     function onWheel(e: WheelEvent) {
@@ -706,8 +839,10 @@ export function CrmGraph({ clientId }: { clientId: string }) {
 
     return () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      window.clearTimeout(reheat);
+      if (reheat !== undefined) window.clearTimeout(reheat);
       ro.disconnect();
+      themeObserver.disconnect();
+      motionMql?.removeEventListener?.("change", onMotionChange);
       canvas.removeEventListener("mousedown", onMouseDown);
       canvas.removeEventListener("wheel", onWheel);
       window.removeEventListener("mousemove", onMouseMove);
@@ -731,8 +866,9 @@ export function CrmGraph({ clientId }: { clientId: string }) {
     const sim = simRef.current;
     if (sim) {
       sim.view = { x: 0, y: 0, k: 1 };
-      sim.alpha = 1;
+      sim.alpha = sim.reduceMotion ? 0.01 : 1;
       sim.selNode = null;
+      sim.kick(); // restart the loop if it had settled
     }
     setSelected(null);
     setQuery("");
@@ -749,7 +885,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
     sim.view.k = Math.max(0.15, Math.min(5, sim.view.k * f));
     sim.view.x = cx - wx * sim.view.k;
     sim.view.y = cy - wy * sim.view.k;
-    sim.alpha = Math.max(sim.alpha, 0.05);
+    sim.kick(); // repaint at the new zoom even if the loop had settled
   }
 
   // type counts for the legend
@@ -758,6 +894,16 @@ export function CrmGraph({ clientId }: { clientId: string }) {
     for (const n of data.nodes) counts[n.type] = (counts[n.type] || 0) + 1;
   }
   const legendTypes = TYPE_ORDER.filter((t) => (counts[t] || 0) > 0);
+
+  // one-line glance digest, built from the existing node counts.
+  const people = (counts.client || 0) + (counts.person || 0);
+  const digestParts = data
+    ? [
+        `RM + ${people} ${people === 1 ? "contact" : "contacts"}`,
+        `${counts.interaction || 0} interactions`,
+        `${counts.theme || 0} themes`,
+      ]
+    : [];
 
   /* ------------------------------------------------------------- render --- */
 
@@ -772,6 +918,11 @@ export function CrmGraph({ clientId }: { clientId: string }) {
             People, channels and <span className="hl">recurring themes</span> for
             this client
           </h2>
+          {data && !loading && (
+            <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+              {digestParts.join(" · ")}
+            </p>
+          )}
         </div>
         <input
           type="text"
@@ -783,18 +934,19 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         />
       </header>
 
-      {/* dark canvas panel (intrinsic 3D-style surface, dark in both themes) */}
+      {/* canvas panel — neutral surface that tracks the theme (the canvas draw
+          reads its colours from CSS tokens, so light/dark both read cleanly) */}
       <div
         ref={containerRef}
-        className="relative h-[560px] w-full select-none bg-[#14110b]"
+        className="relative h-[560px] w-full select-none bg-surface-2"
       >
         {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-[#9c9488]">
+          <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground">
             Building the relationship graph…
           </div>
         )}
         {error && !loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center px-6 text-center text-sm text-[#d65c52]">
+          <div className="absolute inset-0 z-10 flex items-center justify-center px-6 text-center text-sm text-destructive">
             Could not load the knowledge graph: {error}
           </div>
         )}
@@ -857,7 +1009,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
                     />
                     <Icon
                       className="h-3.5 w-3.5 flex-none"
-                      style={{ color: TYPE_COLOR[t] }}
+                      style={{ color: legendColor(t) }}
                       aria-hidden
                     />
                     <span className="flex-1 text-foreground">
@@ -883,7 +1035,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
 
         {/* hint — bottom-right */}
         {data && !loading && (
-          <div className="pointer-events-none absolute bottom-3 right-4 text-right text-[11px] leading-relaxed text-[#7a7468]">
+          <div className="pointer-events-none absolute bottom-3 right-4 text-right text-[11px] leading-relaxed text-muted-foreground">
             Drag a node · scroll or Ctrl ± to zoom · drag the background to pan ·
             click to inspect
           </div>
@@ -895,7 +1047,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
             <div className="mb-2 flex items-center justify-between gap-2">
               <span
                 className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-wide"
-                style={{ color: TYPE_COLOR[selected.type] }}
+                style={{ color: legendColor(selected.type) }}
               >
                 {(() => {
                   const Icon = TYPE_ICON[selected.type];

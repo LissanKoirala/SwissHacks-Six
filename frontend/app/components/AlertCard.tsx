@@ -58,7 +58,7 @@ export function AlertCard({ match }: { match: Match }) {
             </span>
           </div>
           {news.body && (
-            <p className="mt-2 text-sm leading-relaxed text-foreground/80">
+            <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-foreground/80">
               {news.body}
             </p>
           )}
@@ -90,7 +90,10 @@ export function AlertCard({ match }: { match: Match }) {
           <Expander
             label="Why this surfaced"
             count={match.shared_topics.length}
-            defaultOpen
+            summary={Array.from(
+              new Set(match.shared_topics.map((st) => titleCase(st.topic)))
+            ).join(", ")}
+            defaultOpen={false}
           >
             <div className="space-y-3">
               {match.shared_topics.map((st, i) => (

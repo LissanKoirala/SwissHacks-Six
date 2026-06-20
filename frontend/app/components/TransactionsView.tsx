@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ChevronRight, Inbox } from "lucide-react";
 import type {
   TransactionsData,
   LedgerTxn,
@@ -11,42 +12,13 @@ import { api } from "@/lib/api";
 import { chf, pct, price, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
 import { ProvenanceTag } from "./Provenance";
+import { FigureCard } from "./ui";
 
-/* --------------------------------------------------------------- figures --- */
+/* --------------------------------------------------------------- glance --- */
 
-// Mirrors PortfolioCharts' FigureCard: 2xl number + uppercase label, with an
-// optional sub-line for the secondary figure (pct / annual income).
-function FigureCard({
-  label,
-  value,
-  sub,
-  tone = "ink",
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  tone?: "ink" | "green" | "red";
-}) {
-  const toneCls =
-    tone === "green"
-      ? "text-emerald-600"
-      : tone === "red"
-      ? "text-rose-600"
-      : "text-ink";
-  return (
-    <div className="card px-4 py-3.5">
-      <p className={`text-2xl font-semibold tabular-nums leading-none ${toneCls}`}>
-        {value}
-      </p>
-      {sub && (
-        <p className="mt-1 text-xs tabular-nums text-slate-400">{sub}</p>
-      )}
-      <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
-        {label}
-      </p>
-    </div>
-  );
-}
+// First-glance default: how many rows of a dense table render before the rest
+// are folded behind a "Show all N" toggle.
+const PREVIEW_ROWS = 10;
 
 /* ----------------------------------------------------------------- chips --- */
 
@@ -57,12 +29,54 @@ function SideChip({ side }: { side: string }) {
     <span
       className={`chip ring-1 ring-inset ${
         sell
-          ? "bg-rose-50 text-rose-700 ring-rose-200"
-          : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+          ? "bg-destructive/10 text-destructive ring-destructive/20"
+          : "bg-success/10 text-success ring-success/20"
       }`}
     >
       {s}
     </span>
+  );
+}
+
+/* --------------------------------------------------- show-all table footer --- */
+
+// A full-width table-row toggle that reveals the folded rows in place, so the
+// dense table keeps perfect column alignment (an Expander's <div> can't live in
+// a <tbody>). Neutral by default, blue on hover — mirrors the Expander trigger.
+function ShowAllRow({
+  colSpan,
+  hiddenCount,
+  open,
+  onToggle,
+}: {
+  colSpan: number;
+  hiddenCount: number;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  if (hiddenCount <= 0) return null;
+  return (
+    <tr className="border-t border-border">
+      <td colSpan={colSpan} className="px-4 py-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors ${
+            open
+              ? "text-primary"
+              : "text-muted-foreground hover:text-primary"
+          }`}
+        >
+          <ChevronRight
+            className={`h-3.5 w-3.5 shrink-0 transition-transform ${
+              open ? "rotate-90" : ""
+            }`}
+          />
+          {open ? "Show fewer" : `Show all ${hiddenCount + PREVIEW_ROWS}`}
+        </button>
+      </td>
+    </tr>
   );
 }
 
@@ -72,6 +86,11 @@ export function TransactionsView({ clientId }: { clientId: string }) {
   const [data, setData] = useState<TransactionsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Progressive disclosure: each dense list shows a preview, the rest folds away.
+  const [showAllPositions, setShowAllPositions] = useState(false);
+  const [showAllTxns, setShowAllTxns] = useState(false);
+  const [showAllFlows, setShowAllFlows] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -108,11 +127,13 @@ export function TransactionsView({ clientId }: { clientId: string }) {
   }, [data]);
 
   if (loading) {
-    return <p className="p-5 text-sm text-slate-500">Loading transactions…</p>;
+    return (
+      <p className="p-5 text-sm text-muted-foreground">Loading transactions…</p>
+    );
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600">
+      <p className="p-5 text-sm text-destructive">
         Could not load transactions: {error}
       </p>
     );
@@ -125,10 +146,10 @@ export function TransactionsView({ clientId }: { clientId: string }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline gap-2">
-        <h3 className="text-base font-semibold text-ink">
+        <h3 className="text-base font-semibold text-foreground">
           {data.portfolio} ledger
         </h3>
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-muted-foreground">
           {s.txn_count} transactions · {s.buy_count} buy · {s.sell_count} sell
         </span>
       </div>
@@ -140,13 +161,15 @@ export function TransactionsView({ clientId }: { clientId: string }) {
         <FigureCard
           label="Unrealised P&L"
           value={chf(s.unrealised_pnl_chf)}
-          sub={s.unrealised_pnl_pct != null ? pct(s.unrealised_pnl_pct, 2) : undefined}
+          hint={
+            s.unrealised_pnl_pct != null ? pct(s.unrealised_pnl_pct, 2) : undefined
+          }
           tone={pnlTone}
         />
         <FigureCard
           label="Income yield"
           value={pct(s.income_yield_pct, 2)}
-          sub={
+          hint={
             s.annual_income_chf != null
               ? `${chf(s.annual_income_chf)} / yr`
               : undefined
@@ -163,197 +186,277 @@ export function TransactionsView({ clientId }: { clientId: string }) {
 
       {/* 2. Positions · cost basis vs market ----------------------------- */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Positions · cost basis vs market
           </p>
         </div>
-        <div className="scroll-thin overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
-                <th className="px-4 py-2 font-medium">Issuer</th>
-                <th className="px-4 py-2 text-right font-medium">Units</th>
-                <th className="px-4 py-2 text-right font-medium">Cost basis</th>
-                <th className="px-4 py-2 text-right font-medium">Market value</th>
-                <th className="px-4 py-2 text-right font-medium">Unrealised P&L</th>
-                <th className="px-4 py-2 text-right font-medium">Holding period</th>
-              </tr>
-            </thead>
-            <tbody>
-              {positions.map((p, i) => {
-                const pnlCls =
-                  p.unrealised_pnl_chf >= 0 ? "text-emerald-600" : "text-rose-600";
-                return (
-                  <tr
-                    key={`${p.isin}-${i}`}
-                    className="border-t border-slate-100 hover:bg-slate-50"
-                  >
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <IssuerLogo issuer={p.issuer} isin={p.isin} size="sm" />
-                        <div>
-                          <span className="font-medium text-ink">{p.issuer}</span>
-                          {p.provenance && (
-                            <ProvenanceTag prov={p.provenance} label="src" />
-                          )}
-                          <div className="font-mono text-[11px] text-slate-400">
-                            {p.isin}
+        {positions.length === 0 ? (
+          <div className="px-4 py-10 text-center">
+            <Inbox
+              className="mx-auto mb-2 h-6 w-6 text-muted-foreground"
+              aria-hidden
+            />
+            <p className="text-sm text-muted-foreground">
+              No open positions in this portfolio yet. Record a buy in the ledger
+              to start tracking cost basis vs market value.
+            </p>
+          </div>
+        ) : (
+          <div className="scroll-thin overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-2 font-medium">Issuer</th>
+                  <th className="px-4 py-2 text-right font-medium">Units</th>
+                  <th className="px-4 py-2 text-right font-medium">Cost basis</th>
+                  <th className="px-4 py-2 text-right font-medium">Market value</th>
+                  <th className="px-4 py-2 text-right font-medium">Unrealised P&L</th>
+                  <th className="px-4 py-2 text-right font-medium">Holding period</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(showAllPositions
+                  ? positions
+                  : positions.slice(0, PREVIEW_ROWS)
+                ).map((p, i) => {
+                  const pnlCls =
+                    p.unrealised_pnl_chf >= 0 ? "text-positive" : "text-negative";
+                  return (
+                    <tr
+                      key={`${p.isin}-${i}`}
+                      className="border-t border-border/60 hover:bg-accent"
+                    >
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <IssuerLogo issuer={p.issuer} isin={p.isin} size="sm" />
+                          <div>
+                            <span className="font-medium text-foreground">
+                              {p.issuer}
+                            </span>
+                            {p.provenance && (
+                              <ProvenanceTag prov={p.provenance} label="src" />
+                            )}
+                            <div className="font-mono text-[11px] text-muted-foreground">
+                              {p.isin}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
-                      {p.units != null ? p.units.toLocaleString("en-GB") : "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
-                      {chf(p.cost_basis_chf)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
-                      {chf(p.current_chf)}
-                    </td>
-                    <td className={`px-4 py-2 text-right tabular-nums font-medium ${pnlCls}`}>
-                      <div className="flex flex-col items-end leading-tight">
-                        <span>{chf(p.unrealised_pnl_chf)}</span>
-                        {p.unrealised_pnl_pct != null && (
-                          <span className="text-[11px]">
-                            {pct(p.unrealised_pnl_pct, 2)}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-slate-500">
-                      {p.holding_period_days != null
-                        ? `${p.holding_period_days.toLocaleString("en-GB")}d`
-                        : p.first_buy
-                        ? prettyDate(p.first_buy)
-                        : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
+                        {p.units != null ? p.units.toLocaleString("en-GB") : "—"}
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
+                        {chf(p.cost_basis_chf)}
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
+                        {chf(p.current_chf)}
+                      </td>
+                      <td className={`px-4 py-2 text-right tabular-nums font-medium ${pnlCls}`}>
+                        <div className="flex flex-col items-end leading-tight">
+                          <span>{chf(p.unrealised_pnl_chf)}</span>
+                          {p.unrealised_pnl_pct != null && (
+                            <span className="text-[11px]">
+                              {pct(p.unrealised_pnl_pct, 2)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
+                        {p.holding_period_days != null
+                          ? `${p.holding_period_days.toLocaleString("en-GB")}d`
+                          : p.first_buy
+                          ? prettyDate(p.first_buy)
+                          : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+                <ShowAllRow
+                  colSpan={6}
+                  hiddenCount={positions.length - PREVIEW_ROWS}
+                  open={showAllPositions}
+                  onToggle={() => setShowAllPositions((o) => !o)}
+                />
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {/* 3. Transaction history ------------------------------------------ */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Transaction history · {s.txn_count}
           </p>
         </div>
-        <div className="scroll-thin max-h-[28rem] overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-white">
-              <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
-                <th className="px-4 py-2 font-medium">Date</th>
-                <th className="px-4 py-2 font-medium">Side</th>
-                <th className="px-4 py-2 font-medium">Issuer</th>
-                <th className="px-4 py-2 text-right font-medium">Quantity</th>
-                <th className="px-4 py-2 text-right font-medium">Price</th>
-                <th className="px-4 py-2 text-right font-medium">Amount</th>
-                <th className="px-4 py-2 font-medium">Rationale</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((t, i) => (
-                <tr
-                  key={`${t.transaction_id}-${i}`}
-                  className="border-t border-slate-100 align-top hover:bg-slate-50"
-                >
-                  <td className="px-4 py-2 whitespace-nowrap tabular-nums text-ink-soft">
-                    {prettyDate(t.timestamp)}
-                  </td>
-                  <td className="px-4 py-2">
-                    <SideChip side={t.side} />
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <IssuerLogo issuer={t.issuer} isin={t.isin} size="sm" />
-                      <div>
-                        <span className="font-medium text-ink">{t.issuer}</span>
-                        <div className="font-mono text-[11px] text-slate-400">
-                          {t.isin}
+        {transactions.length === 0 ? (
+          <div className="px-4 py-10 text-center">
+            <Inbox
+              className="mx-auto mb-2 h-6 w-6 text-muted-foreground"
+              aria-hidden
+            />
+            <p className="text-sm text-muted-foreground">
+              No transactions recorded yet. Book a buy or sell to build this
+              client&apos;s trade history.
+            </p>
+          </div>
+        ) : (
+          <div className="scroll-thin max-h-[28rem] overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-card">
+                <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-2 font-medium">Date</th>
+                  <th className="px-4 py-2 font-medium">Side</th>
+                  <th className="px-4 py-2 font-medium">Issuer</th>
+                  <th className="px-4 py-2 text-right font-medium">Quantity</th>
+                  <th className="px-4 py-2 text-right font-medium">Price</th>
+                  <th className="px-4 py-2 text-right font-medium">Amount</th>
+                  <th className="px-4 py-2 font-medium">Rationale</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(showAllTxns
+                  ? transactions
+                  : transactions.slice(0, PREVIEW_ROWS)
+                ).map((t, i) => (
+                  <tr
+                    key={`${t.transaction_id}-${i}`}
+                    className="border-t border-border/60 align-top hover:bg-accent"
+                  >
+                    <td className="px-4 py-2 whitespace-nowrap tabular-nums text-foreground/80">
+                      {prettyDate(t.timestamp)}
+                    </td>
+                    <td className="px-4 py-2">
+                      <SideChip side={t.side} />
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <IssuerLogo issuer={t.issuer} isin={t.isin} size="sm" />
+                        <div>
+                          <span className="font-medium text-foreground">
+                            {t.issuer}
+                          </span>
+                          <div className="font-mono text-[11px] text-muted-foreground">
+                            {t.isin}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
-                    {t.quantity != null ? t.quantity.toLocaleString("en-GB") : "—"}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
-                    {t.price_chf != null ? price(t.price_chf, "CHF") : "—"}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-ink-soft">
-                    {chf(t.amount_chf)}
-                  </td>
-                  <td className="px-4 py-2 text-ink-soft">
-                    {t.rationale ? (
-                      <span className="inline-flex flex-wrap items-baseline gap-x-1">
-                        <span className="max-w-md whitespace-normal break-words">
-                          {t.rationale}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
+                      {t.quantity != null ? t.quantity.toLocaleString("en-GB") : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
+                      {t.price_chf != null ? price(t.price_chf, "CHF") : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-foreground/80">
+                      {chf(t.amount_chf)}
+                    </td>
+                    <td className="px-4 py-2 text-foreground/80">
+                      {t.rationale ? (
+                        <span className="inline-flex flex-wrap items-baseline gap-x-1">
+                          <span className="max-w-md whitespace-normal break-words">
+                            {t.rationale}
+                          </span>
+                          {t.provenance && (
+                            <ProvenanceTag prov={t.provenance} label="src" />
+                          )}
                         </span>
-                        {t.provenance && (
-                          <ProvenanceTag prov={t.provenance} label="src" />
-                        )}
-                      </span>
-                    ) : t.provenance ? (
-                      <ProvenanceTag prov={t.provenance} label="src" />
-                    ) : (
-                      <span className="text-slate-300">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      ) : t.provenance ? (
+                        <ProvenanceTag prov={t.provenance} label="src" />
+                      ) : (
+                        <span className="text-muted-foreground/60">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                <ShowAllRow
+                  colSpan={7}
+                  hiddenCount={transactions.length - PREVIEW_ROWS}
+                  open={showAllTxns}
+                  onToggle={() => setShowAllTxns((o) => !o)}
+                />
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {/* 4. Cash flows --------------------------------------------------- */}
       <section className="card overflow-hidden">
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Cash flows · {cashflows.length}
           </p>
         </div>
         {cashflows.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-slate-400">
-            No cash flows recorded.
-          </p>
+          <div className="px-4 py-10 text-center">
+            <Inbox
+              className="mx-auto mb-2 h-6 w-6 text-muted-foreground"
+              aria-hidden
+            />
+            <p className="text-sm text-muted-foreground">
+              No cash flows recorded yet. Log a deposit or withdrawal to track
+              net flows for this portfolio.
+            </p>
+          </div>
         ) : (
-          <ul className="divide-y divide-slate-100">
-            {cashflows.map((c, i) => {
-              const inflow = c.amount_chf >= 0;
-              return (
-                <li
-                  key={`${c.flow_id}-${i}`}
-                  className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm"
+          <>
+            <ul className="divide-y divide-border/60">
+              {(showAllFlows ? cashflows : cashflows.slice(0, PREVIEW_ROWS)).map(
+                (c, i) => {
+                  const inflow = c.amount_chf >= 0;
+                  return (
+                    <li
+                      key={`${c.flow_id}-${i}`}
+                      className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm"
+                    >
+                      <span className="whitespace-nowrap tabular-nums text-foreground/80">
+                        {prettyDate(c.timestamp)}
+                      </span>
+                      <SideChip side={c.side} />
+                      {c.rationale && (
+                        <span className="text-foreground/80">{c.rationale}</span>
+                      )}
+                      {c.provenance && (
+                        <ProvenanceTag prov={c.provenance} label="src" />
+                      )}
+                      <span
+                        className={`ml-auto tabular-nums font-medium ${
+                          inflow ? "text-positive" : "text-negative"
+                        }`}
+                      >
+                        {inflow ? "+" : "−"}
+                        {chf(Math.abs(c.amount_chf))}
+                      </span>
+                    </li>
+                  );
+                }
+              )}
+            </ul>
+            {cashflows.length > PREVIEW_ROWS && (
+              <div className="border-t border-border px-4 py-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAllFlows((o) => !o)}
+                  aria-expanded={showAllFlows}
+                  className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                    showAllFlows
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-primary"
+                  }`}
                 >
-                  <span className="whitespace-nowrap tabular-nums text-ink-soft">
-                    {prettyDate(c.timestamp)}
-                  </span>
-                  <SideChip side={c.side} />
-                  {c.rationale && (
-                    <span className="text-ink-soft">{c.rationale}</span>
-                  )}
-                  {c.provenance && (
-                    <ProvenanceTag prov={c.provenance} label="src" />
-                  )}
-                  <span
-                    className={`ml-auto tabular-nums font-medium ${
-                      inflow ? "text-emerald-600" : "text-rose-600"
+                  <ChevronRight
+                    className={`h-3.5 w-3.5 shrink-0 transition-transform ${
+                      showAllFlows ? "rotate-90" : ""
                     }`}
-                  >
-                    {inflow ? "+" : "−"}
-                    {chf(Math.abs(c.amount_chf))}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+                  />
+                  {showAllFlows ? "Show fewer" : `Show all ${cashflows.length}`}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>

@@ -38,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Expander, PolarityChip } from "./ui";
 
 /* --------------------------------------------------------------- consts --- */
 
@@ -196,6 +197,52 @@ function RiskPreviewBadge({ risk }: { risk: RiskPreview }) {
   );
 }
 
+/* --------------------------------------------------------- summary head --- */
+
+// First-glance digest of the whole draft: how many edges/statements were
+// extracted and which way the risk needle moved. Built purely from the draft
+// data the panel already renders below.
+function StagedSummary({
+  edgeCount,
+  facetCount,
+  risk,
+}: {
+  edgeCount: number;
+  facetCount: number;
+  risk: RiskPreview;
+}) {
+  const meta = DIR_META[risk.direction] ?? DIR_META.flat;
+  const Icon = meta.icon;
+  const sign = risk.delta > 0 ? "+" : "";
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-foreground">
+      <span className="font-medium">
+        Extracted{" "}
+        <span className="tabular-nums">{edgeCount}</span> topic edge
+        {edgeCount === 1 ? "" : "s"}
+      </span>
+      <span className="text-muted-foreground" aria-hidden>
+        ·
+      </span>
+      <span className="font-medium">
+        <span className="tabular-nums">{facetCount}</span> profile statement
+        {facetCount === 1 ? "" : "s"}
+      </span>
+      <span className="text-muted-foreground" aria-hidden>
+        ·
+      </span>
+      <span className={cn("chip ring-1 ring-inset", meta.cls)}>
+        <Icon className="h-3 w-3" aria-hidden />
+        risk {meta.label}
+        <span className="tabular-nums opacity-80">
+          {sign}
+          {risk.delta.toFixed(3)}
+        </span>
+      </span>
+    </div>
+  );
+}
+
 /* ----------------------------------------------------------- edge / facet --- */
 
 function EdgeRow({
@@ -216,6 +263,8 @@ function EdgeRow({
           : "border-border bg-muted/40 opacity-70"
       )}
     >
+      {/* glance: keep / headline (topic + facet + polarity) — the RM can pick
+          without expanding. Editable controls + rationale live on expand. */}
       <div className="flex items-start gap-3">
         <input
           type="checkbox"
@@ -229,47 +278,57 @@ function EdgeRow({
             <span className="text-sm font-semibold text-foreground">
               {edge.topic_label}
             </span>
-            <span className="citation font-mono text-[11px]">
-              {edge.topic}
+            <PolarityChip polarity={edge.polarity} />
+            <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
+              {titleCaseFacet(edge.facet)}
             </span>
+            <span className="citation font-mono text-[11px]">{edge.topic}</span>
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              Polarity
-              <Select
-                value={edge.polarity}
-                onValueChange={(v) =>
-                  patch(index, { polarity: v as Polarity })
-                }
-              >
-                <SelectTrigger
-                  className={cn(
-                    MINI_SELECT,
-                    "font-medium",
-                    POL_TINT[edge.polarity]
-                  )}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {POLARITIES.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              Facet
-              <FacetSelect value={edge.facet} onChange={(v) => patch(index, { facet: v })} />
-            </label>
+          {/* detail on demand: edit polarity / facet + read the rationale */}
+          <div className="mt-2">
+            <Expander
+              label="Detail"
+              summary={edge.rationale ? "rationale, polarity, facet" : "polarity, facet"}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  Polarity
+                  <Select
+                    value={edge.polarity}
+                    onValueChange={(v) =>
+                      patch(index, { polarity: v as Polarity })
+                    }
+                  >
+                    <SelectTrigger
+                      className={cn(
+                        MINI_SELECT,
+                        "font-medium",
+                        POL_TINT[edge.polarity]
+                      )}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {POLARITIES.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  Facet
+                  <FacetSelect value={edge.facet} onChange={(v) => patch(index, { facet: v })} />
+                </label>
+              </div>
+              {edge.rationale && (
+                <p className="mt-2 text-xs italic leading-relaxed text-muted-foreground">
+                  {edge.rationale}
+                </p>
+              )}
+            </Expander>
           </div>
-          {edge.rationale && (
-            <p className="mt-2 text-xs italic leading-relaxed text-muted-foreground">
-              {edge.rationale}
-            </p>
-          )}
         </div>
       </div>
     </div>
@@ -294,6 +353,8 @@ function FacetRow({
           : "border-border bg-muted/40 opacity-70"
       )}
     >
+      {/* glance: keep / facet / a one-line peek of the statement — the RM can
+          pick without expanding. The editable facet + text live on expand. */}
       <div className="flex items-start gap-3">
         <input
           type="checkbox"
@@ -303,16 +364,29 @@ function FacetRow({
           aria-label="Keep this profile statement"
         />
         <div className="min-w-0 flex-1">
-          <label className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-            Facet
-            <FacetSelect value={facet.facet} onChange={(v) => patch(index, { facet: v })} />
-          </label>
-          <Textarea
-            value={facet.text}
-            onChange={(e) => patch(index, { text: e.target.value })}
-            rows={2}
-            className="min-h-0 resize-y text-sm leading-relaxed"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
+              {titleCaseFacet(facet.facet)}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm text-foreground/80">
+              {facet.text}
+            </span>
+          </div>
+          {/* detail on demand: edit the facet + the statement text */}
+          <div className="mt-2">
+            <Expander label="Edit statement">
+              <label className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                Facet
+                <FacetSelect value={facet.facet} onChange={(v) => patch(index, { facet: v })} />
+              </label>
+              <Textarea
+                value={facet.text}
+                onChange={(e) => patch(index, { text: e.target.value })}
+                rows={2}
+                className="min-h-0 resize-y text-sm leading-relaxed"
+              />
+            </Expander>
+          </div>
         </div>
       </div>
     </div>
@@ -365,6 +439,13 @@ export function StagedPanel({
       </div>
 
       <div className="space-y-5 p-5">
+        {/* first-glance digest of the whole draft */}
+        <StagedSummary
+          edgeCount={edges.length}
+          facetCount={facets.length}
+          risk={draft.risk_preview}
+        />
+
         {/* header: modality + dates + preview id */}
         <div className="flex flex-wrap items-center gap-2">
           <MetaChip>
