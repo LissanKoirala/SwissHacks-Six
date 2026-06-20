@@ -28,6 +28,7 @@ import { RiskTimeline } from "./RiskTimeline";
 import { CaptureNote } from "./CaptureNote";
 import { OpportunitiesPanel } from "./OpportunitiesPanel";
 import { AuditPanel } from "./AuditPanel";
+import { ClientWorkspace } from "./ClientWorkspace";
 import { TransactionsView } from "./TransactionsView";
 
 function loadRendezvousView() {
@@ -59,7 +60,7 @@ const RendezvousView = dynamic(() => loadRendezvousView(), {
 
 type Area = "advisory" | "portfolio" | "client" | "capture";
 type PortfolioSub = "holdings" | "audit" | "allocation" | "transactions" | "risk" | "map";
-type ClientSub = "profile" | "network" | "rendezvous";
+type ClientSub = "profile" | "network" | "rendezvous" | "workspace";
 
 const ACTION_CHIP: Record<SwapAction, string> = {
   SWAP: "bg-primary/10 text-primary ring-primary/30",
@@ -451,12 +452,20 @@ export function ClientView({ clientId }: { clientId: string }) {
                   { id: "profile", label: "Profile" },
                   { id: "network", label: "CRM Network" },
                   { id: "rendezvous", label: "Rendezvous" },
+                  { id: "workspace", label: "Workspace" },
                 ]}
               />
               {clientSub === "profile" && <ProfileView clientId={clientId} />}
               {clientSub === "network" && <CrmGraph clientId={clientId} />}
               {clientSub === "rendezvous" && (
                 <RendezvousView clientId={clientId} />
+              )}
+              {clientSub === "workspace" && (
+                <ClientWorkspace
+                  clientId={clientId}
+                  clientName={client.name}
+                  contextBody={insights.dialogue_suggestion?.draft_message ?? ""}
+                />
               )}
             </TabsContent>
           </Tabs>

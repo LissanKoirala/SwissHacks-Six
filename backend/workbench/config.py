@@ -106,6 +106,13 @@ class Settings:
     ).strip()
     token_enc_key = _clean(os.getenv("TOKEN_ENC_KEY"))
 
+    # Per-client email for the Workspace (filter the RM's inbox/calendar to one client, draft to
+    # them). For live testing with ONE real Gmail, set WORKSPACE_TEST_BASE=you@gmail.com and each
+    # client resolves to a plus-address you@gmail.com+<client_id> → you+<client_id>@gmail.com, all
+    # landing in that one inbox. Per-client override: CLIENT_EMAIL_<CLIENT_ID> (e.g.
+    # CLIENT_EMAIL_SCHNEIDER). Falls back to the address on file in persona_seeds.json.
+    workspace_test_base = _clean(os.getenv("WORKSPACE_TEST_BASE"))
+
     # --- Twilio SMS morning briefing (spec §6–§8) ---
     twilio_account_sid = _clean(os.getenv("TWILIO_ACCOUNT_SID"))
     twilio_auth_token = _clean(os.getenv("TWILIO_AUTH_TOKEN"))

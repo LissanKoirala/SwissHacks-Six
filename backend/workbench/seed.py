@@ -5,6 +5,7 @@ graphs. Live feeds (SIX/Event Registry/Phoeniqs) layer on top only when USE_LIVE
 from __future__ import annotations
 
 import json
+import os
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -40,6 +41,24 @@ def _load_json(name: str) -> dict:
     return json.loads((DATA_DIR / name).read_text())
 
 
+def _client_email(client_id: str, fallback: str = "") -> str:
+    """Resolve a client's Workspace email. Priority:
+    1. CLIENT_EMAIL_<CLIENT_ID> env — explicit per-client override.
+    2. WORKSPACE_TEST_BASE plus-address — one real Gmail, a distinct +tag per client
+       (you@gmail.com → you+<client_id>@gmail.com), so all test mail lands in one inbox.
+    3. the address on file in persona_seeds.json.
+    """
+    override = os.getenv(f"CLIENT_EMAIL_{client_id.upper()}", "").strip()
+    if override:
+        return override
+    base = settings.workspace_test_base
+    if base and "@" in base:
+        local, _, domain = base.partition("@")
+        local = local.split("+", 1)[0]  # never stack +tags if the base already carries one
+        return f"{local}+{client_id}@{domain}"
+    return fallback
+
+
 def build_world(use_live_news: bool = False) -> World:
     world = World()
     seeds = _load_json("persona_seeds.json")
@@ -50,6 +69,7 @@ def build_world(use_live_news: bool = False) -> World:
         world.clients[c["client_id"]] = {
             "name": c["name"], "mandate": c["mandate"], "portfolio": c["portfolio"],
             "style": c.get("style", ""), "headline": c.get("headline", ""),
+            "email": _client_email(c["client_id"], c.get("email", "")),
         }
 
     # --- CRM graph: meeting logs ---

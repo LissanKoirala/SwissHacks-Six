@@ -3,6 +3,7 @@
     {
       "client_id": "schneider",
       "crm_sheet": "CRM Schneider",
+      "email": "h.schneider@schneider-automotive.example",
       "name": "Hubertus Schneider",
       "mandate": "Balanced",
       "portfolio": "Balanced",
@@ -44,6 +45,7 @@
     {
       "client_id": "huber",
       "crm_sheet": "CRM Huber",
+      "email": "marius@huber-reforest.example",
       "name": "Marius Huber",
       "mandate": "Defensive",
       "portfolio": "Defensive",
@@ -85,6 +87,7 @@
     {
       "client_id": "raeber",
       "crm_sheet": "CRM Raeber",
+      "email": "e.raeber@bluewin.example",
       "name": "Eugen Räber",
       "mandate": "Defensive",
       "portfolio": "Defensive",
@@ -126,6 +129,7 @@
     {
       "client_id": "ammann",
       "crm_sheet": "CRM Ammann",
+      "email": "j.ammann@ammann-retail.example",
       "name": "Julian Ammann",
       "mandate": "Growth",
       "portfolio": "Growth",

@@ -41,6 +41,30 @@ class BriefingPrefs(BaseModel):
     briefing_enabled: bool | None = None
 
 
+# Workspace request bodies. MUST be module-level: with `from __future__ import annotations`,
+# a Pydantic body model defined inside create_app() is an unresolvable forward ref and FastAPI
+# raises PydanticUserError at request time.
+class DraftBody(BaseModel):
+    to: str
+    subject: str = ""
+    body: str = ""
+
+
+class EventBody(BaseModel):
+    summary: str
+    start: str  # ISO datetime, e.g. 2026-06-22T14:00:00+02:00
+    end: str
+    attendees: list[str] = []
+    description: str = ""
+    location: str = ""
+
+
+class ClientDraftBody(BaseModel):
+    # `to` is forced server-side to the client's address — the RM can't misdirect a client draft.
+    subject: str = ""
+    body: str = ""
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Advisory Workbench", version="0.1.0")
     # SessionMiddleware first (innermost) so CORS is outermost and always adds headers,
@@ -463,19 +487,6 @@ def create_app() -> FastAPI:
 
     # --- Google Workspace (Gmail read/draft + Calendar read/add) -----------------
 
-    class DraftBody(BaseModel):
-        to: str
-        subject: str = ""
-        body: str = ""
-
-    class EventBody(BaseModel):
-        summary: str
-        start: str  # ISO datetime, e.g. 2026-06-22T14:00:00+02:00
-        end: str
-        attendees: list[str] = []
-        description: str = ""
-        location: str = ""
-
     def _gtoken(user: RmUser, db: Session):
         if not settings.workspace_enabled:
             raise HTTPException(503, "Google workspace not configured (scopes + TOKEN_ENC_KEY)")
@@ -526,6 +537,58 @@ def create_app() -> FastAPI:
                 db, row, summary=body.summary, start=body.start, end=body.end,
                 attendees=body.attendees, description=body.description, location=body.location,
             )
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    # --- Per-client Workspace: the RM's Gmail/Calendar, scoped to ONE client by their email ----
+    # Read this client's correspondence + meetings, and draft to them (never sends). Advisory only.
+    def _client_email(client_id: str) -> str:
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        email = (world.clients[client_id].get("email") or "").strip()
+        if not email:
+            raise HTTPException(
+                409, "no email on file for this client — set WORKSPACE_TEST_BASE or "
+                     "CLIENT_EMAIL_<ID> (see .env.example)")
+        return email
+
+    @app.get("/clients/{client_id}/workspace/inbox")
+    def client_inbox(client_id: str, user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, list_inbox
+
+        email = _client_email(client_id)
+        row = _gtoken(user, db)
+        try:  # both sides of the thread: mail from the client and mail the RM sent them
+            messages = list_inbox(db, row, query=f"from:{email} OR to:{email}")
+            return {"email": email, "messages": messages}
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    @app.get("/clients/{client_id}/workspace/calendar")
+    def client_calendar(client_id: str, user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, list_events
+
+        email = _client_email(client_id)
+        row = _gtoken(user, db)
+        try:
+            events = list_events(db, row, query=email)
+            # q is fuzzy free-text — keep events the client is actually invited to, but fall back to
+            # the q-matched set so a meeting that only names them in the title still shows.
+            attended = [e for e in events
+                        if email.lower() in [a.lower() for a in (e.get("attendees") or [])]]
+            return {"email": email, "events": attended or events}
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    @app.post("/clients/{client_id}/workspace/draft")
+    def client_draft(client_id: str, body: ClientDraftBody,
+                     user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, create_draft
+
+        email = _client_email(client_id)  # `to` is forced to the client — never sends (golden rule)
+        row = _gtoken(user, db)
+        try:
+            return create_draft(db, row, email, body.subject, body.body)
         except GoogleError as e:
             raise HTTPException(502, str(e))
 

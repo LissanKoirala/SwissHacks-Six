@@ -26,10 +26,18 @@ def _header(payload: dict, name: str) -> str:
     return ""
 
 
-def list_inbox(db: Session, row: OAuthToken, max_results: int = 12) -> list[dict]:
-    """Recent inbox messages: from / subject / snippet / date (metadata only)."""
-    listing = call(db, row, "GET", f"{GMAIL}/messages",
-                   params={"maxResults": max_results, "labelIds": "INBOX", "q": "in:inbox"})
+def list_inbox(db: Session, row: OAuthToken, max_results: int = 12,
+               query: str | None = None) -> list[dict]:
+    """Recent messages: from / subject / snippet / date (metadata only).
+
+    Default: the RM's own INBOX. With `query` (a Gmail search, e.g. ``from:x@y OR to:x@y``) it
+    returns that client's correspondence across all mail — sent and received — so a per-client
+    Workspace shows both sides of the thread."""
+    if query:
+        params = {"maxResults": max_results, "q": query}
+    else:
+        params = {"maxResults": max_results, "labelIds": "INBOX", "q": "in:inbox"}
+    listing = call(db, row, "GET", f"{GMAIL}/messages", params=params)
     out: list[dict] = []
     for m in (listing.get("messages") or []):
         msg = call(db, row, "GET", f"{GMAIL}/messages/{m['id']}",
@@ -63,13 +71,17 @@ def create_draft(db: Session, row: OAuthToken, to: str, subject: str, body: str)
 
 # --- Calendar ----------------------------------------------------------------
 
-def list_events(db: Session, row: OAuthToken, days: int = 14, max_results: int = 15) -> list[dict]:
+def list_events(db: Session, row: OAuthToken, days: int = 14, max_results: int = 15,
+                query: str | None = None) -> list[dict]:
     now = datetime.now(timezone.utc)
-    data = call(db, row, "GET", f"{CAL}/events", params={
+    params = {
         "timeMin": now.isoformat(),
         "timeMax": (now + timedelta(days=days)).isoformat(),
         "singleEvents": "true", "orderBy": "startTime", "maxResults": max_results,
-    })
+    }
+    if query:  # free-text Calendar search — matches attendee email, title, location, etc.
+        params["q"] = query
+    data = call(db, row, "GET", f"{CAL}/events", params=params)
     out: list[dict] = []
     for e in (data.get("items") or []):
         start = e.get("start", {})

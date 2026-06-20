@@ -41,6 +41,9 @@ import type {
   DraftResult,
   EventBody,
   AddEventResult,
+  ClientInbox,
+  ClientCalendar,
+  ClientDraftBody,
   Task,
   TaskCreateBody,
   TaskUpdateBody,
@@ -177,6 +180,14 @@ export const api = {
     get<{ events: CalendarEvent[] }>("/integrations/google/calendar"),
   addCalendarEvent: (body: EventBody) =>
     post<AddEventResult>("/integrations/google/calendar", body),
+
+  // --- Per-client Workspace (Gmail/Calendar scoped to one client by their email) ---
+  clientInbox: (id: string) =>
+    get<ClientInbox>(`/clients/${id}/workspace/inbox`),
+  clientCalendar: (id: string) =>
+    get<ClientCalendar>(`/clients/${id}/workspace/calendar`),
+  clientDraft: (id: string, body: ClientDraftBody) =>
+    post<DraftResult>(`/clients/${id}/workspace/draft`, body),
 
   // --- The Front Door: inbox + agentic kanban board ---
   tasks: (clientId?: string) =>

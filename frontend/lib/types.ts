@@ -1204,6 +1204,22 @@ export interface DraftResult {
   url: string;
 }
 
+// Per-client Workspace: the RM's Gmail/Calendar scoped to one client by their email.
+export interface ClientInbox {
+  email: string;
+  messages: GmailMessage[];
+}
+
+export interface ClientCalendar {
+  email: string;
+  events: CalendarEvent[];
+}
+
+export interface ClientDraftBody {
+  subject?: string;
+  body?: string;
+}
+
 export interface EventBody {
   summary: string;
   start: string;

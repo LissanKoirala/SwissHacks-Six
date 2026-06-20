@@ -2,10 +2,10 @@
 ~$*
 *.tmp
 
-# secrets
-.env
-backend/.env
-frontend/.env.local
+# secrets — every env file except the committed template
+**/.env
+**/.env.*
+!**/.env.example
 demo/secrets/
 *.pem
 mcp_key
