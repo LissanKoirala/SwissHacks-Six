@@ -1063,6 +1063,12 @@ export interface Overview {
 
 // --- Auth (Google sign-in) + Twilio morning briefing ---
 
+export interface WorkspaceStatus {
+  connected: boolean;
+  gmail: boolean;
+  calendar: boolean;
+}
+
 export interface MeUser {
   id: string;
   email: string;
@@ -1071,6 +1077,63 @@ export interface MeUser {
   phone_e164?: string | null;
   briefing_hour: number;
   briefing_enabled: boolean;
+  workspace?: WorkspaceStatus;
+}
+
+export interface GmailMessage {
+  id: string;
+  thread_id: string;
+  from: string;
+  subject: string;
+  date: string;
+  snippet: string;
+  unread: boolean;
+}
+
+export interface CalendarEvent {
+  id: string;
+  summary: string;
+  start: string;
+  end: string;
+  all_day: boolean;
+  location: string;
+  attendees: string[];
+  html_link: string;
+}
+
+export interface DraftBody {
+  to: string;
+  subject?: string;
+  body?: string;
+}
+
+export interface DraftResult {
+  id: string;
+  message_id?: string | null;
+  url: string;
+}
+
+export interface EventBody {
+  summary: string;
+  start: string;
+  end: string;
+  attendees?: string[];
+  description?: string;
+  location?: string;
+}
+
+export interface AddEventResult {
+  id: string;
+  html_link: string;
+  summary: string;
+}
+
+export interface AuthConfig {
+  google_enabled: boolean;
+  twilio_enabled: boolean;
+  workspace_enabled: boolean;
+  gmail_scope: boolean;
+  calendar_scope: boolean;
 }
 
 export interface BriefingPrefsBody {

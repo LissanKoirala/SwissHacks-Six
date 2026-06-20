@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Home, LayoutGrid, ShieldCheck } from "lucide-react";
+import { Home, LayoutGrid, Briefcase, ShieldCheck } from "lucide-react";
 import type { ClientSummary, IntegrationHealth } from "@/lib/types";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill } from "./ui";
@@ -19,6 +19,8 @@ export function Sidebar({
   health,
   onShowTasks,
   tasksActive,
+  onShowWorkspace,
+  workspaceActive,
 }: {
   clients: ClientSummary[];
   selectedId: string | null;
@@ -28,6 +30,8 @@ export function Sidebar({
   health: IntegrationHealth | null;
   onShowTasks: () => void;
   tasksActive: boolean;
+  onShowWorkspace: () => void;
+  workspaceActive: boolean;
 }) {
   const totalAlerts = clients.reduce((s, c) => s + (c.alert_count || 0), 0);
   // Triage-ordered book: the most urgent client floats to the top.
@@ -96,6 +100,20 @@ export function Sidebar({
         >
           <LayoutGrid className="h-4 w-4 shrink-0" />
           Tasks board
+        </button>
+        <button
+          type="button"
+          onClick={onShowWorkspace}
+          aria-current={workspaceActive ? "page" : undefined}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors",
+            workspaceActive
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <Briefcase className="h-4 w-4 shrink-0" />
+          Workspace
         </button>
       </div>
 

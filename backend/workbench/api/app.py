@@ -359,6 +359,74 @@ def create_app() -> FastAPI:
         """The composed briefing text over the seed book — visible even logged-out."""
         return {"text": compose_for(world)}
 
+    # --- Google Workspace (Gmail read/draft + Calendar read/add) -----------------
+
+    class DraftBody(BaseModel):
+        to: str
+        subject: str = ""
+        body: str = ""
+
+    class EventBody(BaseModel):
+        summary: str
+        start: str  # ISO datetime, e.g. 2026-06-22T14:00:00+02:00
+        end: str
+        attendees: list[str] = []
+        description: str = ""
+        location: str = ""
+
+    def _gtoken(user: RmUser, db: Session):
+        if not settings.workspace_enabled:
+            raise HTTPException(503, "Google workspace not configured (scopes + TOKEN_ENC_KEY)")
+        from ..google_api import token_for
+
+        row = token_for(db, user)
+        if row is None:
+            raise HTTPException(409, "Google not connected — sign in again to grant Gmail/Calendar")
+        return row
+
+    @app.get("/integrations/google/inbox")
+    def google_inbox(user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, list_inbox
+
+        row = _gtoken(user, db)
+        try:
+            return {"messages": list_inbox(db, row)}
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    @app.post("/integrations/google/draft")
+    def google_draft(body: DraftBody, user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, create_draft
+
+        row = _gtoken(user, db)
+        try:
+            return create_draft(db, row, body.to, body.subject, body.body)
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    @app.get("/integrations/google/calendar")
+    def google_calendar(user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, list_events
+
+        row = _gtoken(user, db)
+        try:
+            return {"events": list_events(db, row)}
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    @app.post("/integrations/google/calendar")
+    def google_add_event(body: EventBody, user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, create_event
+
+        row = _gtoken(user, db)
+        try:
+            return create_event(
+                db, row, summary=body.summary, start=body.start, end=body.end,
+                attendees=body.attendees, description=body.description, location=body.location,
+            )
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
     start_scheduler(world)
 
     return app

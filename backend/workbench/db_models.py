@@ -40,6 +40,22 @@ class RmUser(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class OAuthToken(Base):
+    """Per-user Google tokens for Gmail/Calendar, encrypted at rest (Fernet)."""
+
+    __tablename__ = "oauth_token"
+    __table_args__ = (UniqueConstraint("user_id", "provider", name="uq_oauth_user_provider"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("rm_user.id"), index=True)
+    provider: Mapped[str] = mapped_column(String, default="google")
+    access_token_enc: Mapped[str] = mapped_column(String)
+    refresh_token_enc: Mapped[str | None] = mapped_column(String, nullable=True)
+    scopes: Mapped[str] = mapped_column(String, default="")
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class BriefingLog(Base):
     """One row per sent SMS briefing — audit + once-a-day idempotency."""
 
