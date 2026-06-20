@@ -102,6 +102,12 @@ def create_app() -> FastAPI:
     def news():
         return [n.model_dump() for n in world.news]
 
+    @app.get("/overview")
+    def overview():
+        """RM morning landing — aggregates across all clients (docs/OVERVIEW_CONTRACT.md)."""
+        from ..agents.overview import build_overview
+        return build_overview(world)
+
     # --- ported features (builders lazy-imported so the app boots even mid-build) ---
 
     def _dump(out):

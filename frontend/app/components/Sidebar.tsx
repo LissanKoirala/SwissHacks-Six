@@ -8,28 +8,69 @@ export function Sidebar({
   clients,
   selectedId,
   onSelect,
+  onHome,
   health,
 }: {
   clients: ClientSummary[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onHome: () => void;
   health: IntegrationHealth | null;
 }) {
+  const totalAlerts = clients.reduce((s, c) => s + (c.alert_count || 0), 0);
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col border-r border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-5 py-5">
-        <div className="flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-sm font-bold text-white">
-            AW
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-ink">Advisory Workbench</p>
-            <p className="text-xs text-slate-500">Relationship-manager desk</p>
-          </div>
+      <button
+        type="button"
+        onClick={onHome}
+        className="flex w-full items-center gap-2 border-b border-slate-200 px-5 py-5 text-left hover:bg-slate-50"
+      >
+        <div className="grid h-8 w-8 place-items-center rounded-lg bg-accent text-sm font-bold text-white">
+          AW
         </div>
+        <div>
+          <p className="text-sm font-semibold text-ink">Advisory Workbench</p>
+          <p className="text-xs text-slate-500">Relationship-manager desk</p>
+        </div>
+      </button>
+
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          onClick={onHome}
+          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
+            selectedId === null
+              ? "bg-accent-soft ring-1 ring-inset ring-accent/30"
+              : "hover:bg-slate-50"
+          }`}
+        >
+          <span
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-base ${
+              selectedId === null ? "bg-accent text-white" : "bg-slate-100 text-slate-500"
+            }`}
+            aria-hidden
+          >
+            ⌂
+          </span>
+          <div className="min-w-0 flex-1">
+            <span
+              className={`text-sm font-semibold ${
+                selectedId === null ? "text-accent-ink" : "text-ink"
+              }`}
+            >
+              Overview
+            </span>
+            <p className="text-xs text-slate-500">Your morning desk</p>
+          </div>
+          {totalAlerts > 0 && (
+            <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-rose-500 px-1 text-[11px] font-bold text-white">
+              {totalAlerts}
+            </span>
+          )}
+        </button>
       </div>
 
-      <div className="px-5 py-3">
+      <div className="px-5 pb-1 pt-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
           Clients
         </p>

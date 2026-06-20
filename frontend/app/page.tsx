@@ -5,6 +5,7 @@ import type { ClientSummary, IntegrationHealth } from "@/lib/types";
 import { api } from "@/lib/api";
 import { Sidebar } from "./components/Sidebar";
 import { ClientView } from "./components/ClientView";
+import { OverviewDashboard } from "./components/OverviewDashboard";
 
 export default function Home() {
   const [clients, setClients] = useState<ClientSummary[]>([]);
@@ -20,7 +21,7 @@ export default function Home() {
       .then((cs) => {
         if (!alive) return;
         setClients(cs);
-        if (cs.length > 0) setSelectedId(cs[0].client_id);
+        // default landing is the Overview (selectedId stays null), per the desk philosophy
       })
       .catch((e) => alive && setError(String(e)))
       .finally(() => alive && setLoading(false));
@@ -42,6 +43,7 @@ export default function Home() {
         clients={clients}
         selectedId={selectedId}
         onSelect={setSelectedId}
+        onHome={() => setSelectedId(null)}
         health={health}
       />
       <div className="flex-1 overflow-hidden bg-slate-50">
@@ -64,9 +66,7 @@ export default function Home() {
         ) : selectedId ? (
           <ClientView clientId={selectedId} />
         ) : (
-          <div className="grid h-full place-items-center text-sm text-slate-500">
-            Select a client to begin.
-          </div>
+          <OverviewDashboard onOpenClient={setSelectedId} />
         )}
       </div>
     </main>

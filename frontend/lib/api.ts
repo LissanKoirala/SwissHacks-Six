@@ -18,6 +18,7 @@ import type {
   CaptureConfirm,
   CaptureResult,
   CapturePrompts,
+  Overview,
 } from "./types";
 
 export const API_BASE =
@@ -48,6 +49,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const api = {
+  overview: () => get<Overview>("/overview"),
   clients: () => get<ClientSummary[]>("/clients"),
   insights: (id: string) => get<Insights>(`/clients/${id}/insights`),
   portfolio: (id: string) => get<Portfolio>(`/clients/${id}/portfolio`),
