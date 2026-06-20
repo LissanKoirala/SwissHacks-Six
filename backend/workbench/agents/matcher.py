@@ -6,6 +6,7 @@ from __future__ import annotations
 from ..graph.store import World
 from ..models import Match, NewsItem, Provenance, TopicMatch
 from ..topics import topic_label
+from .worldview import is_celebrate, reframe, score_match
 
 
 def _polarity(edges, news: NewsItem) -> str:
@@ -79,7 +80,7 @@ def match_client(world: World, client_id: str) -> list[Match]:
         else:
             headline = f"{news.issuer_name or 'A development'} relates to this client's interest in {', '.join(labels)} — worth a mention."
 
-        matches.append(Match(
+        m = Match(
             id=f"{client_id}:{news.id}",
             client_id=client_id,
             polarity=polarity,
@@ -88,16 +89,26 @@ def match_client(world: World, client_id: str) -> list[Match]:
             shared_topics=shared_topics,
             affected_holding=affected,
             why=why,
-        ))
+        )
+        # Worldview enrichment — deterministic and free, so it runs for every client/surface and
+        # stays correct offline (§9): a 'call to celebrate' flag (#4), the conviction-weighted
+        # relevance score (#2), and the news reframed through the client's own words (#1).
+        m.celebrate = is_celebrate(m, topic_edges)
+        m.relevance = score_match(world, client_id, m)
+        m.lens = reframe(world, client_id, m)
+        matches.append(m)
 
-    # salience: conflicts with a held position first, then opportunities, then the rest
+    # Rank by the conviction-weighted relevance score (#2) — a real per-client priority, not one
+    # fixed salience tuple. The old salience (held conflict first, then sentiment magnitude)
+    # tie-breaks so equal-score items keep a deterministic order.
     def rank(m: Match):
-        return (
+        score = m.relevance.score if m.relevance else 0
+        salience = (
             0 if (m.polarity == "conflict" and m.affected_holding) else
             1 if m.affected_holding else
-            2 if m.polarity == "opportunity" else 3,
-            -abs(m.news.sentiment.score),
+            2 if m.polarity == "opportunity" else 3
         )
+        return (-score, salience, -abs(m.news.sentiment.score))
 
     matches.sort(key=rank)
     return matches

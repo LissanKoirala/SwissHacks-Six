@@ -140,8 +140,9 @@ These are the seams between streams. Agree them in the first hour; change only b
 1. **Topic vocabulary** — a small controlled list (start with the personas' needs): `pharma`, `reforestation/palm-oil`, `governance/labour`, `us-tech-ai`, plus sector tags. CRM and News streams both write topic edges; they must use the same strings.
 2. **Graph schema** — node and edge types for CRM / news / meta. Owned by the CRM stream, agreed by all.
 3. **Adapter interface** — `Source.fetch()` shape above (§6).
-4. **Agent API** — `GET /clients/{id}/insights` returns `{ matches[], strategy_proposal, dialogue_suggestion }`, each item carrying `provenance`. Owned by Advisory/Orchestration stream.
+4. **Agent API** — `GET /clients/{id}/insights` returns `{ client, matches[], strategy_proposal, dialogue_suggestion, additional_proposals[], reaction, life_events[], generated_at, llm_used }`, each item carrying `provenance`. Owned by Advisory/Orchestration stream.
 5. **Provenance format** — `{ source_type, source_id, excerpt }` on every fact and suggestion.
+6. **Worldview engine fields** — the client is modelled, not flattened to a topic set. Each `Match` carries `relevance` (a conviction-weighted 0–100 score with a cited component breakdown), `lens` (the news reframed through the client's own documented words), and `celebrate` (a genuine good-news flag). `ClientInsights` additionally carries `reaction` (the predicted client reaction to the primary proposal) and `life_events` (recent dated values-shifts). `relevance`/`lens`/`celebrate`/`life_events` are **deterministic and free** — computed at match time for every surface (incl. the overview); `reaction` is the only added strong-model call — lazy, on the opened client, cached per client (§9). All advisory-only and fully cited (§2). Lives in `backend/workbench/agents/worldview.py`.
 
 Until a contract is real, **publish a stub** (hard-coded JSON for one persona) so downstream streams aren't blocked.
 
