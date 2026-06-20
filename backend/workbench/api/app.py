@@ -361,6 +361,17 @@ def create_app() -> FastAPI:
 
     start_scheduler(world)
 
+    @app.on_event("startup")
+    def _warm_insights_cache() -> None:
+        import threading
+        def _warm():
+            for cid in world.clients:
+                try:
+                    get_insights(world, cid)
+                except Exception:
+                    pass
+        threading.Thread(target=_warm, daemon=True).start()
+
     return app
 
 
