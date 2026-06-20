@@ -121,6 +121,20 @@ def _prov_dump(entry: MeetingLogEntry) -> dict:
     return entry.source.model_dump()
 
 
+def _entry_signals(entry: MeetingLogEntry) -> list[dict]:
+    """Signals for an entry: the risk cues the analysis stored at capture time (so
+    paraphrased notes still register), falling back to the keyword lexicon for seed
+    entries and any note captured without an analysis."""
+    stored = getattr(entry, "risk_signals", None) or []
+    if stored:
+        out: list[dict] = []
+        for s in stored:
+            weight = _RISK_ON_WEIGHT if s.direction == "up" else _DE_RISK_WEIGHT
+            out.append({"term": s.term, "direction": s.direction, "weight": weight})
+        return out
+    return _signals(entry.note)
+
+
 def score_note(note: str) -> dict:
     """Score a single note against the risk lexicon (§2), independent of a client's
     history. Reused by RM Capture to preview how a staged note will nudge the
@@ -141,6 +155,39 @@ def score_note(note: str) -> dict:
         "delta": _round3(delta),
         "direction": direction,
         "signals": [{"term": s["term"], "direction": s["direction"]} for s in signals],
+    }
+
+
+def preview_from_signals(signals: list[dict]) -> dict:
+    """Build a `score_note`-shaped preview from already-classified signals — e.g. an
+    LLM extraction that named the risk cues itself. `signals` are `{term, direction}`
+    dicts (`direction` in {"up","down"}; others ignored). Reuses the same per-cue
+    weights and per-entry cap as the keyword path so the preview stays consistent
+    with the timeline."""
+    weighted: list[dict] = []
+    for s in signals or []:
+        direction = s.get("direction")
+        if direction == "up":
+            weight = _RISK_ON_WEIGHT
+        elif direction == "down":
+            weight = _DE_RISK_WEIGHT
+        else:
+            continue
+        term = (s.get("term") or "").strip()
+        if not term:
+            continue
+        weighted.append({"term": term, "direction": direction, "weight": weight})
+    delta = _clamp(sum(s["weight"] for s in weighted), -_DELTA_CAP, _DELTA_CAP)
+    if delta > 0.001:
+        direction = "up"
+    elif delta < -0.001:
+        direction = "down"
+    else:
+        direction = "flat"
+    return {
+        "delta": _round3(delta),
+        "direction": direction,
+        "signals": [{"term": s["term"], "direction": s["direction"]} for s in weighted],
     }
 
 
@@ -200,7 +247,7 @@ def build_risk_timeline(world: World, client_id: str) -> dict:
 
     for entry in logs:
         date = entry.timestamp
-        signals = _signals(entry.note)
+        signals = _entry_signals(entry)
 
         raw_delta = sum(s["weight"] for s in signals)
         delta = _clamp(raw_delta, -_DELTA_CAP, _DELTA_CAP)

@@ -902,6 +902,9 @@ export interface CaptureConfirm {
   date?: string;
   edges: ProposedEdge[];
   facets: ProposedFacet[];
+  // Risk cues from the staged draft, carried through so the timeline reflects the
+  // new entry without a second model call.
+  risk_signals?: { term: string; direction: "up" | "down" | "flat" }[];
 }
 
 export interface CaptureResult {

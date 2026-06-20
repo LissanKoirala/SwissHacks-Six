@@ -26,10 +26,12 @@ from ..models import (
     InterestEdge,
     MeetingLogEntry,
     Provenance,
+    RiskSignal,
     Statement,
 )
 from ..topics import TOPIC_VOCAB, classify_text
-from .risk_timeline import score_note
+from .llm import chat_json, llm_available
+from .risk_timeline import preview_from_signals, score_note
 
 # Write-through store of confirmed captures (a JSON list). Git-ignored; replayed on
 # boot by seed.build_world. Module-level so a test can monkeypatch it at a temp path.
@@ -149,40 +151,149 @@ def _rationale(topic_label: str, polarity: str, cue: Optional[str]) -> str:
     return f"{topic_label} surfaced in the note (no strong polarity cue) → neutral."
 
 
-# --- extract (read-only) ----------------------------------------------------
+# --- LLM extraction (read-only; falls back to the keyword path) -------------
 
-def extract_draft(world, client_id: str, req: CaptureExtractRequest) -> dict:
-    """Read-only staged draft (§2). No mutation."""
-    note = _normalise(req.note)[:_NOTE_MAX]
-    low = note.lower()
-    date = _resolve_date(req.date)
-    modality = req.modality or "File Note"
+def _topic_guide() -> str:
+    """The controlled topic vocabulary, as a prompt-friendly bullet list."""
+    return "\n".join(
+        f"- {key}: {t.label} — {t.description}" for key, t in TOPIC_VOCAB.items()
+    )
 
-    detected = classify_text(note)
-    detected_topics = [
-        {"topic": key, "label": TOPIC_VOCAB[key].label}
-        for key in detected
-        if key in TOPIC_VOCAB
+
+_FACET_GUIDE = (
+    "- professional: work context and professionally-linked interests\n"
+    "- interests: personal / recurring interests\n"
+    "- historical: notable behaviour, decisions or transactions\n"
+    "- personality: risk appetite, communication style, values / ethics"
+)
+
+_LLM_SYSTEM = (
+    "You are a CRM analyst for a wealth relationship manager (RM). You read one raw "
+    "interaction note and extract structured, citable signals. You never advise the "
+    "client and never invent facts not present in the note. Be conservative: only "
+    "surface a signal the note actually supports."
+)
+
+
+def _llm_extract(note: str) -> Optional[dict]:
+    """Extract topics/facets/risk cues from arbitrary note text via Phoeniqs. Returns
+    the signal-bearing parts of the draft, or None if the LLM is off or the call
+    fails (caller then uses the deterministic keyword path). Read-only."""
+    if not llm_available() or not note:
+        return None
+
+    user = (
+        f"NOTE:\n{note}\n\n"
+        "Map the note onto this controlled topic vocabulary (use ONLY these keys; "
+        "omit a topic if the note doesn't clearly relate to it):\n"
+        f"{_topic_guide()}\n\n"
+        "Facet definitions:\n"
+        f"{_FACET_GUIDE}\n\n"
+        "Return JSON with this exact shape:\n"
+        '{"topics":[{"topic":"<vocab key>","facet":"<facet>",'
+        '"polarity":"opportunity|conflict|neutral","rationale":"<short why, grounded in the note>"}],'
+        '"facets":[{"facet":"<facet>","text":"<one concise profile statement from the note>"}],'
+        '"risk_signals":[{"term":"<short phrase from the note>","direction":"up|down"}]}\n'
+        "polarity: opportunity = client wants more of this; conflict = wants to avoid it; "
+        "else neutral. risk direction: up = more risk appetite (growth/conviction/add), "
+        "down = more cautious (preserve/trim/worried). Return empty arrays where nothing applies."
+    )
+    data = chat_json(_LLM_SYSTEM, user, max_tokens=900)
+    if not isinstance(data, dict):
+        return None
+
+    detected_topics: list[dict] = []
+    proposed_edges: list[dict] = []
+    seen_topics: set[str] = set()
+    for raw in data.get("topics") or []:
+        topic = (raw.get("topic") or "").strip()
+        if topic not in TOPIC_VOCAB or topic in seen_topics:
+            continue
+        seen_topics.add(topic)
+        label = TOPIC_VOCAB[topic].label
+        facet = raw.get("facet") if raw.get("facet") in _VALID_FACETS else "interests"
+        polarity = raw.get("polarity")
+        if polarity not in ("opportunity", "conflict", "neutral"):
+            polarity = "neutral"
+        rationale = _normalise(raw.get("rationale") or "") or _rationale(label, polarity, None)
+        detected_topics.append({"topic": topic, "label": label})
+        proposed_edges.append({
+            "topic": topic,
+            "topic_label": label,
+            "facet": facet,
+            "polarity": polarity,
+            "rationale": rationale,
+            "selected": True,
+        })
+
+    proposed_facets: list[dict] = []
+    for raw in data.get("facets") or []:
+        text = _normalise(raw.get("text") or "")
+        if not text:
+            continue
+        facet = raw.get("facet") if raw.get("facet") in _VALID_FACETS else "interests"
+        proposed_facets.append({"facet": facet, "text": text, "selected": True})
+
+    signals = [
+        {"term": _normalise(s.get("term") or ""), "direction": s.get("direction")}
+        for s in (data.get("risk_signals") or [])
+        if (s.get("term") or "").strip() and s.get("direction") in ("up", "down")
     ]
 
+    return {
+        "detected_topics": detected_topics,
+        "proposed_edges": proposed_edges,
+        "proposed_facets": proposed_facets,
+        "risk_preview": preview_from_signals(signals),
+    }
+
+
+# --- extract (read-only) ----------------------------------------------------
+
+def _keyword_extract(note: str) -> dict:
+    """Deterministic, offline keyword extraction — the fallback when the LLM is off."""
+    low = note.lower()
+    detected_topics = [
+        {"topic": key, "label": TOPIC_VOCAB[key].label}
+        for key in classify_text(note)
+        if key in TOPIC_VOCAB
+    ]
     polarity, pol_cue = _polarity(low)
     facet, _facet_cue = _facet_guess(low)
-
-    proposed_edges = []
-    for t in detected_topics:
-        proposed_edges.append({
+    proposed_edges = [
+        {
             "topic": t["topic"],
             "topic_label": t["label"],
             "facet": facet,
             "polarity": polarity,
             "rationale": _rationale(t["label"], polarity, pol_cue),
             "selected": True,
-        })
-
+        }
+        for t in detected_topics
+    ]
     proposed_facets = [
         {"facet": facet, "text": text, "selected": True}
         for text in _first_sentences(note)
     ]
+    return {
+        "detected_topics": detected_topics,
+        "proposed_edges": proposed_edges,
+        "proposed_facets": proposed_facets,
+        "risk_preview": score_note(note),
+    }
+
+
+def extract_draft(world, client_id: str, req: CaptureExtractRequest) -> dict:
+    """Read-only staged draft (§2). No mutation.
+
+    Prefers the LLM analysis (Phoeniqs) so paraphrased / free-form notes still yield
+    topics, facets and risk cues; falls back to the deterministic keyword path when
+    the LLM is disabled or unavailable."""
+    note = _normalise(req.note)[:_NOTE_MAX]
+    date = _resolve_date(req.date)
+    modality = req.modality or "File Note"
+
+    signals = _llm_extract(note) or _keyword_extract(note)
 
     return {
         "client_id": client_id,
@@ -192,10 +303,7 @@ def extract_draft(world, client_id: str, req: CaptureExtractRequest) -> dict:
         "modality_icon": _modality_icon(modality),
         "contact": req.contact or "",
         "rm_name": req.rm_name or "",
-        "detected_topics": detected_topics,
-        "proposed_edges": proposed_edges,
-        "proposed_facets": proposed_facets,
-        "risk_preview": score_note(note),
+        **signals,
         "preview_entry_id": _next_id(world, client_id, date),
     }
 
@@ -223,6 +331,12 @@ def _apply_capture(world, client_id: str, payload: dict, persist: bool = False) 
         timestamp=date,
     )
 
+    risk_signals = [
+        RiskSignal(term=_normalise(s.get("term", "")), direction=s.get("direction"))
+        for s in (payload.get("risk_signals") or [])
+        if _normalise(s.get("term", "")) and s.get("direction") in ("up", "down")
+    ]
+
     entry = MeetingLogEntry(
         id=entry_id,
         client_id=client_id,
@@ -232,6 +346,7 @@ def _apply_capture(world, client_id: str, payload: dict, persist: bool = False) 
         rm_name=rm_name,
         note=note,
         source=prov,
+        risk_signals=risk_signals,
     )
     world.meeting_logs.setdefault(client_id, []).append(entry)
 
@@ -328,6 +443,10 @@ def _store_payload(client_id, payload, note, date, modality, contact, rm_name) -
             }
             for f in (payload.get("facets", []) or [])
         ],
+        "risk_signals": [
+            {"term": s.get("term", ""), "direction": s.get("direction")}
+            for s in (payload.get("risk_signals", []) or [])
+        ],
     }
 
 
@@ -362,6 +481,7 @@ def confirm_capture(world, client_id: str, req: CaptureConfirmRequest) -> dict:
         "rm_name": req.rm_name,
         "edges": [e.model_dump() for e in req.edges],
         "facets": [f.model_dump() for f in req.facets],
+        "risk_signals": [s.model_dump() for s in req.risk_signals],
     }
     result = _apply_capture(world, client_id, payload, persist=True)
     return {"ok": True, **result}

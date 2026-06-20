@@ -459,6 +459,10 @@ export function CaptureNote({
         facets: facets
           .filter((f) => f.selected && f.text.trim())
           .map((f) => ({ ...f, text: f.text.trim() })),
+        // Carry the analysis's risk cues so the timeline reflects this entry.
+        risk_signals: draft.risk_preview.signals.filter(
+          (s) => s.direction !== "flat",
+        ),
       });
       setResult(res);
       onSaved?.();

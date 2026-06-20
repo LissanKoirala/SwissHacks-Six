@@ -36,6 +36,14 @@ class Provenance(BaseModel):
 
 # --- CRM graph --------------------------------------------------------------
 
+class RiskSignal(BaseModel):
+    """A risk-appetite cue lifted from a note: a short phrase and its direction.
+    `direction` is "up" (risk-on) or "down" (de-risk). Stored on the log entry so the
+    risk timeline can reuse the analysis instead of re-scoring (CLAUDE.md §9)."""
+    term: str
+    direction: str  # "up" | "down"
+
+
 class MeetingLogEntry(BaseModel):
     """Immutable, append-only raw entry (CLAUDE.md §3)."""
     id: str
@@ -46,6 +54,9 @@ class MeetingLogEntry(BaseModel):
     rm_name: Optional[str] = None
     note: str
     source: Provenance
+    # Risk cues captured by the analysis at confirm time. Empty → the timeline falls
+    # back to its keyword lexicon for this entry.
+    risk_signals: list[RiskSignal] = Field(default_factory=list)
 
 
 class Statement(BaseModel):
@@ -113,6 +124,9 @@ class CaptureConfirmRequest(BaseModel):
     date: str = ""
     edges: list[ProposedEdge] = []  # only the RM-kept ones (selected) are applied
     facets: list[ProposedFacet] = []
+    # Risk cues the analysis surfaced for this note (from the staged draft). Carried
+    # through so the timeline reflects the new entry without a second model call.
+    risk_signals: list[RiskSignal] = []
 
 
 # --- News graph -------------------------------------------------------------
