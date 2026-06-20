@@ -444,6 +444,36 @@ class ClientTwin(BaseModel):
     provenance: list[Provenance] = Field(default_factory=list)
 
 
+class TwinAskRequest(BaseModel):
+    """The RM asks the twin a free-form question about the client."""
+    question: str
+
+
+class TwinAskAnswer(BaseModel):
+    """The twin's predicted answer — how the client would likely think/respond — grounded
+    in the cited profile facts. Speaks to the RM about the client; never advises the client."""
+    client_id: str
+    question: str
+    answer: str
+    confidence: str                 # low | medium | high
+    citations: list[Provenance] = Field(default_factory=list)
+    llm_used: bool = False
+
+
+class TwinFormatRequest(BaseModel):
+    """Turn drafted content into a ready-to-review message for a channel. The RM reviews
+    and sends — the agent never sends anything."""
+    content: str
+    channel: str                    # email | sms | whatsapp | talking_points | call_script
+    tone: Optional[str] = None      # optional steer, e.g. "warm", "concise", "formal"
+
+
+class TwinFormatResult(BaseModel):
+    channel: str
+    formatted: str
+    llm_used: bool = False
+
+
 # --- API contract (CLAUDE.md §7.4) -----------------------------------------
 
 class RMQueryRequest(BaseModel):

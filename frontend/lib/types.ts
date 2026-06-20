@@ -260,6 +260,28 @@ export interface ClientTwin {
   provenance: Provenance[];
 }
 
+export interface TwinAskAnswer {
+  client_id: string;
+  question: string;
+  answer: string;
+  confidence: "low" | "medium" | "high";
+  citations: Provenance[];
+  llm_used: boolean;
+}
+
+export type TwinChannel =
+  | "email"
+  | "sms"
+  | "whatsapp"
+  | "talking_points"
+  | "call_script";
+
+export interface TwinFormatResult {
+  channel: TwinChannel;
+  formatted: string;
+  llm_used: boolean;
+}
+
 export interface Insights {
   client: ClientSummary;
   matches: Match[];

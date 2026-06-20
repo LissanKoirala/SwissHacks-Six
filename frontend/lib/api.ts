@@ -5,6 +5,9 @@ import type {
   ClientSummary,
   Insights,
   ClientTwin,
+  TwinAskAnswer,
+  TwinChannel,
+  TwinFormatResult,
   Portfolio,
   ClientDetail,
   Fundamentals,
@@ -100,6 +103,10 @@ export const api = {
   clients: () => get<ClientSummary[]>("/clients"),
   insights: (id: string) => get<Insights>(`/clients/${id}/insights`),
   twin: (id: string) => get<ClientTwin>(`/clients/${id}/twin`),
+  twinAsk: (id: string, question: string) =>
+    post<TwinAskAnswer>(`/clients/${id}/twin/ask`, { question }),
+  twinFormat: (id: string, body: { content: string; channel: TwinChannel; tone?: string }) =>
+    post<TwinFormatResult>(`/clients/${id}/twin/format`, body),
   portfolio: (id: string) => get<Portfolio>(`/clients/${id}/portfolio`),
   fundamentals: (id: string) =>
     get<Fundamentals[]>(`/clients/${id}/fundamentals`),

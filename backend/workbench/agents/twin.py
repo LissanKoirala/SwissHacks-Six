@@ -12,11 +12,20 @@ from __future__ import annotations
 
 from typing import Optional
 
+import re
+
 from ..graph.store import World
-from ..models import ClientTwin, Provenance, StrategyProposal, TwinDriver
+from ..models import (
+    ClientTwin,
+    Provenance,
+    StrategyProposal,
+    TwinAskAnswer,
+    TwinDriver,
+    TwinFormatResult,
+)
 from ..topics import topic_label
 from .advisory import TOPIC_PREFERENCES
-from .llm import chat_json, llm_available
+from .llm import chat, chat_json, llm_available
 from .orchestrator import get_insights
 from .risk_timeline import build_risk_timeline
 
@@ -293,4 +302,188 @@ def build_twin(world: World, client_id: str, *, refresh: bool = False) -> Client
         drivers=drivers,
         llm_used=llm_used,
         provenance=provenance,
+    )
+
+
+# --- Ask the twin (free-form Q&A) + autoformat (channel drafts) --------------
+# The RM asks the twin anything about the client; the answer predicts how the
+# client would think/respond, grounded in cited profile facts. Then the RM can
+# turn any drafted content into a ready-to-review email / text / talking points.
+# Advisory only: the twin speaks to the RM about the client and never sends.
+
+_STOP = {
+    "the", "a", "an", "to", "of", "and", "or", "is", "are", "be", "would", "will",
+    "do", "does", "did", "how", "what", "why", "should", "could", "for", "on", "in",
+    "with", "about", "his", "her", "their", "they", "he", "she", "it", "this", "that",
+    "if", "we", "i", "you", "client", "feel", "react", "think",
+}
+
+
+def _tokens(text: str) -> set[str]:
+    return {t for t in re.split(r"[^a-z0-9]+", (text or "").lower()) if len(t) > 2 and t not in _STOP}
+
+
+def _profile_facts(world: World, client_id: str) -> list[dict]:
+    """All citable profile facts: weighted interest edges + facet statements."""
+    facts: list[dict] = []
+    for e in world.interest_by_client.get(client_id, []):
+        label = topic_label(e.topic)
+        facts.append({
+            "label": label,
+            "detail": f"{e.polarity} stance on {label}",
+            "weight": e.weight,
+            "prov": e.provenance,
+        })
+    profile = world.profiles.get(client_id)
+    if profile:
+        for facet_name, stmts in profile.facets.items():
+            for s in stmts or []:
+                facts.append({
+                    "label": facet_name.title(),
+                    "detail": s.text,
+                    "weight": getattr(s, "weight", 1.0),
+                    "prov": s.provenance,
+                })
+    return facts
+
+
+def _rank_facts(facts: list[dict], question: str, k: int = 5) -> list[dict]:
+    """Most relevant facts to the question (keyword overlap, then importance). Always
+    returns the heaviest facts as a floor so the answer is grounded even on a miss."""
+    q = _tokens(question)
+
+    def overlap(f: dict) -> int:
+        return len(q & _tokens(f["label"] + " " + f["detail"]))
+
+    ranked = sorted(facts, key=lambda f: (overlap(f), f["weight"]), reverse=True)
+    hit = [f for f in ranked if overlap(f) > 0]
+    return (hit or ranked)[:k]
+
+
+def _client_name(world: World, client_id: str) -> str:
+    meta = world.clients.get(client_id, {})
+    if meta.get("name"):
+        return meta["name"]
+    prof = world.profiles.get(client_id)
+    return prof.name if prof else client_id
+
+
+_ASK_SYSTEM = (
+    "You simulate a private-bank client's 'digital twin' to help their relationship "
+    "manager (RM) prepare. Answer the RM's question by predicting how THIS client would "
+    "think or respond, grounded ONLY in the supplied profile facts. Speak to the RM about "
+    "the client in the third person. Never give the client financial advice and never "
+    "invent facts. Keep it to 2-4 sentences."
+)
+
+
+def ask_twin(world: World, client_id: str, question: str) -> TwinAskAnswer:
+    """Answer a free-form RM question as the client's twin, grounded in cited facts."""
+    name = _client_name(world, client_id)
+    question = (question or "").strip()
+    chosen = _rank_facts(_profile_facts(world, client_id), question) if question else []
+    citations = list(
+        {f["prov"].source_id: f["prov"] for f in chosen}.values()
+    )
+
+    answer = ""
+    confidence = "low"
+    llm_used = False
+    if question and llm_available() and chosen:
+        facts_str = "\n".join(f"{i + 1}. {f['label']}: {f['detail']}" for i, f in enumerate(chosen))
+        txt = chat(
+            _ASK_SYSTEM,
+            f"Client: {name}.\nProfile facts:\n{facts_str}\n\nRM question: {question}",
+            max_tokens=260,
+        )
+        if txt:
+            answer = txt.strip()
+            confidence = "medium"
+            llm_used = True
+
+    if not answer:
+        if not question:
+            answer = "Ask a question about the client to get a predicted read."
+        elif chosen:
+            lead = chosen[0]
+            answer = (
+                f"Based on {name}'s record — {lead['detail'].lower()} — they would likely weigh "
+                f"this through that lens. Confirm with them directly before acting."
+            )
+        else:
+            answer = f"There isn't enough on {name}'s record to predict this with confidence yet."
+
+    return TwinAskAnswer(
+        client_id=client_id,
+        question=question,
+        answer=answer,
+        confidence=confidence,
+        citations=citations,
+        llm_used=llm_used,
+    )
+
+
+# --- autoformat -------------------------------------------------------------
+
+_CHANNELS = {"email", "sms", "whatsapp", "talking_points", "call_script"}
+
+_CHANNEL_BRIEF = {
+    "email": "a concise, warm professional email from the RM to the client (subject line + body, "
+             "ready to review and send)",
+    "sms": "a short SMS from the RM to the client (under 320 characters, no subject line)",
+    "whatsapp": "a friendly but professional WhatsApp message from the RM to the client (short, "
+                "light formatting)",
+    "talking_points": "a tight bullet list of talking points for the RM to use in conversation",
+    "call_script": "a brief call script for the RM: a natural opener, the key points, and a close",
+}
+
+
+def _format_system(channel: str, tone: str | None) -> str:
+    brief = _CHANNEL_BRIEF.get(channel, _CHANNEL_BRIEF["email"])
+    extra = f" Tone: {tone}." if tone else ""
+    return (
+        f"You are drafting {brief} for a relationship manager to review. Use UK spelling. "
+        "Keep the client's documented preferences in mind. Output only the drafted message — "
+        f"no preamble, no notes.{extra} The RM reviews and sends; never claim it has been sent."
+    )
+
+
+def _fallback_format(channel: str, content: str, name: str) -> str:
+    """Deterministic, offline draft when the LLM is unavailable."""
+    body = content.strip()
+    first = (name or "there").split(" ")[0]
+    if channel == "sms":
+        return body[:320]
+    if channel == "whatsapp":
+        return f"Hi {first}, {body}"
+    if channel == "talking_points":
+        lines = [s.strip() for s in re.split(r"(?<=[.!?])\s+", body) if s.strip()]
+        return "\n".join(f"• {ln}" for ln in lines) or f"• {body}"
+    if channel == "call_script":
+        return (
+            f"Opener: Hi {first}, thanks for taking a moment.\n"
+            f"Key point: {body}\n"
+            "Close: Happy to talk it through whenever suits — no rush."
+        )
+    # email
+    return (
+        f"Subject: A quick note\n\nDear {first},\n\n{body}\n\n"
+        "Kind regards,\nYour relationship manager"
+    )
+
+
+def format_message(world: World, client_id: str, content: str, channel: str,
+                   tone: str | None = None) -> TwinFormatResult:
+    """Turn drafted content into a ready-to-review message for a channel. Never sends."""
+    channel = channel if channel in _CHANNELS else "email"
+    content = (content or "").strip()
+    if content and llm_available():
+        txt = chat(_format_system(channel, tone), content, max_tokens=500)
+        if txt:
+            return TwinFormatResult(channel=channel, formatted=txt.strip(), llm_used=True)
+    name = _client_name(world, client_id)
+    return TwinFormatResult(
+        channel=channel,
+        formatted=_fallback_format(channel, content, name),
+        llm_used=False,
     )
