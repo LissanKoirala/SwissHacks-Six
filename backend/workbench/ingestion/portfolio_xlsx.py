@@ -22,6 +22,20 @@ def _num(v: Any) -> float:
         return 0.0
 
 
+def _opt_num(v: Any) -> Any:
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _isodate(v: Any) -> str:
+    """Coerce a workbook cell (datetime or string) to an ISO yyyy-mm-dd string."""
+    if hasattr(v, "isoformat"):
+        return v.isoformat()[:10]
+    return str(v)[:10] if v is not None else ""
+
+
 def _sheet_dicts(ws) -> list[dict[str, Any]]:
     rows = list(ws.iter_rows(values_only=True))
     if not rows:
@@ -53,6 +67,8 @@ class PortfolioWorkbookSource:
         out += self._mandates(wb)
         out += self._cio(wb)
         out += self._holdings(wb)
+        out += self._transactions(wb)
+        out += self._cashflows(wb)
         wb.close()
         return out
 
@@ -151,4 +167,67 @@ class PortfolioWorkbookSource:
                         "yahoo": str(row.get("Yahoo Ticker") or "") or None,
                     },
                 ))
+        return recs
+
+    def _transactions(self, wb) -> list[Record]:
+        """Historical trades per strategy (Transactions {Defensive,Balanced,Growth}) — cost basis,
+        holding period, SELL precedents, and the RM's recorded rationale (HI4)."""
+        recs: list[Record] = []
+        for strat in self.STRATEGIES:
+            sheet = f"Transactions {strat}"
+            if sheet not in wb.sheetnames:
+                continue
+            for row in _sheet_dicts(wb[sheet]):
+                txid = row.get("Transaction ID")
+                isin = row.get("ISIN")
+                side = row.get("Side")
+                if not txid or not isin or not side:
+                    continue
+                issuer = str(row.get("Issuer / Asset") or "")
+                rationale = str(row.get("Rationale") or "") or None
+                recs.append(Record(
+                    kind="transaction", source_type="portfolio", source_id=str(txid),
+                    excerpt=(rationale or f"{side} {issuer} ({isin})"),
+                    payload={
+                        "transaction_id": str(txid),
+                        "timestamp": _isodate(row.get("Timestamp")),
+                        "portfolio": str(row.get("Portfolio") or strat),
+                        "isin": str(isin),
+                        "issuer": issuer,
+                        "side": str(side).strip().upper(),
+                        "quantity": _opt_num(row.get("Quantity")),
+                        "price_local": _opt_num(row.get("Price (local)")),
+                        "currency": str(row.get("Currency") or "") or None,
+                        "fx_chf": _opt_num(row.get("FX → CHF")),
+                        "price_chf": _opt_num(row.get("Price (CHF)")),
+                        "amount_chf": _num(row.get("Amount (CHF)")),
+                        "rationale": rationale,
+                        "price_source": str(row.get("Price Source") or "") or None,
+                    },
+                ))
+        return recs
+
+    def _cashflows(self, wb) -> list[Record]:
+        """Cash movements (Cash Flows tab): COUPON income, DEPOSIT/WITHDRAWAL flows, FEE drag (HI4)."""
+        if "Cash Flows" not in wb.sheetnames:
+            return []
+        recs: list[Record] = []
+        for row in _sheet_dicts(wb["Cash Flows"]):
+            fid = row.get("Flow ID")
+            side = row.get("Side")
+            if not fid or not side:
+                continue
+            rationale = str(row.get("Rationale") or "") or None
+            recs.append(Record(
+                kind="cash_flow", source_type="portfolio", source_id=str(fid),
+                excerpt=(rationale or f"{side} {row.get('Amount (CHF)')}"),
+                payload={
+                    "flow_id": str(fid),
+                    "timestamp": _isodate(row.get("Timestamp")),
+                    "portfolio": str(row.get("Portfolio") or ""),
+                    "side": str(side).strip().upper(),
+                    "amount_chf": _num(row.get("Amount (CHF)")),
+                    "rationale": rationale,
+                },
+            ))
         return recs

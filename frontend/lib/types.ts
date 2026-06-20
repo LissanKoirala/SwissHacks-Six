@@ -181,6 +181,30 @@ export interface StrategyProposal {
   provenance: Provenance[];
 }
 
+export interface QueryAlternative {
+  buy_isin: string;
+  buy_issuer: string;
+  industry_group: string | null;
+  rationale: string;
+  substitution: SubstitutionMetrics;
+  provenance: Provenance[];
+}
+
+export interface RMQueryResult {
+  kind: "alternative" | "context" | "none";
+  question: string;
+  answer: string | null;
+  alternative: QueryAlternative | null;
+  llm_used?: boolean;
+  provenance?: Provenance[];
+}
+
+export interface RMQueryBody {
+  match_id?: string | null;
+  question?: string;
+  exclude_isin?: string | null;
+}
+
 export interface TalkingPoint {
   text: string;
   provenance: Provenance;
@@ -213,6 +237,7 @@ export interface Insights {
   matches: Match[];
   strategy_proposal: StrategyProposal | null;
   dialogue_suggestion: DialogueSuggestion | null;
+  additional_proposals?: StrategyProposal[];
   generated_at: string;
   llm_used: boolean;
 }
@@ -273,6 +298,85 @@ export interface IntegrationHealth {
   probes: IntegrationProbe[];
   stt?: { provider: string; enabled: boolean };
   ocr?: { provider: string; enabled: boolean; model?: string };
+}
+
+// --- NEW opportunities (HI3: unheld CIO-BUY names aligned to client DNA) ---
+
+export interface Opportunity {
+  isin: string;
+  issuer: string;
+  industry_group: string | null;
+  sub_asset_class: string | null;
+  region: string | null;
+  rating: string;
+  value_tags: string[];
+  sentiment: number | null;
+  hist_vol_30d: number | null;
+  risk_source: string | null;
+  alignment_topics: string[];
+  alignment_reason: string;
+  score: number;
+  provenance: Provenance[];
+}
+
+// --- transaction ledger + cash flows (HI4) ---
+
+export interface LedgerTxn {
+  transaction_id: string;
+  timestamp: string;
+  isin: string;
+  issuer: string;
+  side: "BUY" | "SELL";
+  quantity: number | null;
+  price_local: number | null;
+  currency: string | null;
+  fx_chf: number | null;
+  price_chf: number | null;
+  amount_chf: number;
+  rationale: string | null;
+  price_source: string | null;
+  provenance: Provenance | null;
+}
+
+export interface LedgerPosition {
+  isin: string;
+  issuer: string;
+  units: number | null;
+  cost_basis_chf: number;
+  current_chf: number;
+  unrealised_pnl_chf: number;
+  unrealised_pnl_pct: number | null;
+  first_buy: string | null;
+  holding_period_days: number | null;
+  provenance: Provenance | null;
+}
+
+export interface LedgerCashFlow {
+  flow_id: string;
+  timestamp: string;
+  side: string;
+  amount_chf: number;
+  rationale: string | null;
+  provenance: Provenance | null;
+}
+
+export interface TransactionsData {
+  portfolio: string;
+  summary: {
+    cost_basis_chf: number;
+    current_chf: number;
+    unrealised_pnl_chf: number;
+    unrealised_pnl_pct: number | null;
+    income_yield_pct: number | null;
+    annual_income_chf: number | null;
+    net_flows_chf: number;
+    txn_count: number;
+    buy_count: number;
+    sell_count: number;
+  };
+  transactions: LedgerTxn[];
+  positions: LedgerPosition[];
+  cashflows: LedgerCashFlow[];
 }
 
 // --- analytics (charts + 3D investment globe) ---
