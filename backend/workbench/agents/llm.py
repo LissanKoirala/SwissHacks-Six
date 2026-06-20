@@ -5,12 +5,21 @@ callers fall back to deterministic drafts so everything stays testable offline."
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Optional
 
 import httpx
 
 from ..config import settings
+
+# Hard cap on a single Phoeniqs call. The strong model runs lazily on RM open (§9); if it stalls
+# we'd rather fall back to the deterministic draft fast than hang the request for a minute.
+# Override with LLM_TIMEOUT_SECONDS.
+try:
+    LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT_SECONDS", "18"))
+except ValueError:
+    LLM_TIMEOUT = 18.0
 
 
 def llm_available() -> bool:
@@ -37,7 +46,7 @@ def chat(system: str, user: str, *, temperature: float = 0.3, max_tokens: int = 
                 "temperature": temperature,
                 "max_tokens": max_tokens,
             },
-            timeout=60.0,
+            timeout=LLM_TIMEOUT,
         )
         data = resp.json()
         return (data.get("choices") or [{}])[0].get("message", {}).get("content") or None

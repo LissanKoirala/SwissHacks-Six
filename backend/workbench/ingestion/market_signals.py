@@ -100,6 +100,8 @@ class FMPSignalLiveSource:
         out: list[Record] = []
         for sym, issuer, isin in self.WATCH:
             grades = _fmp_get(f"grade/{sym}", {"limit": 1}) or []
+            if isinstance(grades, dict):
+                grades = grades.get("data", grades.get("grades", []))
             for i, g in enumerate(grades[:1]):
                 fid = f"analyst-{sym}-{g.get('date','')}"
                 out.append(Record(

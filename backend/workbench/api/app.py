@@ -2,14 +2,14 @@
 Renders the orchestrator's output; nothing here makes decisions."""
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from ..agents.orchestrator import get_insights
+from ..agents.orchestrator import get_insights, get_overview_insights
 from ..analytics import build_analytics
 from ..auth import init_oauth, require_user
 from ..auth import router as auth_router
@@ -35,23 +35,28 @@ from ..agents.news_watcher import start_news_watch
 from ..seed import build_world
 
 
+class BriefingPrefs(BaseModel):
+    phone_e164: str | None = None
+    briefing_hour: int | None = None
+    briefing_enabled: bool | None = None
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Advisory Workbench", version="0.1.0")
-    app.add_middleware(
-        CORSMiddleware,
-        # Prod origins from CORS_ORIGINS (comma-separated, e.g. https://billionaire.lissan.dev);
-        # any localhost port still allowed in dev via the regex. A request matches either rule.
-        allow_origins=settings.cors_origins_list,
-        allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
-        allow_credentials=True,  # session cookie travels with /auth + /briefing calls
-        allow_methods=["*"], allow_headers=["*"],
-    )
-    # Signed session cookie (holds only the user id); no Google tokens are stored.
+    # SessionMiddleware first (innermost) so CORS is outermost and always adds headers,
+    # even when the session layer throws.
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.session_secret,
-        same_site="lax",
+        same_site="none",
         https_only=settings.session_https_only,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins_list,
+        allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+        allow_credentials=True,
+        allow_methods=["*"], allow_headers=["*"],
     )
     world = build_world(use_live_news=settings.news_enabled)
     app.state.world = world
@@ -172,9 +177,11 @@ def create_app() -> FastAPI:
 
     @app.get("/clients")
     def list_clients():
+        # Summary only (name/mandate/headline/alert_count) — the LLM-free path keeps the strong
+        # model lazy (§9). The full proposal + dialogue is built on demand at /clients/{id}/insights.
         out = []
         for cid in world.clients:
-            ins = get_insights(world, cid)
+            ins = get_overview_insights(world, cid)
             out.append(ins.client.model_dump())
         return out
 
@@ -410,14 +417,9 @@ def create_app() -> FastAPI:
     init_oauth()
     app.include_router(auth_router)
 
-    class BriefingPrefs(BaseModel):
-        phone_e164: str | None = None
-        briefing_hour: int | None = None
-        briefing_enabled: bool | None = None
-
     @app.put("/me/briefing")
     def update_briefing(
-        prefs: BriefingPrefs,
+        prefs: BriefingPrefs = Body(...),
         user: RmUser = Depends(require_user),
         db: Session = Depends(get_db),
     ):
@@ -532,12 +534,17 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     def _warm_insights_cache() -> None:
+        # Warm the LLM-FREE overview path only (matching is a free index intersection). The strong
+        # model stays lazy — it runs on first RM open of a client, never speculatively for all of
+        # them at boot (CLAUDE.md §9 token discipline). This is what keeps the morning briefing /
+        # desk overview instant instead of waiting on 4 parallel Phoeniqs calls.
         from concurrent.futures import ThreadPoolExecutor
         import threading
+        from ..agents.orchestrator import get_overview_insights
         def _warm():
             client_ids = list(world.clients)
             with ThreadPoolExecutor(max_workers=len(client_ids) or 1) as pool:
-                futures = [pool.submit(get_insights, world, cid) for cid in client_ids]
+                futures = [pool.submit(get_overview_insights, world, cid) for cid in client_ids]
                 for f in futures:
                     try:
                         f.result()
