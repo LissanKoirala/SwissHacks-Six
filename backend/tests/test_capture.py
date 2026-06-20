@@ -236,13 +236,16 @@ def _llm_on(monkeypatch):
     monkeypatch.setattr(capture, "chat_json", lambda *a, **k: dict(_LLM_RESPONSE))
 
 
-def test_keyword_path_misses_paraphrased_note(fresh_world):
-    """Baseline: the deterministic path finds no topic and no risk in a paraphrase."""
+def test_keyword_path_handles_paraphrased_note(fresh_world):
+    """The broadened deterministic path now maps a paraphrase (no LLM): 'brain-illness'
+    → neuro-research, and 'nest egg' / 'shielded' → a de-risk signal."""
     draft = capture.extract_draft(
         fresh_world, "schneider", CaptureExtractRequest(note=PARAPHRASED_NOTE)
     )
-    assert draft["detected_topics"] == []
-    assert draft["risk_preview"]["direction"] == "flat"
+    assert "neuro-research" in {t["topic"] for t in draft["detected_topics"]}
+    assert draft["risk_preview"]["direction"] == "down"
+    # facets are still produced, so the note always develops the profile
+    assert draft["proposed_facets"]
 
 
 def test_llm_extract_surfaces_topic_facet_and_risk(_llm_on, fresh_world):

@@ -39,11 +39,18 @@ _DE_RISK_WEIGHT = -0.06
 _RISK_ON_WEIGHT = +0.06
 
 DE_RISK_TERMS: list[str] = [
-    "averse", "cautious", "caution", "conservative", "defensive", "preserve",
-    "preservation", "protect", "protection", "nervous", "worried", "anxious",
-    "divest", "reduce", "trim", "exit", "de-risk", "derisk", "drawdown", "hedge",
-    "stability", "stable", "safety", "safe", "secure", "withdraw", "liquidity",
-    "cash", "sell", "concerned", "uneasy", "wary",
+    "averse", "cautious", "caution", "cautiously", "conservative", "defensive",
+    "preserve", "preservation", "protect", "protection", "nervous", "worried",
+    "anxious", "divest", "reduce", "trim", "exit", "de-risk", "derisk", "de-risking",
+    "drawdown", "hedge", "stability", "stable", "safety", "safe", "secure", "withdraw",
+    "liquidity", "cash", "sell", "concerned", "uneasy", "wary", "prudent", "prudence",
+    "risk-averse", "play it safe", "playing it safe", "shield", "shielded",
+    "capital preservation", "preserve capital", "protect capital", "diversify",
+    "lower risk", "reduce risk", "downside protection", "rainy day", "nest egg",
+    "patient capital", "long horizon", "long-term", "sleep at night", "volatile",
+    "volatility", "downturn", "recession", "pull back", "pare back", "lighten",
+    "take profits", "income", "bonds", "fixed income", "rebalance toward bonds",
+    "careful", "carefully", "steady", "low risk",
 ]
 
 RISK_ON_TERMS: list[str] = [
@@ -51,6 +58,12 @@ RISK_ON_TERMS: list[str] = [
     "overweight", "speculative", "leverage", "ambitious", "conviction", "reinvest",
     "equity sleeve", "expand", "bullish", "upside", "venture", "double down",
     "high-conviction", "appetite for", "comfortable with risk", "buy",
+    "risk-on", "risk appetite", "more equity", "more equities", "growth stocks",
+    "more risk", "higher return", "higher returns", "chase returns", "tactical tilt",
+    "tilt toward", "concentrate", "concentrated", "go big", "lean in", "lean into",
+    "compounding", "momentum", "rally", "buy the dip", "deploy cash", "deploy",
+    "put money to work", "scale in", "build a position", "lever up", "keen to invest",
+    "ambition", "punchy", "high octane", "swing for", "take more risk", "go aggressive",
 ]
 
 # Cap on a single entry's swing so one chatty note can't dominate (§2).

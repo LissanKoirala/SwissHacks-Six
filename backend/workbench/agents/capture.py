@@ -47,20 +47,41 @@ _CONFLICT_CUES = [
     "avoid", "penalise", "penalize", "divest", "exit", "betrayal", "against",
     "refuse", "dump", "exposed", "scandal", "unacceptable", "never", "hypocrisy",
     "red line", "zero tolerance", "won't hold", "drop",
+    # broadened
+    "boycott", "won't invest", "wont invest", "won't touch", "pull out", "pull our",
+    "uncomfortable", "opposed", "object", "objects", "disapprove", "disapproves",
+    "reduce exposure", "cut ties", "no longer", "disappointed", "uneasy",
+    "concerned about", "concerns about", "wary of", "steer clear", "rules out",
+    "rule out", "not willing", "reservations",
 ]
 
 _OPPORTUNITY_CUES = [
     "support", "fund", "reward", "want more", "increase", "celebrate", "proud",
     "back", "champion", "prioritise", "prioritize", "commit", "passionate",
     "believe in", "double down", "magnificent",
+    # broadened
+    "keen", "keen to", "excited", "enthusiastic", "wants to", "want to",
+    "interested in", "channel money", "allocate to", "put money into", "grow",
+    "more of", "lean into", "deploy", "invest in", "happy to back", "in favour",
+    "in favor", "supportive", "advocate", "drawn to", "would like to",
 ]
 
 # Facet-guess cues (first match wins, in priority order: personality → professional
 # → historical → else interests).
-_PERSONALITY_CUES = ["averse", "tolerance", "values", "ethics", "betrayal", "principle"]
-_PROFESSIONAL_CUES = ["ceo", "business", "company", "enterprise", "board", "firm"]
+_PERSONALITY_CUES = [
+    "averse", "tolerance", "values", "ethics", "betrayal", "principle",
+    "appetite", "cautious", "conservative", "aggressive", "patient", "prudent",
+    "risk", "comfortable", "nervous", "worried", "temperament", "red line",
+]
+_PROFESSIONAL_CUES = [
+    "ceo", "business", "company", "enterprise", "board", "firm",
+    "work", "career", "industry", "sector", "founder", "executive", "director",
+    "office", "client of his", "his firm", "her firm", "the business",
+]
 _HISTORICAL_CUES = [
     "transferred", "withdrew", "endowment", "capital call", "bought", "sold", "deposit",
+    "invested", "donated", "moved", "rebalanced", "purchased", "redeemed",
+    "subscribed", "drew down", "topped up", "added to", "liquidated",
 ]
 
 
