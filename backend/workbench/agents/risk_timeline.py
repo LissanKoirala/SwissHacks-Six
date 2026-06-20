@@ -1,0 +1,330 @@
+"""Risk Timeline builder (RISK_TIMELINE_CONTRACT §2).
+
+Replays a client's CRM meeting log chronologically and scores how their **risk
+appetite** moved at each line, against a deterministic lexicon (no LLM, §9). Every
+point carries the entry's own `source` Provenance (CLAUDE.md §2: if you can't cite
+it, don't surface it) and tracks the **mandate fit** — appetite vs the mandate's
+risk band — over time.
+
+The risk axis runs 0.0 (max-defensive) … 1.0 (max risk-on). We start each client
+at their mandate baseline and accrue per-entry deltas from matched terms, clamped
+so one chatty note can't swing the line. Accrual counts (interest edges / profile
+facets learned by each date) ride along so the scrubber can show what the desk knew
+when.
+"""
+from __future__ import annotations
+
+import re
+from typing import Optional
+
+from ..graph.store import World
+from ..models import InterestEdge, MeetingLogEntry, Provenance, Statement
+
+# --- mandate baselines + risk bands (deterministic) -------------------------
+
+BASELINE: dict[str, float] = {"Defensive": 0.30, "Balanced": 0.55, "Growth": 0.78}
+
+# Fixed visual bands for the chart (independent of the client's own baseline band).
+BANDS: list[dict] = [
+    {"id": "defensive", "label": "Defensive", "lo": 0.0, "hi": 0.40},
+    {"id": "balanced", "label": "Balanced", "lo": 0.40, "hi": 0.66},
+    {"id": "growth", "label": "Growth", "lo": 0.66, "hi": 1.0},
+]
+
+# --- scoring lexicon (§2) ---------------------------------------------------
+# Matched case-insensitively as word-ish substrings on the note. Each distinct
+# matched term contributes its weight to that entry's delta.
+
+_DE_RISK_WEIGHT = -0.06
+_RISK_ON_WEIGHT = +0.06
+
+DE_RISK_TERMS: list[str] = [
+    "averse", "cautious", "caution", "conservative", "defensive", "preserve",
+    "preservation", "protect", "protection", "nervous", "worried", "anxious",
+    "divest", "reduce", "trim", "exit", "de-risk", "derisk", "drawdown", "hedge",
+    "stability", "stable", "safety", "safe", "secure", "withdraw", "liquidity",
+    "cash", "sell", "concerned", "uneasy", "wary",
+]
+
+RISK_ON_TERMS: list[str] = [
+    "aggressive", "growth", "opportunity", "opportunistic", "increase", "add to",
+    "overweight", "speculative", "leverage", "ambitious", "conviction", "reinvest",
+    "equity sleeve", "expand", "bullish", "upside", "venture", "double down",
+    "high-conviction", "appetite for", "comfortable with risk", "buy",
+]
+
+# Cap on a single entry's swing so one chatty note can't dominate (§2).
+_DELTA_CAP = 0.18
+_SCORE_LO = 0.05
+_SCORE_HI = 0.95
+_BAND_HALF = 0.12  # mandate band half-width around the baseline
+
+_EXCERPT_LEN = 160
+
+
+def _clamp(value: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, value))
+
+
+def _round3(value: float) -> float:
+    return round(value, 3)
+
+
+def _compile(terms: list[str], direction: str, weight: float) -> list[tuple[re.Pattern, str, str, float]]:
+    """Pre-compile each term as a word-ish boundary regex (case-insensitive)."""
+    out: list[tuple[re.Pattern, str, str, float]] = []
+    for term in terms:
+        # \b doesn't play well with hyphens / multi-word phrases, so we anchor on a
+        # non-word boundary at each end of the escaped term.
+        pat = re.compile(r"(?<!\w)" + re.escape(term) + r"(?!\w)", re.IGNORECASE)
+        out.append((pat, term, direction, weight))
+    return out
+
+
+_LEXICON: list[tuple[re.Pattern, str, str, float]] = (
+    _compile(DE_RISK_TERMS, "down", _DE_RISK_WEIGHT)
+    + _compile(RISK_ON_TERMS, "up", _RISK_ON_WEIGHT)
+)
+
+
+def _excerpt(note: str) -> str:
+    """A short, clean verbatim slice of a log note (<= ~160 chars)."""
+    text = " ".join(note.split())
+    if len(text) <= _EXCERPT_LEN:
+        return text
+    cut = text[:_EXCERPT_LEN]
+    for sep in (". ", "; ", ", "):
+        idx = cut.rfind(sep)
+        if idx > 60:
+            return cut[: idx + 1].rstrip()
+    return cut.rsplit(" ", 1)[0].rstrip() + "…"
+
+
+def _signals(note: str) -> list[dict]:
+    """Distinct matched lexicon terms in a note, each as a signal dict.
+
+    Distinct = one signal per term even if the term appears several times. Kept in
+    lexicon order for stable, deterministic output."""
+    seen: set[str] = set()
+    out: list[dict] = []
+    for pat, term, direction, weight in _LEXICON:
+        if term in seen:
+            continue
+        if pat.search(note):
+            seen.add(term)
+            out.append({"term": term, "direction": direction, "weight": weight})
+    return out
+
+
+def _prov_dump(entry: MeetingLogEntry) -> dict:
+    """The entry's own source Provenance, as a plain JSON-serialisable dict."""
+    return entry.source.model_dump()
+
+
+def score_note(note: str) -> dict:
+    """Score a single note against the risk lexicon (§2), independent of a client's
+    history. Reused by RM Capture to preview how a staged note will nudge the
+    risk timeline. Returns `{delta, direction, signals:[{term, direction}]}` —
+    `delta` is clamped to the same per-entry cap as the timeline, `signals` are
+    the distinct matched lexicon terms (term + direction only, weights dropped for
+    the preview)."""
+    signals = _signals(note or "")
+    raw_delta = sum(s["weight"] for s in signals)
+    delta = _clamp(raw_delta, -_DELTA_CAP, _DELTA_CAP)
+    if delta > 0.001:
+        direction = "up"
+    elif delta < -0.001:
+        direction = "down"
+    else:
+        direction = "flat"
+    return {
+        "delta": _round3(delta),
+        "direction": direction,
+        "signals": [{"term": s["term"], "direction": s["direction"]} for s in signals],
+    }
+
+
+# --- accrual: what the desk knew by each date -------------------------------
+
+def _edge_dates(edges: list[InterestEdge]) -> list[str]:
+    """Sorted list of interest-edge provenance timestamps (skipping nulls)."""
+    return sorted(e.provenance.timestamp for e in edges if e.provenance and e.provenance.timestamp)
+
+
+def _facet_statements(world: World, client_id: str) -> list[tuple[str, Statement]]:
+    """(facet_name, Statement) pairs from the profile that carry a timestamp."""
+    profile = world.profiles.get(client_id)
+    if not profile:
+        return []
+    out: list[tuple[str, Statement]] = []
+    for facet_name, stmts in profile.facets.items():
+        for stmt in stmts or []:
+            if stmt.provenance and stmt.provenance.timestamp:
+                out.append((facet_name, stmt))
+    return out
+
+
+def _count_by_date(timestamps: list[str], on_or_before: str) -> int:
+    return sum(1 for t in timestamps if t <= on_or_before)
+
+
+def build_risk_timeline(world: World, client_id: str) -> dict:
+    """Build the chronological risk-appetite timeline for a client (§2).
+
+    Returns the RiskTimeline shape as a plain dict (snake_case), ready for the API.
+    Deterministic — no LLM, no per-client model call."""
+    meta = world.clients.get(client_id, {})
+    name = meta.get("name") or (
+        world.profiles[client_id].name if client_id in world.profiles else client_id
+    )
+    mandate = meta.get("mandate") or (
+        world.profiles[client_id].mandate if client_id in world.profiles else "Balanced"
+    )
+    baseline = BASELINE.get(mandate, 0.55)
+
+    lo, hi = baseline - _BAND_HALF, baseline + _BAND_HALF
+    band = {"lo": _round3(lo), "hi": _round3(hi), "label": mandate}
+
+    # raw history, sorted ascending by timestamp (§2)
+    logs = sorted(world.meeting_logs.get(client_id, []), key=lambda e: e.timestamp)
+
+    # accrual sources
+    edges = world.interest_by_client.get(client_id, [])
+    edge_dates = _edge_dates(edges)
+    facet_stmts = _facet_statements(world, client_id)
+    facet_dates = [s.provenance.timestamp for _, s in facet_stmts]
+
+    points: list[dict] = []
+    prev_score = baseline
+    prev_fit: Optional[str] = None
+
+    for entry in logs:
+        date = entry.timestamp
+        signals = _signals(entry.note)
+
+        raw_delta = sum(s["weight"] for s in signals)
+        delta = _clamp(raw_delta, -_DELTA_CAP, _DELTA_CAP)
+        score = _clamp(prev_score + delta, _SCORE_LO, _SCORE_HI)
+
+        if delta > 0.001:
+            direction = "up"
+        elif delta < -0.001:
+            direction = "down"
+        else:
+            direction = "flat"
+
+        mandate_gap = _round3(score - baseline)
+        if score < lo:
+            mandate_fit = "cautious-drift"
+        elif score > hi:
+            mandate_fit = "risk-on-drift"
+        else:
+            mandate_fit = "aligned"
+
+        # what the desk knew by this date
+        edges_known = _count_by_date(edge_dates, date)
+        facets_known = _count_by_date(facet_dates, date)
+        facet_changes = [
+            {"facet": fname, "text": stmt.text}
+            for fname, stmt in facet_stmts
+            if stmt.provenance.timestamp == date
+        ]
+
+        points.append({
+            "id": entry.id,
+            "date": date,
+            "modality": entry.modality,
+            "contact": entry.contact,
+            "note_excerpt": _excerpt(entry.note),
+            "risk_score": _round3(score),
+            "delta": _round3(delta),
+            "direction": direction,
+            "risk_relevant": bool(signals),
+            "signals": signals,
+            "mandate_gap": mandate_gap,
+            "mandate_fit": mandate_fit,
+            "edges_known": edges_known,
+            "facets_known": facets_known,
+            "facet_changes": facet_changes,
+            "provenance": _prov_dump(entry),
+        })
+
+        prev_score = score
+        prev_fit = mandate_fit  # noqa: F841  (kept for parity; crossings computed below)
+
+    milestones = _milestones(points)
+
+    return {
+        "client_id": client_id,
+        "client_name": name,
+        "mandate": mandate,
+        "baseline": _round3(baseline),
+        "band": band,
+        "bands": [dict(b) for b in BANDS],
+        "start_date": points[0]["date"] if points else None,
+        "end_date": points[-1]["date"] if points else None,
+        "points": points,
+        "milestones": milestones,
+        "current": points[-1] if points else None,
+    }
+
+
+def _milestone_label(point: dict, kind: str) -> str:
+    """A short, human label for a milestone, grounded in the point itself."""
+    if kind == "start":
+        return "Mandate baseline"
+    if kind == "crossing":
+        fit = point["mandate_fit"]
+        if fit == "cautious-drift":
+            return "Drifts defensive"
+        if fit == "risk-on-drift":
+            return "Drifts risk-on"
+        return "Back in mandate band"
+    # spike
+    arrow = "Risk-on" if point["direction"] == "up" else "De-risking"
+    lead = next((s["term"] for s in point["signals"]), "")
+    return f"{arrow} signal" + (f" · {lead}" if lead else "")
+
+
+def _milestones(points: list[dict]) -> list[dict]:
+    """Up to 4 biggest |delta| spikes, plus mandate-fit crossings, plus the first
+    point. Deduped by point id, ordered chronologically (§2)."""
+    if not points:
+        return []
+
+    chosen: dict[str, dict] = {}
+
+    # first point — the mandate baseline anchor
+    first = points[0]
+    chosen[first["id"]] = {
+        "point_id": first["id"],
+        "label": _milestone_label(first, "start"),
+        "kind": "start",
+    }
+
+    # mandate-fit crossings (where the fit changed from the previous point)
+    prev_fit = points[0]["mandate_fit"]
+    for pt in points[1:]:
+        if pt["mandate_fit"] != prev_fit:
+            chosen.setdefault(pt["id"], {
+                "point_id": pt["id"],
+                "label": _milestone_label(pt, "crossing"),
+                "kind": "crossing",
+            })
+        prev_fit = pt["mandate_fit"]
+
+    # up to 4 largest |delta| spikes
+    spikes = sorted(
+        (p for p in points if abs(p["delta"]) > 0.001),
+        key=lambda p: (-abs(p["delta"]), p["date"]),
+    )[:4]
+    for pt in spikes:
+        chosen.setdefault(pt["id"], {
+            "point_id": pt["id"],
+            "label": _milestone_label(pt, "spike"),
+            "kind": "spike",
+        })
+
+    # chronological order by point position
+    order = {p["id"]: i for i, p in enumerate(points)}
+    return sorted(chosen.values(), key=lambda m: order[m["point_id"]])

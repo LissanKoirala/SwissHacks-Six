@@ -16,16 +16,20 @@ import { InvestmentGlobe } from "./InvestmentGlobe";
 import { CrmGraph } from "./CrmGraph";
 import { DecisionFlow } from "./DecisionFlow";
 import { RendezvousView } from "./RendezvousView";
+import { RiskTimeline } from "./RiskTimeline";
+import { CaptureNote } from "./CaptureNote";
 
 type Tab =
   | "advisory"
   | "decision"
   | "portfolio"
   | "analytics"
+  | "risk"
   | "map"
   | "network"
   | "rendezvous"
-  | "profile";
+  | "profile"
+  | "capture";
 
 export function ClientView({ clientId }: { clientId: string }) {
   const [insights, setInsights] = useState<Insights | null>(null);
@@ -119,10 +123,12 @@ export function ClientView({ clientId }: { clientId: string }) {
             ["decision", "Decision Flow"],
             ["portfolio", "Portfolio"],
             ["analytics", "Analytics"],
+            ["risk", "Risk Timeline"],
             ["map", "Investment Map"],
             ["network", "CRM Network"],
             ["rendezvous", "Rendezvous"],
             ["profile", "Profile"],
+            ["capture", "＋ Add Note"],
           ] as [Tab, string][]).map(([id, label]) => (
             <button
               key={id}
@@ -171,6 +177,8 @@ export function ClientView({ clientId }: { clientId: string }) {
 
         {tab === "analytics" && <PortfolioCharts clientId={clientId} />}
 
+        {tab === "risk" && <RiskTimeline clientId={clientId} />}
+
         {tab === "map" && <InvestmentGlobe clientId={clientId} />}
 
         {tab === "network" && <CrmGraph clientId={clientId} />}
@@ -178,6 +186,8 @@ export function ClientView({ clientId }: { clientId: string }) {
         {tab === "rendezvous" && <RendezvousView clientId={clientId} />}
 
         {tab === "profile" && <ProfileView clientId={clientId} />}
+
+        {tab === "capture" && <CaptureNote clientId={clientId} />}
       </div>
     </div>
   );

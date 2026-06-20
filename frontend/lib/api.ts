@@ -12,6 +12,12 @@ import type {
   Rendezvous,
   Decision,
   Globe,
+  RiskTimeline,
+  CaptureDraft,
+  CaptureExtractBody,
+  CaptureConfirm,
+  CaptureResult,
+  CapturePrompts,
 } from "./types";
 
 export const API_BASE =
@@ -28,6 +34,19 @@ async function get<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`${res.status} ${res.statusText} — POST ${path}`);
+  }
+  return (await res.json()) as T;
+}
+
 export const api = {
   clients: () => get<ClientSummary[]>("/clients"),
   insights: (id: string) => get<Insights>(`/clients/${id}/insights`),
@@ -38,5 +57,13 @@ export const api = {
   rendezvous: (id: string) => get<Rendezvous>(`/clients/${id}/rendezvous`),
   decision: (id: string) => get<Decision>(`/clients/${id}/decision`),
   globe: (id: string) => get<Globe>(`/clients/${id}/globe`),
+  riskTimeline: (id: string) =>
+    get<RiskTimeline>(`/clients/${id}/risk-timeline`),
+  captureExtract: (id: string, body: CaptureExtractBody) =>
+    post<CaptureDraft>(`/clients/${id}/capture/extract`, body),
+  captureConfirm: (id: string, body: CaptureConfirm) =>
+    post<CaptureResult>(`/clients/${id}/capture/confirm`, body),
+  capturePrompts: (id: string) =>
+    get<CapturePrompts>(`/clients/${id}/capture/prompts`),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
 };

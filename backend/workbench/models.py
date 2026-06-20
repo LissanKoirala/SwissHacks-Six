@@ -72,6 +72,45 @@ class Profile(BaseModel):
     interest_edges: list[InterestEdge] = Field(default_factory=list)
 
 
+# --- RM Capture (multimodal note → stage → confirm) -------------------------
+
+class CaptureExtractRequest(BaseModel):
+    """Raw note (typed, dictated, or OCR'd) → read-only staged draft. No mutation."""
+    note: str                       # raw text (typed, dictated, or OCR'd)
+    modality: str = "File Note"     # Physical Meeting / Phone Call / Video Call / Email / Lunch / File Note / Physical Event
+    contact: str = ""               # who the RM spoke with
+    rm_name: str = ""
+    date: str = ""                  # ISO yyyy-mm-dd; default = server today if empty
+
+
+class ProposedEdge(BaseModel):
+    """A candidate interest edge the RM can deselect/edit before confirm."""
+    topic: str                      # MUST be a TOPIC_VOCAB key
+    topic_label: str
+    facet: str                      # professional / interests / historical / personality
+    polarity: str                   # opportunity / conflict / neutral
+    rationale: str                  # short why, quotes the cue
+    selected: bool = True           # default-on; RM can deselect/edit
+
+
+class ProposedFacet(BaseModel):
+    """A candidate facet statement the RM can deselect/edit before confirm."""
+    facet: str
+    text: str
+    selected: bool = True
+
+
+class CaptureConfirmRequest(BaseModel):
+    """The RM gate — only the kept (selected) edges/facets are materialised."""
+    note: str                       # final (RM-edited) note text
+    modality: str
+    contact: str = ""
+    rm_name: str = ""
+    date: str = ""
+    edges: list[ProposedEdge] = []  # only the RM-kept ones (selected) are applied
+    facets: list[ProposedFacet] = []
+
+
 # --- News graph -------------------------------------------------------------
 
 class Sentiment(BaseModel):
