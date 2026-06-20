@@ -440,7 +440,9 @@ export function ClientView({ clientId }: { clientId: string }) {
                 <TransactionsView clientId={clientId} />
               )}
               {portfolioSub === "risk" && <RiskTimeline clientId={clientId} />}
-              {portfolioSub === "map" && <InvestmentGlobe clientId={clientId} />}
+              {portfolioSub === "map" && (
+                <InvestmentGlobe clientId={clientId} matches={insights.matches} />
+              )}
             </TabsContent>
 
             {/* CLIENT — profile · network · rendezvous */}

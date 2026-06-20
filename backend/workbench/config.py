@@ -71,7 +71,9 @@ class Settings:
     # Financial Modeling Prep (free tier): ESG controversy ratings, earnings calendar/results,
     # analyst ratings + price targets, fundamentals + dividends. One key, several adapters.
     fmp_key = _clean(os.getenv("FMP_API_KEY"))
-    fmp_url = os.getenv("FMP_API_URL", "https://financialmodelingprep.com/api/v3").strip()
+    # FMP retired the /api/v3 "legacy" endpoints (Aug 2025) for keys issued after that date;
+    # the current API lives under /stable. Override via FMP_API_URL only for legacy keys.
+    fmp_url = os.getenv("FMP_API_URL", "https://financialmodelingprep.com/stable").strip()
 
     # Macro/FX digest. Frankfurter (ECB rates) needs NO key; FRED key is optional enrichment.
     fred_key = _clean(os.getenv("FRED_API_KEY"))
