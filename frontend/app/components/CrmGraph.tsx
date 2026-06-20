@@ -48,6 +48,15 @@ interface SimNode extends CrmNode {
 interface SimLink {
   source: SimNode;
   target: SimNode;
+  strength: number; // 0..1 → line width + alpha
+  recency: number; // 0..1 → warmth/glow (1 = most recent)
+}
+
+/* Loaded avatar bitmap + its load state, keyed by node id. */
+interface Avatar {
+  img: HTMLImageElement;
+  ready: boolean;
+  failed: boolean;
 }
 
 /* All mutable simulation state lives here so the rAF loop reads it via one ref. */
@@ -55,6 +64,7 @@ interface SimState {
   nodes: SimNode[];
   links: SimLink[];
   adj: Map<string, Set<string>>;
+  avatars: Map<string, Avatar>;
   view: { x: number; y: number; k: number };
   alpha: number;
   hoverNode: SimNode | null;
@@ -69,6 +79,18 @@ interface SimState {
   H: number;
   DPR: number;
   tooltip: { x: number; y: number; text: string } | null;
+}
+
+/* Coloured ring around each circular avatar, per node type. */
+function initials(n: SimNode): string {
+  const base = (n.first_name || n.label || "").trim();
+  if (!base) return "?";
+  const words = base.split(/\s+/);
+  return (
+    words.length > 1
+      ? words[0][0] + words[words.length - 1][0]
+      : base.slice(0, 2)
+  ).toUpperCase();
 }
 
 /* physics constants — ported 1:1 from build_graph.py */
@@ -96,11 +118,13 @@ export function CrmGraph({ clientId }: { clientId: string }) {
     text: string;
   } | null>(null);
   const [query, setQuery] = useState("");
+  const [zoomPct, setZoomPct] = useState(100); // live zoom-% badge
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const simRef = useRef<SimState | null>(null);
   const rafRef = useRef<number | null>(null);
+  const visibleRef = useRef(true); // true while this tab is on-screen
 
   // Keep the live sim's filter/query in sync with React control state.
   useEffect(() => {
@@ -113,6 +137,21 @@ export function CrmGraph({ clientId }: { clientId: string }) {
   useEffect(() => {
     if (simRef.current) simRef.current.query = query.trim().toLowerCase();
   }, [query]);
+
+  // Track whether this graph tab is on-screen so the keyboard zoom only hijacks
+  // Ctrl/Cmd +/- when the user is actually looking at the graph.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting && entry.intersectionRatio > 0;
+      },
+      { threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [data]);
 
   // Fetch the graph for this client.
   useEffect(() => {
@@ -155,8 +194,30 @@ export function CrmGraph({ clientId }: { clientId: string }) {
     }));
     const byId = new Map(nodes.map((n) => [n.id, n]));
     const links: SimLink[] = data.links
-      .map((l) => ({ source: byId.get(l.source)!, target: byId.get(l.target)! }))
+      .map((l) => ({
+        source: byId.get(l.source)!,
+        target: byId.get(l.target)!,
+        strength: typeof l.strength === "number" ? l.strength : 0.85,
+        recency: typeof l.recency === "number" ? l.recency : 0.85,
+      }))
       .filter((l) => l.source && l.target);
+
+    // ---- preload circular avatars (person / rm) ----
+    const avatars = new Map<string, Avatar>();
+    for (const n of nodes) {
+      if (!n.avatar) continue;
+      const img = new Image();
+      const rec: Avatar = { img, ready: false, failed: false };
+      img.onload = () => {
+        rec.ready = true;
+        sim.alpha = Math.max(sim.alpha, 0.05); // nudge a repaint
+      };
+      img.onerror = () => {
+        rec.failed = true;
+      };
+      img.src = n.avatar;
+      avatars.set(n.id, rec);
+    }
 
     // adjacency for highlight + connection counts
     const adj = new Map<string, Set<string>>(
@@ -171,6 +232,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
       nodes,
       links,
       adj,
+      avatars,
       view: { x: 0, y: 0, k: 1 },
       alpha: 1,
       hoverNode: null,
@@ -311,8 +373,8 @@ export function CrmGraph({ clientId }: { clientId: string }) {
       const focus = sim.selNode || sim.hoverNode;
       const neigh = focus ? sim.adj.get(focus.id) : null;
 
-      // links
-      ctx.lineWidth = 1;
+      // links — width + alpha from strength, warmth/glow from recency.
+      ctx.lineCap = "round";
       for (const l of sim.links) {
         const a = l.source;
         const b = l.target;
@@ -320,14 +382,33 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         const pa = toScreen(a);
         const pb = toScreen(b);
         const active = focus && (a === focus || b === focus);
+        const dimLink = focus && !active;
+
+        const s = l.strength; // 0..1
+        const rec = l.recency; // 0..1 (1 = most recent → warmer)
+        // recent contact warms cool slate (210°) toward warm amber (38°)
+        const hue = 210 - 172 * rec;
+        const sat = 24 + 56 * rec;
+        const baseA = (0.16 + 0.5 * s) * (0.45 + 0.55 * rec);
+        const alpha = active ? Math.min(0.95, baseA + 0.4) : dimLink ? 0.06 : baseA;
+
+        ctx.lineWidth = (0.6 + 2.6 * s) * (active ? 1.6 : 1);
+        // warm recent edges glow softly
+        if (rec > 0.6 && !dimLink) {
+          ctx.shadowColor = `hsla(${hue}, ${sat}%, 62%, ${0.5 * rec})`;
+          ctx.shadowBlur = 6 * rec * Math.sqrt(sim.view.k);
+        } else {
+          ctx.shadowBlur = 0;
+        }
         ctx.strokeStyle = active
-          ? "rgba(122,162,247,.55)"
-          : "rgba(120,130,170,.13)";
+          ? `hsla(${hue}, ${Math.max(60, sat)}%, 70%, ${alpha})`
+          : `hsla(${hue}, ${sat}%, ${56 + 12 * rec}%, ${alpha})`;
         ctx.beginPath();
         ctx.moveTo(pa.x, pa.y);
         ctx.lineTo(pb.x, pb.y);
         ctx.stroke();
       }
+      ctx.shadowBlur = 0;
 
       // nodes
       for (const n of sim.nodes) {
@@ -343,17 +424,73 @@ export function CrmGraph({ clientId }: { clientId: string }) {
             (n.detail || "").toLowerCase().includes(sim.query);
         }
 
-        ctx.globalAlpha = dim ? 0.18 : sim.query && !hit ? 0.12 : 1;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = n.color || TYPE_COLOR[n.type] || "#888";
-        ctx.fill();
+        const nodeAlpha = dim ? 0.18 : sim.query && !hit ? 0.12 : 1;
+        ctx.globalAlpha = nodeAlpha;
+        const ring = n.color || TYPE_COLOR[n.type] || "#888";
+        const av = sim.avatars.get(n.id);
+        const hasFace = n.type === "rm" || n.type === "person";
+
+        if (hasFace) {
+          // ---- circular avatar (image or initials) with a coloured ring ----
+          const ir = r * 0.92; // inner photo radius, leaving room for the ring
+          if (av && av.ready) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, ir, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            // cover-fit the (square) photo into the circle
+            const s2 = ir * 2;
+            ctx.drawImage(av.img, p.x - ir, p.y - ir, s2, s2);
+            ctx.restore();
+          } else {
+            // initials fallback (loading or missing/failed image)
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, ir, 0, Math.PI * 2);
+            ctx.fillStyle = ring;
+            ctx.globalAlpha = nodeAlpha * 0.28;
+            ctx.fill();
+            ctx.globalAlpha = nodeAlpha;
+            ctx.fillStyle = "#0b1020";
+            ctx.font = `600 ${Math.max(8, ir * 0.95)}px ui-sans-serif, system-ui, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(initials(n), p.x, p.y + 0.5);
+            ctx.textBaseline = "alphabetic";
+          }
+          // coloured ring around the avatar
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, ir, 0, Math.PI * 2);
+          ctx.lineWidth = Math.max(1.5, r * 0.16);
+          ctx.strokeStyle = ring;
+          ctx.stroke();
+        } else {
+          // ---- plain coloured disc for non-face nodes ----
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = ring;
+          ctx.fill();
+          // emoji icon on medium / theme / interaction nodes
+          if (n.icon) {
+            ctx.globalAlpha = nodeAlpha;
+            ctx.font = `${Math.max(9, r * 1.25)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(n.icon, p.x, p.y + 0.5);
+            ctx.textBaseline = "alphabetic";
+          }
+        }
+
         if (sim.query && hit) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
           ctx.lineWidth = 2;
           ctx.strokeStyle = "#fff";
           ctx.stroke();
         }
         if (n === sim.selNode) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r + (hasFace ? 2 : 0), 0, Math.PI * 2);
           ctx.lineWidth = 2.5;
           ctx.strokeStyle = "#fff";
           ctx.stroke();
@@ -379,8 +516,17 @@ export function CrmGraph({ clientId }: { clientId: string }) {
       }
       ctx.globalAlpha = 1;
       ctx.restore();
+
+      // keep the live zoom badge in sync (only push to React on change)
+      const pct = Math.round(sim.view.k * 100);
+      if (pct !== lastPct) {
+        lastPct = pct;
+        setZoomPct(pct);
+      }
+
       rafRef.current = requestAnimationFrame(render);
     }
+    let lastPct = 100;
     rafRef.current = requestAnimationFrame(render);
 
     // gentle reheat so it settles nicely
@@ -447,20 +593,40 @@ export function CrmGraph({ clientId }: { clientId: string }) {
       sim.panning = false;
     }
 
-    function onWheel(e: WheelEvent) {
-      e.preventDefault();
-      const pos = localPos(e);
+    // Zoom by a factor about a screen-space anchor (default: viewport centre).
+    function zoomBy(f: number, anchor?: { x: number; y: number }) {
+      const pos = anchor || { x: sim.W / 2, y: sim.H / 2 };
       const w = toWorld(pos.x, pos.y);
-      const f = e.deltaY < 0 ? 1.12 : 1 / 1.12;
       sim.view.k = Math.max(0.15, Math.min(5, sim.view.k * f));
       sim.view.x = pos.x - w.x * sim.view.k;
       sim.view.y = pos.y - w.y * sim.view.k;
+    }
+
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12, localPos(e));
+    }
+
+    // Ctrl/Cmd + '='/'+' zoom in, '-'/'_' zoom out. Only intercept the browser's
+    // native zoom while THIS graph tab is actually visible on screen.
+    function onKeyDown(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      if (!visibleRef.current) return;
+      const k = e.key;
+      if (k === "=" || k === "+") {
+        e.preventDefault();
+        zoomBy(1.18);
+      } else if (k === "-" || k === "_") {
+        e.preventDefault();
+        zoomBy(1 / 1.18);
+      }
     }
 
     canvas.addEventListener("mousedown", onMouseDown);
     canvas.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("keydown", onKeyDown, { passive: false });
 
     return () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
@@ -470,6 +636,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
       canvas.removeEventListener("wheel", onWheel);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("keydown", onKeyDown);
       simRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -493,6 +660,20 @@ export function CrmGraph({ clientId }: { clientId: string }) {
     }
     setSelected(null);
     setQuery("");
+  }
+
+  // Zoom from the badge buttons (about the viewport centre), same clamp as wheel/keys.
+  function zoomCentre(f: number) {
+    const sim = simRef.current;
+    if (!sim) return;
+    const cx = sim.W / 2;
+    const cy = sim.H / 2;
+    const wx = (cx - sim.view.x) / sim.view.k;
+    const wy = (cy - sim.view.y) / sim.view.k;
+    sim.view.k = Math.max(0.15, Math.min(5, sim.view.k * f));
+    sim.view.x = cx - wx * sim.view.k;
+    sim.view.y = cy - wy * sim.view.k;
+    sim.alpha = Math.max(sim.alpha, 0.05);
   }
 
   // type counts for the legend
@@ -546,6 +727,37 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           className="block h-full w-full cursor-grab active:cursor-grabbing"
         />
 
+        {/* zoom controls + live % badge — top-right floating */}
+        {data && !loading && (
+          <div className="pointer-events-auto absolute right-4 top-4 flex items-center gap-1 rounded-xl border border-slate-700/60 bg-slate-800/80 px-1.5 py-1 text-slate-200 shadow-pop backdrop-blur">
+            <button
+              type="button"
+              onClick={() => zoomCentre(1 / 1.18)}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-base leading-none text-slate-300 transition-colors hover:bg-slate-700/70 hover:text-white"
+              aria-label="Zoom out"
+              title="Zoom out (Ctrl/⌘ −)"
+            >
+              −
+            </button>
+            <span
+              className="min-w-[3.25rem] text-center text-xs font-semibold tabular-nums text-slate-100"
+              aria-live="polite"
+              title="Current zoom level"
+            >
+              {zoomPct}%
+            </span>
+            <button
+              type="button"
+              onClick={() => zoomCentre(1.18)}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-base leading-none text-slate-300 transition-colors hover:bg-slate-700/70 hover:text-white"
+              aria-label="Zoom in"
+              title="Zoom in (Ctrl/⌘ +)"
+            >
+              +
+            </button>
+          </div>
+        )}
+
         {/* legend + reset — top-left floating panel */}
         {data && !loading && (
           <div className="pointer-events-auto absolute left-4 top-4 w-56 rounded-xl border border-slate-700/60 bg-slate-800/80 p-3 text-slate-200 shadow-pop backdrop-blur">
@@ -588,7 +800,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         {/* hint — bottom-right */}
         {data && !loading && (
           <div className="pointer-events-none absolute bottom-3 right-4 text-right text-[11px] leading-relaxed text-slate-500">
-            drag node · scroll zoom · drag bg pan · click node
+            drag node · scroll / Ctrl ± zoom · drag bg pan · click node
           </div>
         )}
 

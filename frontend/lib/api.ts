@@ -9,6 +9,9 @@ import type {
   IntegrationHealth,
   Analytics,
   CrmGraph,
+  Rendezvous,
+  Decision,
+  Globe,
 } from "./types";
 
 export const API_BASE =
@@ -32,5 +35,8 @@ export const api = {
   client: (id: string) => get<ClientDetail>(`/clients/${id}`),
   analytics: (id: string) => get<Analytics>(`/clients/${id}/analytics`),
   graph: (id: string) => get<CrmGraph>(`/clients/${id}/graph`),
+  rendezvous: (id: string) => get<Rendezvous>(`/clients/${id}/rendezvous`),
+  decision: (id: string) => get<Decision>(`/clients/${id}/decision`),
+  globe: (id: string) => get<Globe>(`/clients/${id}/globe`),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
 };

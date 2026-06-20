@@ -272,15 +272,162 @@ export interface CrmNode {
   medium?: string;
   contact?: string;
   summary?: string;
+  avatar?: string | null; // "/faces/<slug>.jpg" for person/rm nodes
+  icon?: string | null; // emoji for medium/theme/interaction nodes
+  first_name?: string | null;
 }
 
 export interface CrmLink {
   source: string;
   target: string;
+  strength?: number; // 0..1 connection importance → line width/contrast
+  recency?: number; // 0..1 (1 = most recent) → line warmth/glow
 }
 
 export interface CrmGraph {
   client_id: string;
   nodes: CrmNode[];
   links: CrmLink[];
+}
+
+// --- Rendezvous planner (CRM-grounded next-meeting plan) ---
+
+export type RendezvousKind =
+  | "dining"
+  | "sport"
+  | "culture"
+  | "outdoor"
+  | "family"
+  | "philanthropy"
+  | "wine"
+  | "travel"
+  | "other";
+
+export interface RendezvousInterest {
+  id: string;
+  label: string;
+  category: RendezvousKind;
+  icon: string;
+  provenance?: Provenance | null;
+}
+
+export interface RendezvousSuggestion {
+  id: string;
+  kind: RendezvousKind;
+  icon: string;
+  title: string;
+  venue: string;
+  city: string;
+  when: string;
+  why: string;
+  matched_interest_ids: string[];
+  prep: string[];
+  confidence: "grounded" | "inferred";
+  provenance: Provenance[];
+}
+
+export interface Rendezvous {
+  client_id: string;
+  client_name: string;
+  interests: RendezvousInterest[];
+  suggestions: RendezvousSuggestion[];
+  talking_points: { text: string; provenance?: Provenance | null }[];
+  avoid: string[];
+}
+
+// --- Decision Flow (layered "why this call" DAG over the insights data) ---
+
+export type DecisionLayerId =
+  | "notes"
+  | "dna"
+  | "signal"
+  | "holding"
+  | "candidate"
+  | "action";
+
+export interface DecisionNode {
+  id: string;
+  layer: DecisionLayerId;
+  title: string;
+  subtitle: string;
+  detail: string;
+  polarity?: Polarity | null;
+  provenance: Provenance[];
+}
+
+export interface DecisionEdge {
+  id: string;
+  source: string;
+  target: string;
+  kind: "supports" | "flags" | "triggers" | "replaces" | "honors" | "proposes";
+  label: string;
+}
+
+export interface Decision {
+  client_id: string;
+  client_name: string;
+  headline: string;
+  polarity: Polarity;
+  layers: { id: DecisionLayerId; label: string }[];
+  nodes: DecisionNode[];
+  edges: DecisionEdge[];
+  recommendation: {
+    action: string;
+    sell: string | null;
+    buy: string | null;
+    rationale: string;
+    constraints_checked: string[];
+  };
+}
+
+// --- Investment Map globe (holdings + news + signal arcs) ---
+
+export interface GlobeHolding {
+  id: string;
+  issuer: string;
+  isin: string;
+  industry_group: string | null;
+  current_chf: number;
+  lat: number;
+  lng: number;
+  country: string;
+  city: string;
+  verdict: "VIOLATION" | "WATCH" | "OK";
+  weight: number;
+}
+
+export interface GlobeEvent {
+  id: string;
+  headline: string;
+  source: string;
+  published_at: string;
+  lat: number;
+  lng: number;
+  country: string;
+  severity: "high" | "med" | "low";
+  summary: string;
+  linked_holding_ids: string[];
+}
+
+export interface GlobeArc {
+  id: string;
+  from_lat: number;
+  from_lng: number;
+  to_lat: number;
+  to_lng: number;
+  color: string;
+  label: string;
+}
+
+export interface Globe {
+  client_id: string;
+  holdings: GlobeHolding[];
+  events: GlobeEvent[];
+  arcs: GlobeArc[];
+  stats: {
+    holdings: number;
+    violations: number;
+    watches: number;
+    events: number;
+  };
 }

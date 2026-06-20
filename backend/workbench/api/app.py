@@ -101,6 +101,32 @@ def create_app() -> FastAPI:
     def news():
         return [n.model_dump() for n in world.news]
 
+    # --- ported features (builders lazy-imported so the app boots even mid-build) ---
+
+    def _dump(out):
+        return out.model_dump() if hasattr(out, "model_dump") else out
+
+    @app.get("/clients/{client_id}/rendezvous")
+    def client_rendezvous(client_id: str):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.rendezvous import build_rendezvous
+        return _dump(build_rendezvous(world, client_id))
+
+    @app.get("/clients/{client_id}/decision")
+    def client_decision(client_id: str):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.decision import build_decision
+        return _dump(build_decision(world, client_id))
+
+    @app.get("/clients/{client_id}/globe")
+    def client_globe(client_id: str):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..globe import build_globe
+        return _dump(build_globe(world, client_id))
+
     return app
 
 
