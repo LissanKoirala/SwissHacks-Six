@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { StagedPanel, extractErrorMessage } from "./CaptureStaged";
 import { GuidedPrompts } from "./CaptureGuided";
+import { CaptureInterview } from "./CaptureInterview";
 
 /* --------------------------------------------------------------- consts --- */
 
@@ -567,6 +568,15 @@ export function CaptureNote({
             you review and confirm.
           </p>
         </header>
+
+        {/* conversational capture — TTS asks follow-ups, RM answers aloud */}
+        <CaptureInterview
+          clientId={clientId}
+          baseNote={note}
+          serverSttEnabled={!!serverSttEnabled}
+          mediaSupported={mediaSupported}
+          onAppend={(text) => setNote((prev) => appendToNote(prev, text))}
+        />
 
         {/* guided capture — client-aware quest prompts */}
         <GuidedPrompts

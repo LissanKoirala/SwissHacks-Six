@@ -923,6 +923,20 @@ export interface CapturePrompt {
   hint: string;
 }
 
+// Conversational capture — the TTS voice asks one follow-up at a time.
+export interface CaptureFollowupBody {
+  note: string;
+  asked: string[];
+}
+
+export interface CaptureFollowup {
+  id: string;
+  question: string;
+  done: boolean;
+  kind: string;
+  source: "llm" | "guided";
+}
+
 export interface CapturePrompts {
   client_id: string;
   client_name: string;

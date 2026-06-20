@@ -98,6 +98,13 @@ class CaptureExtractRequest(BaseModel):
     date: str = ""                  # ISO yyyy-mm-dd; default = server today if empty
 
 
+class CaptureFollowupRequest(BaseModel):
+    """Conversational capture turn: the note gathered so far + the ids of questions
+    already asked → the single best next spoken follow-up (read-only)."""
+    note: str = ""                  # transcript accumulated so far
+    asked: list[str] = []           # question ids already asked this session
+
+
 class ProposedEdge(BaseModel):
     """A candidate interest edge the RM can deselect/edit before confirm."""
     topic: str                      # MUST be a TOPIC_VOCAB key

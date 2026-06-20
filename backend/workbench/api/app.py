@@ -10,7 +10,12 @@ from ..analytics import build_analytics
 from ..config import settings
 from ..agents.flight_fli import _fli_installed
 from ..graph.crm_graph import build_crm_graph
-from ..models import CaptureConfirmRequest, CaptureExtractRequest, RMQueryRequest
+from ..models import (
+    CaptureConfirmRequest,
+    CaptureExtractRequest,
+    CaptureFollowupRequest,
+    RMQueryRequest,
+)
 from ..seed import build_world
 
 
@@ -259,6 +264,13 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "unknown client")
         from ..agents.capture import build_capture_prompts
         return build_capture_prompts(world, client_id)
+
+    @app.post("/clients/{client_id}/capture/followup")
+    def capture_followup(client_id: str, req: CaptureFollowupRequest):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.capture import next_followup
+        return next_followup(world, client_id, req.note, req.asked)
 
     return app
 

@@ -294,6 +294,35 @@ def test_llm_risk_signals_flow_into_timeline(_llm_on, fresh_world):
     assert point["direction"] == "down" and point["delta"] < 0
 
 
+# --- conversational follow-ups ----------------------------------------------
+
+def test_followup_walks_guided_quest_offline(fresh_world):
+    """With no LLM, the interview walks the guided quest list and finishes."""
+    asked: list[str] = []
+    first = capture.next_followup(fresh_world, "schneider", "", asked)
+    assert first["id"] == "opener" and first["done"] is False and first["question"]
+
+    # walk to exhaustion; every question is non-empty and ids don't repeat
+    guard = 0
+    while not (step := capture.next_followup(fresh_world, "schneider", "note", asked))["done"]:
+        assert step["question"]
+        assert step["id"] not in asked
+        asked.append(step["id"])
+        guard += 1
+        assert guard < 20
+    # the final step is flagged done
+    assert step["done"] is True
+
+
+def test_followup_uses_llm_when_available(_llm_on, monkeypatch, fresh_world):
+    monkeypatch.setattr(
+        capture, "chat_json", lambda *a, **k: {"question": "How is his health?", "done": False}
+    )
+    step = capture.next_followup(fresh_world, "schneider", "We discussed the foundation.", [])
+    assert step["source"] == "llm"
+    assert step["question"] == "How is his health?"
+
+
 # --- persistence stays out of the repo --------------------------------------
 
 def test_confirm_writes_to_tmp_store_not_repo(fresh_world):

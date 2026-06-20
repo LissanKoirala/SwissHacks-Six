@@ -616,3 +616,79 @@ def build_capture_prompts(world, client_id: str) -> dict:
         "first_name": first,
         "prompts": prompts,
     }
+
+
+# --- conversational capture (TTS asks, RM dictates the answer) ---------------
+# One spoken follow-up at a time. The deterministic engine walks the guided quest
+# list; when the LLM is on, it instead reads the note so far and asks the single
+# most useful next question (or signals it has enough). Read-only — no mutation.
+
+_FOLLOWUP_SYSTEM = (
+    "You are interviewing a relationship manager (RM) to capture a thorough client "
+    "meeting note. Ask ONE short, natural, spoken follow-up question at a time to draw "
+    "out the detail that is still missing. Never give advice and never address the "
+    "client. Keep each question under 22 words and conversational."
+)
+
+
+def _coverage_areas(prompts: list[dict]) -> str:
+    return "\n".join(f"- {p['kind']}: {p['question']}" for p in prompts)
+
+
+def next_followup(world, client_id: str, note: str, asked: list[str]) -> dict:
+    """Return the next spoken follow-up: `{id, question, done, kind, source}`.
+
+    LLM-led when available (grounded in the note so far + the client's known
+    positions), falling back to the deterministic guided quest list so the
+    interview still works offline / without a key."""
+    asked = asked or []
+    note = _normalise(note or "")
+    bundle = build_capture_prompts(world, client_id)
+    prompts: list[dict] = bundle["prompts"]
+    first = bundle["first_name"]
+
+    # deterministic next-in-list (also the fallback)
+    remaining = [p for p in prompts if p["id"] not in asked]
+    det = remaining[0] if remaining else None
+
+    if llm_available():
+        known = "; ".join(
+            sorted({
+                TOPIC_VOCAB[e.topic].label if e.topic in TOPIC_VOCAB else e.topic
+                for e in world.interest_by_client.get(client_id, [])
+            })
+        ) or "none on record"
+        user = (
+            f"Client first name: {first}. Known positions: {known}.\n\n"
+            f"Note captured so far:\n{note or '(nothing yet)'}\n\n"
+            "Areas a complete note should cover:\n"
+            f"{_coverage_areas(prompts)}\n\n"
+            f"Questions already asked this session: {asked or 'none'}.\n\n"
+            'Return JSON {"question":"<the next spoken follow-up>","done":<bool>}. '
+            "Ask about an area not yet covered by the note. Set done=true (and question "
+            '"") only when the note already covers positions, risk appetite, life/business '
+            "news, holdings, values and next steps."
+        )
+        data = chat_json(_FOLLOWUP_SYSTEM, user, max_tokens=120)
+        if isinstance(data, dict):
+            if data.get("done") and not (data.get("question") or "").strip():
+                return {"id": "", "question": "", "done": True, "kind": "closer", "source": "llm"}
+            q = _normalise(data.get("question") or "")
+            if q:
+                return {
+                    "id": f"followup-{len(asked) + 1}",
+                    "question": q,
+                    "done": bool(data.get("done")),
+                    "kind": "llm",
+                    "source": "llm",
+                }
+
+    if det is None:
+        return {"id": "", "question": "", "done": True, "kind": "closer", "source": "guided"}
+    return {
+        "id": det["id"],
+        "question": det["question"],
+        "done": len(remaining) <= 1,
+        "kind": det["kind"],
+        "source": "guided",
+    }

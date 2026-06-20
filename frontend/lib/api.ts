@@ -20,6 +20,8 @@ import type {
   CaptureConfirm,
   CaptureResult,
   CapturePrompts,
+  CaptureFollowup,
+  CaptureFollowupBody,
   Opportunity,
   TransactionsData,
   RMQueryBody,
@@ -100,6 +102,8 @@ export const api = {
     post<CaptureResult>(`/clients/${id}/capture/confirm`, body),
   capturePrompts: (id: string) =>
     get<CapturePrompts>(`/clients/${id}/capture/prompts`),
+  captureFollowup: (id: string, body: CaptureFollowupBody) =>
+    post<CaptureFollowup>(`/clients/${id}/capture/followup`, body),
   query: (id: string, body: RMQueryBody) =>
     post<RMQueryResult>(`/clients/${id}/query`, body),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
