@@ -1,10 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Portfolio } from "@/lib/types";
+import type { Portfolio, Fundamentals, Holding } from "@/lib/types";
 import { api } from "@/lib/api";
-import { chf, pct, signedPp, price, prettyDate } from "@/lib/format";
+import { chf, pct, signedPp, price, compact, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
+import { ProvenanceTag } from "./Provenance";
+
+/** CIO-deviation chip: a held name off the CIO list, downgraded to SELL, or on-list. */
+function CioStatusChip({ status }: { status?: string | null }) {
+  if (!status || status === "CASH") return null;
+  const map: Record<string, string> = {
+    OFF_LIST: "bg-destructive/10 text-destructive ring-destructive/20",
+    SELL: "bg-warning/10 text-warning ring-warning/25",
+    HOLD: "bg-muted text-muted-foreground ring-border",
+    BUY: "bg-success/10 text-success ring-success/25",
+  };
+  const label = status === "OFF_LIST" ? "Off CIO list" : `CIO · ${status}`;
+  return (
+    <span className={`chip ring-1 ring-inset ${map[status] ?? map.HOLD}`}>
+      {label}
+    </span>
+  );
+}
 
 export function PortfolioView({
   clientId,
@@ -14,6 +32,7 @@ export function PortfolioView({
   affectedIsin?: string | null;
 }) {
   const [data, setData] = useState<Portfolio | null>(null);
+  const [fundamentals, setFundamentals] = useState<Fundamentals[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -21,11 +40,17 @@ export function PortfolioView({
     let alive = true;
     setLoading(true);
     setError(null);
+    setFundamentals([]);
     api
       .portfolio(clientId)
       .then((p) => alive && setData(p))
       .catch((e) => alive && setError(String(e)))
       .finally(() => alive && setLoading(false));
+    // Fundamentals are context, not a blocker — load separately and degrade silently.
+    api
+      .fundamentals(clientId)
+      .then((f) => alive && setFundamentals(f))
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -60,6 +85,11 @@ export function PortfolioView({
       t.target_pct > 0
   );
 
+  // CIO-deviation audit (Portfolio Agent): held names off the CIO list or downgraded to SELL.
+  const deviations: Holding[] = data.holdings
+    .filter((h) => h.cio_status === "OFF_LIST" || h.cio_status === "SELL")
+    .sort((a, b) => b.current_chf - a.current_chf);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline gap-2">
@@ -70,6 +100,46 @@ export function PortfolioView({
           total {chf(data.total_chf)}
         </span>
       </div>
+
+      {/* CIO deviation audit — held names no longer on the CIO list or downgraded to SELL */}
+      {deviations.length > 0 && (
+        <section className="card overflow-hidden ring-1 ring-inset ring-warning/25">
+          <div className="flex flex-wrap items-center gap-2 border-b border-warning/25 bg-warning/[0.06] px-4 py-3">
+            <p className="text-xs font-medium tracking-wide text-warning">
+              CIO deviations · <span className="tabular-nums">{deviations.length}</span>
+            </p>
+            <span className="text-[11px] text-muted-foreground">
+              Held names off the CIO list or rated SELL — review with the client.
+            </span>
+          </div>
+          <ul className="divide-y divide-border/60">
+            {deviations.map((h) => (
+              <li
+                key={h.isin}
+                className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm"
+              >
+                <IssuerLogo
+                  issuer={h.issuer}
+                  isin={h.isin}
+                  yahoo={h.yahoo}
+                  size="sm"
+                />
+                <span className="font-medium text-foreground">{h.issuer}</span>
+                <CioStatusChip status={h.cio_status} />
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  <span className="citation">{h.isin}</span>
+                </span>
+                <span className="ml-auto tabular-nums text-foreground/80">
+                  {chf(h.current_chf)}
+                </span>
+                {h.provenance && (
+                  <ProvenanceTag prov={h.provenance} label="holding" />
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Mandate drift table */}
       <section className="card overflow-hidden">
@@ -104,6 +174,9 @@ export function PortfolioView({
                     <span className="ml-2 text-xs text-muted-foreground">
                       {t.asset_class}
                     </span>
+                    {t.provenance && (
+                      <ProvenanceTag prov={t.provenance} label="mandate" />
+                    )}
                   </td>
                   <td className="px-4 py-1.5 text-right tabular-nums text-muted-foreground">
                     {pct(t.target_pct, 1)}
@@ -194,6 +267,12 @@ export function PortfolioView({
                               In alert
                             </span>
                           )}
+                          {(h.cio_status === "OFF_LIST" ||
+                            h.cio_status === "SELL") && (
+                            <span className="ml-2 inline-flex">
+                              <CioStatusChip status={h.cio_status} />
+                            </span>
+                          )}
                           <div className="font-mono text-[11px] text-muted-foreground">
                             <span className="citation">{h.isin}</span>
                             {h.six_ticker ? ` · ${h.six_ticker}` : ""}
@@ -242,7 +321,12 @@ export function PortfolioView({
                       </td>
                     )}
                     <td className="px-4 py-1.5 text-right tabular-nums text-foreground">
-                      {chf(h.current_chf)}
+                      <span className="inline-flex items-center justify-end gap-1">
+                        {chf(h.current_chf)}
+                        {h.provenance && (
+                          <ProvenanceTag prov={h.provenance} label="src" />
+                        )}
+                      </span>
                     </td>
                   </tr>
                 );
@@ -251,6 +335,81 @@ export function PortfolioView({
           </table>
         </div>
       </section>
+
+      {/* Issuer fundamentals · dividends · insider activity (context, never an alert) */}
+      {fundamentals.length > 0 && (
+        <section className="card overflow-hidden">
+          <div className="border-b border-border px-4 py-3">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground">
+              Issuer fundamentals · dividends · insider ·{" "}
+              <span className="tabular-nums">{fundamentals.length}</span>
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Reference context for the conversation — not a trade signal.
+            </p>
+          </div>
+          <div className="grid gap-px bg-border sm:grid-cols-2">
+            {fundamentals.map((f) => {
+              const affected = affectedIsin && f.isin === affectedIsin;
+              return (
+                <div
+                  key={f.isin}
+                  className={`bg-card p-4 ${affected ? "ring-1 ring-inset ring-warning/25" : ""}`}
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <IssuerLogo issuer={f.issuer} isin={f.isin} size="sm" />
+                    <span className="font-medium text-foreground">{f.issuer}</span>
+                    {affected && (
+                      <span className="chip bg-warning/10 text-warning ring-1 ring-inset ring-warning/25">
+                        In alert
+                      </span>
+                    )}
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                    <Metric label="P/E" value={f.pe_ratio != null ? f.pe_ratio.toFixed(1) : "—"} />
+                    <Metric label="Dividend yield" value={pct(f.dividend_yield, 2)} />
+                    <Metric label="Next ex-div" value={f.next_ex_dividend ? prettyDate(f.next_ex_dividend) : "—"} />
+                    <Metric label="Market cap" value={compact(f.market_cap, f.currency)} />
+                    <Metric
+                      label="52-week range"
+                      value={
+                        f.week52_low != null && f.week52_high != null
+                          ? `${price(f.week52_low, f.currency)} – ${price(f.week52_high, f.currency)}`
+                          : "—"
+                      }
+                    />
+                  </dl>
+                  {f.insider_summary && (
+                    <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-muted/40 px-3 py-2 text-sm text-foreground/80 ring-1 ring-inset ring-border">
+                      <span className="font-medium">Insider:</span>
+                      <span>{f.insider_summary}</span>
+                      {f.insider_trades.map((t, i) => (
+                        <ProvenanceTag
+                          key={`${t.date}-${i}`}
+                          prov={t.provenance}
+                          label={`${t.transaction === "BUY" ? "▲" : "▼"} ${t.role ?? t.insider}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    {f.as_of ? `As of ${prettyDate(f.as_of)}` : ""}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="tabular-nums text-foreground/80">{value}</dd>
     </div>
   );
 }

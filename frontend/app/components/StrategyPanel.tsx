@@ -1,7 +1,13 @@
 "use client";
 
-import { ArrowRight, Check, CircleDot } from "lucide-react";
-import type { StrategyProposal, Swap, SwapAction } from "@/lib/types";
+import { ArrowRight, Check, CircleDot, Sparkles } from "lucide-react";
+import type {
+  StrategyProposal,
+  Swap,
+  SwapAction,
+  GoodNewsBriefing,
+  SubstitutionMetrics,
+} from "@/lib/types";
 import { chf, price, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
 import { Expander } from "./ui";
@@ -22,6 +28,118 @@ function ActionChip({ action }: { action: SwapAction }) {
     <span className={`chip ring-1 ring-inset ${cls} font-semibold`}>
       {action}
     </span>
+  );
+}
+
+const asPct = (v?: number | null, dp = 1) =>
+  v == null ? "—" : `${(v * 100).toFixed(dp)}%`;
+const asNum = (v?: number | null, dp = 2) =>
+  v == null ? "—" : v.toFixed(dp);
+
+/** Sold-vs-replacement comparison (Ammann 'substitution metrics'). */
+function SubstitutionTable({ sub }: { sub: SubstitutionMetrics }) {
+  const rows: { label: string; sell: string; buy: string; flag?: boolean }[] = [
+    {
+      label: "Volatility (30d)",
+      sell: asPct(sub.vol_sell),
+      buy: asPct(sub.vol_buy),
+      flag: sub.vol_delta != null && Math.abs(sub.vol_delta) > 0.05,
+    },
+    { label: "Beta", sell: asNum(sub.beta_sell), buy: asNum(sub.beta_buy) },
+    { label: "P/E", sell: asNum(sub.pe_sell, 1), buy: asNum(sub.pe_buy, 1) },
+    {
+      label: "Sentiment",
+      sell: asNum(sub.sentiment_sell),
+      buy: asNum(sub.sentiment_buy),
+    },
+  ];
+  return (
+    <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium tracking-wide text-muted-foreground">
+          Substitution metrics
+        </span>
+        {sub.sector_match && (
+          <span className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20">
+            <Check className="h-3.5 w-3.5" />
+            Same sector
+          </span>
+        )}
+        {sub.vol_delta != null && (
+          <span
+            className={`chip ring-1 ring-inset ${
+              Math.abs(sub.vol_delta) <= 0.05
+                ? "bg-success/10 text-success ring-success/20"
+                : "bg-warning/10 text-warning ring-warning/20"
+            }`}
+          >
+            Risk Δ {sub.vol_delta >= 0 ? "+" : ""}
+            <span className="tabular-nums">
+              {(sub.vol_delta * 100).toFixed(1)}pp
+            </span>
+          </span>
+        )}
+        {sub.risk_source && (
+          <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+            risk: {sub.risk_source}
+          </span>
+        )}
+      </div>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-[11px] font-medium tracking-wide text-muted-foreground">
+            <th className="py-1 font-medium">Metric</th>
+            <th className="py-1 text-right font-medium">
+              {sub.sell_issuer ?? "Sold"}
+            </th>
+            <th className="py-1 text-right font-medium">
+              {sub.buy_issuer ?? "Replacement"}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label} className="border-t border-border/60">
+              <td className="py-1 text-muted-foreground">{r.label}</td>
+              <td className="py-1 text-right tabular-nums text-foreground/80">
+                {r.sell}
+              </td>
+              <td
+                className={`py-1 text-right tabular-nums ${
+                  r.flag ? "text-warning" : "text-foreground"
+                }`}
+              >
+                {r.buy}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {(sub.value_tags_sell.length > 0 || sub.value_tags_buy.length > 0) && (
+        <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+          <div className="flex flex-wrap gap-1">
+            {sub.value_tags_sell.map((t) => (
+              <span
+                key={t}
+                className="chip bg-destructive/10 text-destructive ring-1 ring-inset ring-destructive/20"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-end gap-1">
+            {sub.value_tags_buy.map((t) => (
+              <span
+                key={t}
+                className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -94,10 +212,39 @@ function SwapRow({ swap }: { swap: Swap }) {
         {swap.rationale}
       </p>
 
+      {swap.substitution && <SubstitutionTable sub={swap.substitution} />}
+
       {swap.provenance.length > 0 && (
         <div className="mt-3">
           <Expander label="View sources" count={swap.provenance.length}>
             <ProvenanceList items={swap.provenance} />
+          </Expander>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GoodNewsBriefingCard({ briefing }: { briefing: GoodNewsBriefing }) {
+  return (
+    <div className="rounded-lg border border-success/20 bg-success/[0.06] p-4">
+      <span className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20 font-semibold">
+        <Sparkles className="h-3.5 w-3.5" />
+        Good news briefing
+      </span>
+      <p className="mt-2 text-sm font-semibold text-foreground">
+        {briefing.headline}
+      </p>
+      <p className="mt-1.5 text-sm leading-relaxed text-foreground/80">
+        {briefing.why_authentic}
+      </p>
+      <p className="mt-1.5 text-sm leading-relaxed text-foreground/80">
+        {briefing.action_summary}
+      </p>
+      {briefing.provenance.length > 0 && (
+        <div className="mt-3">
+          <Expander label="View sources" count={briefing.provenance.length}>
+            <ProvenanceList items={briefing.provenance} />
           </Expander>
         </div>
       )}
@@ -122,6 +269,9 @@ export function StrategyPanel({
       </header>
 
       <div className="flex-1 space-y-4 p-5">
+        {proposal?.good_news_briefing && (
+          <GoodNewsBriefingCard briefing={proposal.good_news_briefing} />
+        )}
         {!proposal || proposal.swaps.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Nothing to propose — the current portfolio stays within mandate and

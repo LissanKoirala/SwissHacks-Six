@@ -38,6 +38,12 @@ def create_app() -> FastAPI:
              "live": settings.six_enabled, "mode": "live" if settings.six_enabled else "workbook seed valuation"},
             {"name": "Event Registry", "configured": bool(settings.news_key),
              "live": settings.news_enabled, "mode": "live" if settings.news_enabled else "seed news fixtures"},
+            {"name": "SEC EDGAR", "configured": bool(settings.sec_user_agent),
+             "live": settings.sec_enabled, "mode": "live (no key)" if settings.sec_enabled else "seed filing fixtures"},
+            {"name": "FMP (ESG/earnings/analyst/fundamentals)", "configured": bool(settings.fmp_key),
+             "live": settings.fmp_enabled, "mode": "live" if settings.fmp_enabled else "seed signal fixtures"},
+            {"name": "Macro/FX (Frankfurter/ECB)", "configured": True,
+             "live": settings.macro_enabled, "mode": "live (no key)" if settings.macro_enabled else "seed macro fixtures"},
         ]
         return {"use_live": settings.use_live, "probes": probes}
 
@@ -79,6 +85,14 @@ def create_app() -> FastAPI:
             "mandate": mandate.model_dump() if mandate else None,
             "holdings": [h.model_dump() for h in holdings],
         }
+
+    @app.get("/clients/{client_id}/fundamentals")
+    def client_fundamentals(client_id: str):
+        """Fundamentals + dividends + insider activity for the issuers this client holds.
+        Reference/context data (never an alert) — feeds the portfolio view + dialogue."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        return [f.model_dump() for f in world.fundamentals_for_client(client_id)]
 
     @app.get("/clients/{client_id}/log")
     def client_log(client_id: str):

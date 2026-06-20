@@ -9,6 +9,13 @@ import {
   Wallet,
   Scale,
   Globe,
+  FileText,
+  Leaf,
+  BarChart3,
+  LineChart,
+  TrendingUp,
+  Calculator,
+  UserRoundCog,
   type LucideIcon,
 } from "lucide-react";
 import type { Polarity, SourceType } from "@/lib/types";
@@ -70,6 +77,14 @@ const SOURCE_META: Record<SourceType, { label: string; icon: LucideIcon }> = {
   portfolio: { label: "Portfolio", icon: Wallet },
   mandate: { label: "Mandate", icon: Scale },
   market_digest: { label: "Market digest", icon: Globe },
+  // additional free data sources (CLAUDE.md §6)
+  sec_filing: { label: "SEC filing", icon: FileText },
+  esg: { label: "ESG", icon: Leaf },
+  earnings: { label: "Earnings", icon: BarChart3 },
+  analyst: { label: "Analyst", icon: LineChart },
+  macro: { label: "Macro/FX", icon: TrendingUp },
+  fundamentals: { label: "Fundamentals", icon: Calculator },
+  insider: { label: "Insider", icon: UserRoundCog },
 };
 
 export function SourceBadge({ type }: { type: SourceType }) {

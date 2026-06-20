@@ -67,6 +67,10 @@ class PortfolioWorkbookSource:
             sac = row.get("Sub-Asset Class")
             if not ac or not sac:
                 continue
+            # Skip the footer summary rows ("TOTAL / GLOBAL MANDATE", "Target amount / 10000000"):
+            # they are not real sleeves and would otherwise seed a phantom 100pp drift breach.
+            if str(ac).strip() in ("TOTAL", "Target amount"):
+                continue
             for strat in self.STRATEGIES:
                 recs.append(Record(
                     kind="mandate",

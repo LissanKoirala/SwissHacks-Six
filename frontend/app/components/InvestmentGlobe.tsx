@@ -10,7 +10,7 @@ import type {
 } from "@/lib/types";
 import { api } from "@/lib/api";
 import { chf, prettyDate } from "@/lib/format";
-import { Provenance } from "./Provenance";
+import { Provenance, ProvenanceTag } from "./Provenance";
 
 /* The globe.gl instance is only created in the browser (dynamic import inside
  * useEffect) — it touches WebGL/`window` and must never run at SSR. */
@@ -334,6 +334,9 @@ function HoldingRow({ holding }: { holding: GlobeHolding }) {
         <span className="font-mono text-[11px] text-muted-foreground">
           {holding.isin}
         </span>
+        {holding.provenance && (
+          <ProvenanceTag prov={holding.provenance} label="src" />
+        )}
       </div>
     </div>
   );
@@ -351,10 +354,13 @@ function EventCard({ event }: { event: GlobeEvent }) {
       <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
         {event.headline}
       </p>
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
         {event.source} · {event.country} ·{" "}
         {event.linked_holding_ids.length} linked holding
         {event.linked_holding_ids.length === 1 ? "" : "s"}
+        {event.provenance && (
+          <ProvenanceTag prov={event.provenance} label="source" />
+        )}
       </p>
     </div>
   );
@@ -365,9 +371,12 @@ function NewsRow({ item }: { item: GlobeEvent }) {
   return (
     <div className="rounded-md border border-border bg-card px-3 py-2">
       <p className="text-sm font-medium leading-snug text-foreground">{item.summary}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">
+      <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
         {item.source} · {item.country} ·{" "}
         <span className={senti.cls}>{senti.text}</span>
+        {item.provenance && (
+          <ProvenanceTag prov={item.provenance} label="source" />
+        )}
       </p>
     </div>
   );
