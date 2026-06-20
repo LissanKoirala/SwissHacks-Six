@@ -546,3 +546,19 @@ export interface CaptureResult {
   applied: { edges: number; facets: number };
   log_count: number;
 }
+
+// Guided capture — client-aware "pseudo-interview" prompts that scaffold a
+// richer voice/text log.
+export interface CapturePrompt {
+  id: string;
+  kind: string;
+  question: string;
+  hint: string;
+}
+
+export interface CapturePrompts {
+  client_id: string;
+  client_name: string;
+  first_name: string;
+  prompts: CapturePrompt[];
+}

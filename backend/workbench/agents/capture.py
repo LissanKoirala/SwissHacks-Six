@@ -388,3 +388,90 @@ def replay_captures(world) -> int:
             # one bad record must never crash boot; skip it
             continue
     return applied
+
+
+# --- guided capture prompts (client-aware "pseudo-interview") ---------------
+# A deterministic, read-only set of quest prompts that scaffold a richer voice/
+# text log. Client-aware: it asks whether the client's KNOWN positions have
+# shifted, then covers risk, life, holdings, values and follow-ups. No mutation.
+
+_STANCE_PHRASE = {
+    "opportunity": "on record as keen to back it",
+    "conflict": "on record as wanting to avoid it",
+    "neutral": "on record as watching it",
+}
+
+
+def _first_name(name: str) -> str:
+    return (name or "").strip().split(" ")[0] or "the client"
+
+
+def build_capture_prompts(world, client_id: str) -> dict:
+    """Client-aware quest prompts that guide the RM toward the best CRM log.
+    Read-only, deterministic, no LLM."""
+    name = world.clients.get(client_id, {}).get("name", "the client")
+    first = _first_name(name)
+
+    prompts: list[dict] = [{
+        "id": "opener",
+        "kind": "opener",
+        "question": f"What did you cover with {first} today — the headline of the conversation?",
+        "hint": "One or two sentences on the main thing you discussed.",
+    }]
+
+    # Position-change prompts for the client's KNOWN interest topics (deduped, capped at 3).
+    seen: set[str] = set()
+    for edge in world.interest_by_client.get(client_id, []):
+        label = TOPIC_VOCAB[edge.topic].label if edge.topic in TOPIC_VOCAB else edge.topic
+        if label in seen:
+            continue
+        seen.add(label)
+        stance = _STANCE_PHRASE.get(edge.polarity, "on record as watching it")
+        prompts.append({
+            "id": f"position-{edge.topic}",
+            "kind": "position",
+            "question": f"Has {first}'s position on {label} shifted at all?",
+            "hint": f"They are {stance}.",
+        })
+        if len(seen) >= 3:
+            break
+
+    prompts.extend([
+        {
+            "id": "risk",
+            "kind": "risk",
+            "question": f"Any change in {first}'s risk appetite, liquidity needs, or time horizon?",
+            "hint": "Cautious vs. opportunistic; any cash call or withdrawal coming up.",
+        },
+        {
+            "id": "life",
+            "kind": "life",
+            "question": "Any personal, family or business news?",
+            "hint": "Health, succession, a big purchase or a liquidity event.",
+        },
+        {
+            "id": "holdings",
+            "kind": "holdings",
+            "question": f"Did {first} raise any specific holding, sector, or recent market move?",
+            "hint": "A concern, fresh interest, or a name to watch.",
+        },
+        {
+            "id": "values",
+            "kind": "values",
+            "question": f"Anything new on what {first} cares about — values, causes, red lines?",
+            "hint": "What they want to back, and what they refuse to hold.",
+        },
+        {
+            "id": "closer",
+            "kind": "closer",
+            "question": "What did you agree, and what is the next follow-up?",
+            "hint": "Commitments made and the next step you owe them.",
+        },
+    ])
+
+    return {
+        "client_id": client_id,
+        "client_name": name,
+        "first_name": first,
+        "prompts": prompts,
+    }

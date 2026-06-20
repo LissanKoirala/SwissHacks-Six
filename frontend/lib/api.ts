@@ -17,6 +17,7 @@ import type {
   CaptureExtractBody,
   CaptureConfirm,
   CaptureResult,
+  CapturePrompts,
 } from "./types";
 
 export const API_BASE =
@@ -62,5 +63,7 @@ export const api = {
     post<CaptureDraft>(`/clients/${id}/capture/extract`, body),
   captureConfirm: (id: string, body: CaptureConfirm) =>
     post<CaptureResult>(`/clients/${id}/capture/confirm`, body),
+  capturePrompts: (id: string) =>
+    get<CapturePrompts>(`/clients/${id}/capture/prompts`),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
 };

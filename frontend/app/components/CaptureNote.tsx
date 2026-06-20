@@ -8,12 +8,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CaptureDraft,
+  CapturePrompt,
   CaptureResult,
   ProposedEdge,
   ProposedFacet,
 } from "@/lib/types";
 import { api } from "@/lib/api";
 import { StagedPanel, extractErrorMessage } from "./CaptureStaged";
+import { GuidedPrompts } from "./CaptureGuided";
 
 /* --------------------------------------------------------------- consts --- */
 
@@ -113,6 +115,9 @@ export function CaptureNote({
   const [date, setDate] = useState<string>(todayISO());
   const [rmName, setRmName] = useState("");
 
+  // --- guided capture prompts (client-aware quest list) ---
+  const [prompts, setPrompts] = useState<CapturePrompt[]>([]);
+
   // --- dictation (Web Speech) ---
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -161,6 +166,27 @@ export function CaptureNote({
     if (listening) stopDictation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
+
+  // Fetch the client-aware guided prompts (read-only; degrade to none on error).
+  useEffect(() => {
+    let alive = true;
+    api
+      .capturePrompts(clientId)
+      .then((d) => alive && setPrompts(d.prompts))
+      .catch(() => alive && setPrompts([]));
+    return () => {
+      alive = false;
+    };
+  }, [clientId]);
+
+  // Drop a prompt's question into the note as a written cue (newline-preserving).
+  function insertPromptLead(question: string) {
+    setNote((prev) => {
+      const base = prev.trimEnd();
+      const lead = base ? `${base}\n\n${question}\n` : `${question}\n`;
+      return lead.slice(0, NOTE_MAX);
+    });
+  }
 
   /* ----------------------------------------------------- dictation --- */
 
@@ -422,6 +448,15 @@ export function CaptureNote({
             you review and confirm.
           </p>
         </header>
+
+        {/* guided capture — client-aware quest prompts */}
+        <GuidedPrompts
+          prompts={prompts}
+          listening={listening}
+          speechSupported={speechSupported}
+          onToggleDictation={toggleDictation}
+          onInsert={insertPromptLead}
+        />
 
         {/* mode buttons */}
         <div className="mb-3 flex flex-wrap items-center gap-2">

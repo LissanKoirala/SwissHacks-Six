@@ -151,6 +151,13 @@ def create_app() -> FastAPI:
         from ..agents.capture import confirm_capture
         return _dump(confirm_capture(world, client_id, req))
 
+    @app.get("/clients/{client_id}/capture/prompts")
+    def capture_prompts(client_id: str):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.capture import build_capture_prompts
+        return build_capture_prompts(world, client_id)
+
     return app
 
 
