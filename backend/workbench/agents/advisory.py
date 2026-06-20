@@ -19,6 +19,7 @@ from ..models import (
     Provenance,
     Statement,
     StrategyProposal,
+    SubstitutionMetrics,
     SwapProposal,
 )
 from ..topics import topic_label
@@ -93,7 +94,7 @@ def _drift_after_swap(world: World, client_id: str, sell_sac: Optional[str],
 def select_swap_candidate(
     world: World, client_id: str, industry_group: str,
     desired: list[str], avoid: list[str], exclude_isin: Optional[str],
-    same_sub_asset_class: Optional[str],
+    same_sub_asset_class: Optional[str], target_vol: Optional[float] = None,
 ) -> Optional[CIOStock]:
     held = world.held_isins(client_id)
     candidates = [c for c in world.cio_by_industry(industry_group, "BUY") if c.isin != exclude_isin]
@@ -109,6 +110,10 @@ def select_swap_candidate(
             s += 1.5
         if c.sentiment:
             s += c.sentiment.score
+        # Risk-matched substitution (HI2 / Ammann 'at similar risk'): prefer the BUY name whose
+        # volatility is closest to the name being sold, so the swap keeps the risk profile.
+        if target_vol is not None and c.hist_vol_30d is not None:
+            s -= 2.0 * abs(c.hist_vol_30d - target_vol)
         if c.isin in held:
             s += 0.25
         return s
@@ -118,6 +123,46 @@ def select_swap_candidate(
     if set(best.value_tags) & set(avoid):  # never swap into a disqualified name
         return None
     return best
+
+
+def _buy_sleeve_drift_after(world: World, client_id: str, sell_sac: Optional[str],
+                            buy_sac: Optional[str], amount: float) -> Optional[float]:
+    """Post-swap drift (pp) of the BUY sleeve — 0-delta when the swap is within the same sleeve."""
+    mand = world.mandates.get(world.portfolio_of(client_id))
+    if not mand or not buy_sac:
+        return None
+    total = mand.total_chf or 1.0
+    t = next((x for x in mand.targets if x.sub_asset_class == buy_sac), None)
+    if not t:
+        return None
+    delta = amount if sell_sac != buy_sac else 0.0
+    return round((t.current_chf + delta) / total * 100 - t.target_pct, 3)
+
+
+def _substitution_metrics(world: World, client_id: str, sold: Holding, cand: CIOStock,
+                          amount: float) -> SubstitutionMetrics:
+    """Build the side-by-side sold-vs-replacement comparison (HI2)."""
+    sell_cio = world.cio_by_isin.get(sold.isin)
+    sent_sell = sell_cio.sentiment.score if (sell_cio and sell_cio.sentiment) else None
+    sent_buy = cand.sentiment.score if cand.sentiment else None
+    vol_sell, vol_buy = sold.hist_vol_30d, cand.hist_vol_30d
+    return SubstitutionMetrics(
+        sell_issuer=sold.issuer, buy_issuer=cand.issuer,
+        vol_sell=vol_sell, vol_buy=vol_buy,
+        vol_delta=(round(vol_buy - vol_sell, 4) if vol_sell is not None and vol_buy is not None else None),
+        beta_sell=sold.beta, beta_buy=cand.beta,
+        pe_sell=sold.pe_ratio, pe_buy=cand.pe_ratio,
+        sentiment_sell=sent_sell, sentiment_buy=sent_buy,
+        sentiment_delta=(round(sent_buy - sent_sell, 3)
+                         if sent_sell is not None and sent_buy is not None else None),
+        sector_match=bool(sold.industry_group) and cand.industry_group == sold.industry_group,
+        sub_asset_class_match=(sold.sub_asset_class == cand.sub_asset_class),
+        drift_pp_after=_buy_sleeve_drift_after(world, client_id, sold.sub_asset_class,
+                                               cand.sub_asset_class, amount),
+        value_tags_sell=list(sell_cio.value_tags) if sell_cio else [],
+        value_tags_buy=list(cand.value_tags),
+        risk_source=cand.risk_source or sold.risk_source,
+    )
 
 
 def _find_laggard(world: World, client_id: str, industry_group: Optional[str],
@@ -176,16 +221,22 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
     if match.polarity == "conflict" and affected is not None:
         sector = affected.industry_group or fallback_sector or ""
         cand = select_swap_candidate(world, client_id, sector, desired, avoid,
-                                     affected.isin, affected.sub_asset_class)
+                                     affected.isin, affected.sub_asset_class,
+                                     target_vol=affected.hist_vol_30d)
         cio_row = world.cio_by_isin.get(affected.isin)
         sell_view = f" (CIO: {cio_row.rating})" if cio_row else ""
         if cand:
             same_sector = bool(affected.industry_group) and cand.industry_group == affected.industry_group
+            amount = round(affected.current_chf, 2)
             drift_safe, drift_notes = _drift_after_swap(
-                world, client_id, affected.sub_asset_class, cand.sub_asset_class,
-                round(affected.current_chf, 2))
+                world, client_id, affected.sub_asset_class, cand.sub_asset_class, amount)
+            sub = _substitution_metrics(world, client_id, affected, cand, amount)
             constraints.append(f"Same sector: {sector}." if same_sector
                                else f"Sector check: sell {affected.industry_group} → buy {cand.industry_group}.")
+            if sub.vol_delta is not None:
+                constraints.append(
+                    f"Risk-matched: sold vol {sub.vol_sell:.0%} → buy vol {sub.vol_buy:.0%} "
+                    f"({sub.vol_delta:+.1%} delta, {sub.risk_source}).")
             constraints += drift_notes
             swaps.append(SwapProposal(
                 action="SWAP",
@@ -193,15 +244,16 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
                 buy_isin=cand.isin, buy_issuer=cand.issuer,
                 industry_group=cand.industry_group,
                 same_sector=same_sector,
-                amount_chf=round(affected.current_chf, 2),
+                amount_chf=amount,
                 drift_safe=drift_safe,
+                substitution=sub,
                 **_buy_quote(cand.valor, cand.mic),
                 rationale=(
                     f"Divest {affected.issuer}{sell_view}: the trigger directly violates the client's "
                     f"documented stance on {_topic_labels(match)}. Reinvest CHF {affected.current_chf:,.0f} "
                     f"into {cand.issuer} (CIO BUY), a same-sector name labelled "
                     f"{', '.join(cand.value_tags) or 'sentiment-positive'} — keeps the sector weight, upgrades "
-                    f"the values fit."
+                    f"the values fit at comparable risk."
                 ),
                 provenance=prov + [cand.provenance],
             ))
