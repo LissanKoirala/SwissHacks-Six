@@ -16,6 +16,7 @@ import type {
   NewsWireItem,
   Severity,
   Polarity,
+  MeUser,
 } from "@/lib/types";
 import { api } from "@/lib/api";
 import { chf, prettyDate, titleCase } from "@/lib/format";
@@ -497,8 +498,10 @@ function NewsRow({
 
 export function OverviewDashboard({
   onOpenClient,
+  user,
 }: {
   onOpenClient: (id: string) => void;
+  user?: MeUser | null;
 }) {
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -624,7 +627,7 @@ export function OverviewDashboard({
         <header className="mb-5">
           <div className="flex flex-wrap items-baseline gap-2">
             <h1 className="font-display text-3xl font-light tracking-tight text-ink">
-              {greeting()}, {firstName(o.rm_name)}
+              {greeting()}, {firstName(user?.name || o.rm_name)}
             </h1>
             <span className="text-sm text-muted-foreground">
               {prettyDate(o.today)} ·{" "}
