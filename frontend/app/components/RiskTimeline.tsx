@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import type {
   RiskTimeline as RiskTimelineData,
   RiskPoint,
@@ -14,7 +15,8 @@ import { Provenance } from "./Provenance";
 /* ------------------------------------------------------------- chart consts --- */
 /* Hand-rolled SVG scrubber. Time on x (true date scale start_date..end_date),
  * risk 0..1 inverted on y. Responsive width via ResizeObserver, exactly like
- * DecisionFlow. Light theme only. */
+ * DecisionFlow. Theme-aware: neutral chrome uses CSS vars / currentColor, status
+ * colours use opacity-based rgba that read on both light and dark. */
 
 const PAD_L = 38; // y-axis gutter (risk % labels)
 const PAD_R = 14;
@@ -23,49 +25,53 @@ const PAD_B = 30; // x-axis gutter (date labels)
 const CHART_H = 248; // inner plot height
 const AUTO_MS = 1300; // playhead step interval (gentle replay pace)
 
-// Faint horizontal band tints — defensive (sky/slate), balanced (amber),
-// growth (emerald). Literal hex so they read identically server/client.
+// Faint horizontal band tints, keyed to the warm token palette so they read on
+// light and dark without introducing a rainbow. Defensive = neutral muted,
+// balanced = warning (elevated risk), growth = evergreen primary.
 const BAND_FILL: Record<string, string> = {
-  defensive: "#e0f2fe", // sky-100
-  balanced: "#fef3c7", // amber-100
-  growth: "#d1fae5", // emerald-100
+  defensive: "hsl(var(--muted-foreground) / 0.10)",
+  balanced: "hsl(var(--warning) / 0.12)",
+  growth: "hsl(var(--primary) / 0.12)",
 };
 const BAND_LABEL_FILL: Record<string, string> = {
-  defensive: "#0369a1", // sky-700
-  balanced: "#b45309", // amber-700
-  growth: "#047857", // emerald-700
+  defensive: "hsl(var(--muted-foreground))",
+  balanced: "hsl(var(--warning))",
+  growth: "hsl(var(--primary))",
 };
 
-// Direction → dot colour (risk-relevant moves stand out).
+// Direction → dot colour. De-risk reads on the evergreen primary; risk-on reads
+// on the warning token (elevated risk); flat is neutral. Token-driven, theme-aware.
 const DIR_HEX: Record<RiskPoint["direction"], string> = {
-  up: "#10b981", // emerald-500
-  down: "#f43f5e", // rose-500
-  flat: "#94a3b8", // slate-400
+  up: "hsl(var(--warning))", // appetite rose — caution
+  down: "hsl(var(--primary))", // appetite fell — de-risk
+  flat: "hsl(var(--muted-foreground))",
 };
 
-// Mandate-fit chip styling.
+// Mandate-fit chip styling — semantic tokens only (primary / warning / muted).
 const FIT_META: Record<
   RiskPoint["mandate_fit"],
   { label: string; cls: string; dot: string }
 > = {
   aligned: {
     label: "Aligned",
-    cls: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-    dot: "bg-emerald-500",
+    cls: "bg-primary/10 text-primary ring-primary/25",
+    dot: "bg-primary",
   },
   "cautious-drift": {
     label: "Cautious drift",
-    cls: "bg-sky-50 text-sky-700 ring-sky-200",
-    dot: "bg-sky-500",
+    cls: "bg-muted text-muted-foreground ring-border",
+    dot: "bg-muted-foreground",
   },
   "risk-on-drift": {
     label: "Risk-on drift",
-    cls: "bg-amber-50 text-amber-700 ring-amber-200",
-    dot: "bg-amber-500",
+    cls: "bg-warning/10 text-warning ring-warning/25",
+    dot: "bg-warning",
   },
 };
 
-const ACCENT = "#1f5fa6"; // matches the `accent` token used elsewhere
+// The evergreen primary leads the line, playhead, marker and baseline. Uses the
+// primary token so it follows the theme. No indigo.
+const ACCENT = "hsl(var(--primary))";
 
 /* ----------------------------------------------------------------- helpers --- */
 
@@ -225,16 +231,16 @@ function ScrubberChart({
                 y={top}
                 width={innerW}
                 height={Math.max(0, bottom - top)}
-                fill={BAND_FILL[b.id] ?? "#f1f5f9"}
+                fill={BAND_FILL[b.id] ?? "hsl(var(--muted))"}
                 fillOpacity={0.5}
               />
               <text
                 x={PAD_L + 4}
                 y={(top + bottom) / 2}
                 dominantBaseline="middle"
-                className="text-[9px] font-semibold uppercase tracking-wide"
-                fill={BAND_LABEL_FILL[b.id] ?? "#64748b"}
-                opacity={0.7}
+                className="text-[9px] font-medium tracking-wide"
+                fill={BAND_LABEL_FILL[b.id] ?? "hsl(var(--muted-foreground))"}
+                opacity={0.9}
               >
                 {b.label}
               </text>
@@ -280,7 +286,7 @@ function ScrubberChart({
               x2={PAD_L + innerW}
               y1={yFor(t)}
               y2={yFor(t)}
-              stroke="#e2e8f0"
+              stroke="hsl(var(--border))"
               strokeWidth={1}
             />
             <text
@@ -289,7 +295,7 @@ function ScrubberChart({
               textAnchor="end"
               dominantBaseline="middle"
               className="text-[9px] tabular-nums"
-              fill="#94a3b8"
+              fill="hsl(var(--muted-foreground))"
             >
               {Math.round(t * 100)}%
             </text>
@@ -304,7 +310,7 @@ function ScrubberChart({
             y={PAD_T + CHART_H + 16}
             textAnchor={i === 0 ? "start" : i === xTicks.length - 1 ? "end" : "middle"}
             className="text-[9px]"
-            fill="#94a3b8"
+            fill="hsl(var(--muted-foreground))"
           >
             {prettyDate(new Date(ms).toISOString().slice(0, 10))}
           </text>
@@ -371,7 +377,7 @@ function ScrubberChart({
                 r={r}
                 fill={hex}
                 fillOpacity={past ? 1 : 0.35}
-                stroke="#fff"
+                stroke="hsl(var(--card))"
                 strokeWidth={1.4}
                 className="cursor-pointer"
                 onClick={() => onScrub(p.index)}
@@ -422,8 +428,8 @@ function StepButton({
       title={label}
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1 ring-inset transition-colors ${
         disabled
-          ? "cursor-not-allowed bg-slate-50 text-slate-300 ring-slate-200"
-          : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50 hover:text-ink"
+          ? "cursor-not-allowed bg-muted/40 text-muted-foreground/40 ring-border"
+          : "bg-card text-muted-foreground ring-border hover:bg-accent hover:text-foreground"
       }`}
     >
       {children}
@@ -491,8 +497,8 @@ function PlayheadBar({
           disabled={!canAutoplay}
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-inset transition-colors ${
             canAutoplay
-              ? "bg-accent text-white ring-accent hover:bg-accent-ink"
-              : "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200"
+              ? "bg-primary text-primary-foreground ring-primary hover:bg-primary/90"
+              : "cursor-not-allowed bg-muted text-muted-foreground ring-border"
           }`}
           aria-label={playing ? "Pause timeline" : "Play timeline"}
           title={
@@ -549,7 +555,7 @@ function PlayheadBar({
           )}`}
           className="risk-range w-full"
         />
-        <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
           <span>{prettyDate(data.start_date)}</span>
           <span className="tabular-nums">
             entry {index + 1} / {data.points.length}
@@ -558,14 +564,14 @@ function PlayheadBar({
         </div>
       </div>
 
-      {/* range thumb/track styling — scoped, light theme, no extra deps */}
+      {/* range thumb/track styling — scoped, theme-aware via CSS vars */}
       <style jsx>{`
         :global(.risk-range) {
           -webkit-appearance: none;
           appearance: none;
           height: 6px;
           border-radius: 9999px;
-          background: #e2e8f0;
+          background: hsl(var(--muted));
           cursor: pointer;
         }
         :global(.risk-range::-webkit-slider-thumb) {
@@ -574,17 +580,17 @@ function PlayheadBar({
           width: 16px;
           height: 16px;
           border-radius: 9999px;
-          background: ${ACCENT};
-          border: 2px solid #fff;
-          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+          background: hsl(var(--primary));
+          border: 2px solid hsl(var(--card));
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
         }
         :global(.risk-range::-moz-range-thumb) {
           width: 16px;
           height: 16px;
           border-radius: 9999px;
-          background: ${ACCENT};
-          border: 2px solid #fff;
-          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+          background: hsl(var(--primary));
+          border: 2px solid hsl(var(--card));
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
         }
       `}</style>
     </div>
@@ -610,14 +616,14 @@ function SignalChip({ signal }: { signal: RiskSignal }) {
   const up = signal.direction === "up";
   const down = signal.direction === "down";
   const cls = up
-    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+    ? "bg-warning/10 text-warning ring-warning/25"
     : down
-    ? "bg-rose-50 text-rose-700 ring-rose-200"
-    : "bg-slate-50 text-slate-600 ring-slate-200";
-  const arrow = up ? "▲" : down ? "▼" : "■";
+    ? "bg-primary/10 text-primary ring-primary/25"
+    : "bg-muted text-muted-foreground ring-border";
+  const Arrow = up ? ArrowUpRight : down ? ArrowDownRight : Minus;
   return (
     <span className={`chip ring-1 ring-inset ${cls}`}>
-      <span className="text-[9px] leading-none">{arrow}</span>
+      <Arrow className="h-3 w-3" aria-hidden />
       {signal.term}
       <span className="tabular-nums opacity-70">
         {signal.weight > 0 ? "+" : ""}
@@ -653,20 +659,20 @@ function StatePanel({
 
   return (
     <div className="card flex h-full flex-col p-4">
-      <div className="flex items-baseline justify-between gap-2 border-b border-slate-200 pb-3">
+      <div className="flex items-baseline justify-between gap-2 border-b border-border pb-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            As of
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">
+            As Of
           </p>
-          <p className="mt-0.5 text-sm font-semibold text-ink">
+          <p className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
             {prettyDate(point.date)}
           </p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-semibold tabular-nums text-ink">
-            {pctLabel(point.risk_score)}
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+            <span className="hl">{pctLabel(point.risk_score)}</span>
           </p>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-muted-foreground">
             risk appetite · {band?.label ?? "—"}
           </p>
         </div>
@@ -674,29 +680,29 @@ function StatePanel({
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <MandateFitChip point={point} />
-        <span className="chip bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">
+        <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
           {point.modality}
         </span>
-        <span className="chip bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">
+        <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
           {point.contact}
         </span>
       </div>
 
       {/* latest risk-moving event note + provenance */}
       <div className="mt-4">
-        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
           <span
             className="h-1.5 w-1.5 rounded-full"
             style={{ backgroundColor: DIR_HEX[mover.direction] }}
           />
-          Latest risk-moving note
+          Latest Risk-Moving Note
           {mover.id !== point.id && (
-            <span className="font-normal normal-case text-slate-400">
+            <span className="font-normal text-muted-foreground/70">
               · {prettyDate(mover.date)}
             </span>
           )}
         </p>
-        <p className="text-sm leading-relaxed text-ink-soft">
+        <p className="text-sm leading-relaxed text-foreground/80">
           “{mover.note_excerpt}”
         </p>
         {mover.signals.length > 0 && (
@@ -714,15 +720,15 @@ function StatePanel({
       {/* facet changes learned at this entry */}
       {point.facet_changes.length > 0 && (
         <div className="mt-4">
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            The desk learned here
+          <p className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+            The Desk Learned Here
           </p>
           <ul className="space-y-1">
             {point.facet_changes.map((f, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-ink-soft">
-                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
+              <li key={i} className="flex items-start gap-2 text-xs text-foreground/80">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary" />
                 <span>
-                  <span className="font-medium text-slate-500">{f.facet}:</span>{" "}
+                  <span className="font-medium text-muted-foreground">{f.facet}:</span>{" "}
                   {f.text}
                 </span>
               </li>
@@ -733,17 +739,17 @@ function StatePanel({
 
       {/* accrual counters */}
       <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
-        <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-inset ring-slate-200">
-          <p className="text-lg font-semibold tabular-nums text-ink">
+        <div className="rounded-md bg-muted/40 px-3 py-2 ring-1 ring-inset ring-border">
+          <p className="text-lg font-semibold tabular-nums text-foreground">
             {point.edges_known}
           </p>
-          <p className="text-[11px] text-slate-500">interest edges known</p>
+          <p className="text-[11px] text-muted-foreground">interest edges known</p>
         </div>
-        <div className="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-inset ring-slate-200">
-          <p className="text-lg font-semibold tabular-nums text-ink">
+        <div className="rounded-md bg-muted/40 px-3 py-2 ring-1 ring-inset ring-border">
+          <p className="text-lg font-semibold tabular-nums text-foreground">
             {point.facets_known}
           </p>
-          <p className="text-[11px] text-slate-500">profile facets known</p>
+          <p className="text-[11px] text-muted-foreground">profile facets known</p>
         </div>
       </div>
     </div>
@@ -752,10 +758,12 @@ function StatePanel({
 
 /* --------------------------------------------------------- milestones strip --- */
 
+// Milestone chips — semantic tokens only. Spike = warning (de-risk shock),
+// crossing = primary (mandate boundary), start = neutral.
 const MILESTONE_TONE: Record<string, string> = {
-  spike: "bg-amber-50 text-amber-700 ring-amber-200 hover:bg-amber-100",
-  crossing: "bg-sky-50 text-sky-700 ring-sky-200 hover:bg-sky-100",
-  start: "bg-slate-50 text-slate-600 ring-slate-200 hover:bg-slate-100",
+  spike: "bg-warning/10 text-warning ring-warning/25 hover:bg-warning/15",
+  crossing: "bg-primary/10 text-primary ring-primary/25 hover:bg-primary/15",
+  start: "bg-muted text-muted-foreground ring-border hover:bg-accent",
 };
 
 function MilestonesStrip({
@@ -771,7 +779,7 @@ function MilestonesStrip({
   const indexById = new Map(data.points.map((p, i) => [p.id, i]));
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+      <span className="text-xs font-medium tracking-wide text-muted-foreground">
         Milestones
       </span>
       {data.milestones.map((m) => {
@@ -785,7 +793,7 @@ function MilestonesStrip({
             type="button"
             onClick={() => onJump(idx)}
             className={`chip ring-1 ring-inset transition-colors ${tone} ${
-              active ? "ring-2 ring-accent" : ""
+              active ? "ring-2 ring-primary" : ""
             }`}
             title={`${m.kind} · ${prettyDate(data.points[idx].date)}`}
           >
@@ -860,14 +868,14 @@ export function RiskTimeline({ clientId }: { clientId: string }) {
   if (loading) {
     return (
       <section className="card p-5">
-        <p className="text-sm text-slate-500">Loading risk timeline…</p>
+        <p className="text-sm text-muted-foreground">Loading risk timeline…</p>
       </section>
     );
   }
   if (error) {
     return (
       <section className="card p-5">
-        <p className="text-sm text-rose-600">
+        <p className="text-sm text-destructive">
           Could not load the risk timeline: {error}
         </p>
       </section>
@@ -877,8 +885,8 @@ export function RiskTimeline({ clientId }: { clientId: string }) {
   if (data.points.length === 0) {
     return (
       <section className="card p-10 text-center">
-        <p className="text-sm font-medium text-ink">No dated history yet</p>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="text-sm font-medium text-foreground">No dated history yet</p>
+        <p className="mt-1 text-sm text-muted-foreground">
           There are no meeting-log entries to replay for {data.client_name}.
         </p>
       </section>
@@ -893,18 +901,18 @@ export function RiskTimeline({ clientId }: { clientId: string }) {
       {/* headline */}
       <div className="flex flex-wrap items-start gap-2">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Risk appetite over time
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">
+            Risk Appetite Over Time
           </p>
-          <h3 className="mt-0.5 text-base font-semibold leading-snug text-ink">
+          <h3 className="mt-0.5 text-base font-semibold tracking-tight leading-snug text-foreground">
             {data.client_name} ·{" "}
-            <span className="text-ink-soft">{data.mandate} mandate</span>
+            <span className="text-muted-foreground">{data.mandate} mandate</span>
           </h3>
         </div>
-        <p className="ml-auto mt-0.5 max-w-xs text-right text-xs text-slate-500">
-          Replay of {data.points.length} CRM entries scored against a risk
-          lexicon. Drag the scrubber to see how appetite drifted from the
-          mandate.
+        <p className="ml-auto mt-0.5 max-w-xs text-right text-xs text-muted-foreground">
+          Replay of <span className="tabular-nums">{data.points.length}</span> CRM
+          entries scored against a risk lexicon. Drag the scrubber to see how
+          appetite drifted from the mandate.
         </p>
       </div>
 
@@ -921,18 +929,18 @@ export function RiskTimeline({ clientId }: { clientId: string }) {
             canAutoplay={canAutoplay}
           />
           {/* legend */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" /> risk-on note
+              <span className="h-2 w-2 rounded-full bg-warning" /> risk-on note
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-rose-500" /> de-risk note
+              <span className="h-2 w-2 rounded-full bg-primary" /> de-risk note
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-slate-400" /> no signal
+              <span className="h-2 w-2 rounded-full bg-muted-foreground" /> no signal
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-0 w-4 border-t-2 border-dashed border-accent" />{" "}
+              <span className="inline-block h-0 w-4 border-t-2 border-dashed border-primary" />{" "}
               mandate baseline
             </span>
           </div>

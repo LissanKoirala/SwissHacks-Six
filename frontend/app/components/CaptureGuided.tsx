@@ -7,16 +7,33 @@
 // it never mutates anything itself.
 
 import { useState } from "react";
+import {
+  BarChart3,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
+  Compass,
+  MessageSquare,
+  Mic,
+  Plus,
+  Repeat,
+  Scale,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import type { CapturePrompt } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
-const KIND_ICON: Record<string, string> = {
-  opener: "💬",
-  position: "🔁",
-  risk: "⚖️",
-  life: "👪",
-  holdings: "📊",
-  values: "🧭",
-  closer: "✅",
+const KIND_ICON: Record<string, LucideIcon> = {
+  opener: MessageSquare,
+  position: Repeat,
+  risk: Scale,
+  life: Users,
+  holdings: BarChart3,
+  values: Compass,
+  closer: Check,
 };
 
 export function GuidedPrompts({
@@ -51,18 +68,18 @@ export function GuidedPrompts({
   };
 
   return (
-    <section className="mb-4 rounded-xl border border-accent/20 bg-accent-soft/40 p-4">
+    <section className="mb-4 rounded-md border border-primary/20 bg-primary/[0.06] p-4">
       <header className="flex items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-accent-ink">
-          Guided capture
+        <span className="text-xs font-medium tracking-wide text-muted-foreground">
+          <span className="hl">Guided</span> Capture
         </span>
-        <span className="hidden text-xs text-slate-500 sm:inline">
+        <span className="hidden text-xs text-muted-foreground sm:inline">
           — work the prompts for a richer log
         </span>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="ml-auto text-xs font-medium text-accent hover:underline"
+          className="ml-auto rounded-md text-xs font-medium text-primary transition-colors hover:underline focus-visible:focus-ring"
           aria-expanded={open}
         >
           {open ? "Hide" : "Show"}
@@ -72,32 +89,44 @@ export function GuidedPrompts({
       {open && (
         <>
           {/* teleprompter — the current quest prompt */}
-          <div className="mt-3 rounded-lg bg-white p-4 ring-1 ring-inset ring-slate-200">
-            <div className="flex items-center justify-between text-[11px] text-slate-400">
-              <span>
+          <div className="mt-3 rounded-md bg-card p-4 ring-1 ring-inset ring-border">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span className="tabular-nums">
                 Prompt {idx + 1} / {prompts.length}
               </span>
-              <span>{used.size} added to note</span>
+              <span className="tabular-nums">{used.size} added to note</span>
             </div>
-            <p className="mt-1 flex items-start gap-2 text-base font-semibold leading-snug text-ink">
-              <span aria-hidden>{KIND_ICON[cur.kind] ?? "❓"}</span>
+            <p className="mt-1 flex items-start gap-2 text-base font-semibold leading-snug text-foreground">
+              {(() => {
+                const Icon = KIND_ICON[cur.kind] ?? CircleHelp;
+                return (
+                  <Icon
+                    className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                  />
+                );
+              })()}
               <span>{cur.question}</span>
             </p>
             {cur.hint && (
-              <p className="mt-1 pl-7 text-xs text-slate-500">{cur.hint}</p>
+              <p className="mt-1 pl-6 text-xs text-muted-foreground">{cur.hint}</p>
             )}
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => go(idx - 1)}
                 disabled={atFirst}
-                className="btn-ghost text-xs disabled:cursor-not-allowed disabled:opacity-40"
               >
-                ◀ Prev
-              </button>
-              <button
+                <ChevronLeft className="h-3.5 w-3.5" />
+                Prev
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={onToggleDictation}
                 disabled={!speechSupported}
                 title={
@@ -105,56 +134,67 @@ export function GuidedPrompts({
                     ? "Dictate your answer to this prompt"
                     : "Dictation needs Chrome or Edge"
                 }
-                className={`btn text-xs ring-1 ring-inset transition-colors ${
-                  !speechSupported
-                    ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 ring-slate-200"
-                    : listening
-                    ? "border-rose-300 bg-rose-50 text-rose-700 ring-rose-200"
-                    : "border-slate-300 bg-white text-ink-soft ring-transparent hover:bg-slate-50"
-                }`}
+                className={cn(
+                  listening &&
+                    "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive"
+                )}
               >
-                <span aria-hidden>🎙</span>
+                <Mic className="h-3.5 w-3.5" />
                 {listening ? "Listening…" : "Answer aloud"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={insert}
                 title="Drop this question into the note as a written cue"
-                className="btn text-xs border-slate-300 bg-white text-ink-soft ring-1 ring-inset ring-transparent hover:bg-slate-50"
               >
-                ＋ Add to note
-              </button>
-              <button
+                <Plus className="h-3.5 w-3.5" />
+                Add to note
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => go(idx + 1)}
                 disabled={atLast}
-                className="btn-ghost ml-auto text-xs disabled:cursor-not-allowed disabled:opacity-40"
+                className="ml-auto"
               >
-                Next ▶
-              </button>
+                Next
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
 
           {/* all prompts — jump dots, tick the ones already added */}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {prompts.map((p, i) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => go(i)}
-                title={p.question}
-                className={`rounded-full px-2 py-0.5 text-[11px] ring-1 ring-inset transition-colors ${
-                  i === idx
-                    ? "bg-accent text-white ring-accent"
-                    : used.has(i)
-                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                    : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
-                }`}
-              >
-                <span aria-hidden>{KIND_ICON[p.kind] ?? "•"}</span>{" "}
-                {used.has(i) ? "✓" : i + 1}
-              </button>
-            ))}
+            {prompts.map((p, i) => {
+              const Icon = KIND_ICON[p.kind] ?? CircleHelp;
+              const added = used.has(i);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => go(i)}
+                  title={p.question}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] tabular-nums ring-1 ring-inset transition-colors focus-visible:focus-ring",
+                    i === idx
+                      ? "bg-primary text-primary-foreground ring-primary"
+                      : added
+                      ? "bg-primary/10 text-primary ring-primary/20"
+                      : "bg-card text-muted-foreground ring-border hover:bg-accent"
+                  )}
+                >
+                  {added ? (
+                    <Check className="h-3 w-3" aria-hidden />
+                  ) : (
+                    <Icon className="h-3 w-3" aria-hidden />
+                  )}
+                  {i + 1}
+                </button>
+              );
+            })}
           </div>
         </>
       )}

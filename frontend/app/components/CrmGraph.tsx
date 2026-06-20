@@ -1,6 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  Activity,
+  MessageSquare,
+  Minus,
+  Plus,
+  RotateCcw,
+  Tag,
+  User,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import type { CrmGraph as CrmGraphData, CrmNode } from "@/lib/types";
 import { api } from "@/lib/api";
 
@@ -9,21 +21,35 @@ import { api } from "@/lib/api";
 type NodeType = CrmNode["type"];
 
 const TYPE_LABELS: Record<NodeType, string> = {
-  rm: "Relationship Mgr",
+  rm: "Relationship Manager",
   client: "Client",
   person: "Person",
-  medium: "Medium",
+  medium: "Channel",
   interaction: "Interaction",
   theme: "Theme",
 };
 
+// Wordsmith-Blue-led canvas palette (the dark surface keeps its own fills; these
+// stay legible on the near-black canvas). Blue leads the relationship core
+// (RM/client); distinct semantic categories take the brand accents — teal for
+// channels, purple for themes — with neutral greys for structural nodes.
 const TYPE_COLOR: Record<NodeType, string> = {
-  rm: "#e0b3ff",
-  client: "#ffd166",
-  person: "#4cc9f0",
-  medium: "#76c893",
-  interaction: "#9aa0b5",
-  theme: "#f08080",
+  rm: "#2f7ce6", // Wordsmith Blue (primary, dark)
+  client: "#5b9bf0", // lighter Wordsmith Blue — the focal client
+  person: "#9a9aa2", // neutral grey
+  medium: "#1aa899", // teal accent — channels (distinct category)
+  interaction: "#6e6e76", // neutral grey
+  theme: "#9d4dff", // purple accent — recurring themes (distinct category)
+};
+
+// Per-type Lucide glyph for the legend chips (replaces emoji entirely).
+const TYPE_ICON: Record<NodeType, LucideIcon> = {
+  rm: Users,
+  client: User,
+  person: User,
+  medium: MessageSquare,
+  interaction: Activity,
+  theme: Tag,
 };
 
 const TYPE_ORDER: NodeType[] = [
@@ -91,6 +117,55 @@ function initials(n: SimNode): string {
       ? words[0][0] + words[words.length - 1][0]
       : base.slice(0, 2)
   ).toUpperCase();
+}
+
+/* ---- canvas-drawable Lucide glyphs (24×24 viewBox, stroked) ----
+ * Raw SVG path strings lifted from lucide-react so the same icons can be
+ * stroked onto the 2D canvas — no emoji. Drawn centred + scaled per node. */
+const CANVAS_ICON: Partial<Record<NodeType, string[]>> = {
+  // MessageSquare
+  medium: [
+    "M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z",
+  ],
+  // Activity
+  interaction: [
+    "M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2",
+  ],
+  // Tag (path only — the decorative dot is dropped for canvas clarity)
+  theme: [
+    "M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z",
+  ],
+};
+
+/* Stroke a cached Path2D glyph centred at (cx, cy), scaled so the 24px viewBox
+ * fits within `size`. Colour comes from the caller (dark-canvas-legible). */
+const PATH_CACHE = new Map<string, Path2D>();
+function path2d(d: string): Path2D {
+  let p = PATH_CACHE.get(d);
+  if (!p) {
+    p = new Path2D(d);
+    PATH_CACHE.set(d, p);
+  }
+  return p;
+}
+function drawCanvasIcon(
+  ctx: CanvasRenderingContext2D,
+  paths: string[],
+  cx: number,
+  cy: number,
+  size: number,
+  stroke: string
+) {
+  const s = size / 24;
+  ctx.save();
+  ctx.translate(cx - 12 * s, cy - 12 * s);
+  ctx.scale(s, s);
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = stroke;
+  for (const d of paths) ctx.stroke(path2d(d));
+  ctx.restore();
 }
 
 /* physics constants — ported 1:1 from build_graph.py */
@@ -400,8 +475,11 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         } else {
           ctx.shadowBlur = 0;
         }
+        // Active edges (touching the focused node) lead on Wordsmith Blue so the
+        // selection reads as the primary accent; idle edges keep the recency
+        // warmth ramp as an ambient cue.
         ctx.strokeStyle = active
-          ? `hsla(${hue}, ${Math.max(60, sat)}%, 70%, ${alpha})`
+          ? `hsla(215, 79%, 62%, ${alpha})`
           : `hsla(${hue}, ${sat}%, ${56 + 12 * rec}%, ${alpha})`;
         ctx.beginPath();
         ctx.moveTo(pa.x, pa.y);
@@ -451,7 +529,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
             ctx.globalAlpha = nodeAlpha * 0.28;
             ctx.fill();
             ctx.globalAlpha = nodeAlpha;
-            ctx.fillStyle = "#0b1020";
+            ctx.fillStyle = "#16140f";
             ctx.font = `600 ${Math.max(8, ir * 0.95)}px ui-sans-serif, system-ui, sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -470,14 +548,12 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
           ctx.fillStyle = ring;
           ctx.fill();
-          // emoji icon on medium / theme / interaction nodes
-          if (n.icon) {
+          // Lucide glyph (mapped from node type) on medium / theme / interaction
+          // nodes — never the raw backend emoji.
+          const glyph = CANVAS_ICON[n.type];
+          if (glyph && r > 6) {
             ctx.globalAlpha = nodeAlpha;
-            ctx.font = `${Math.max(9, r * 1.25)}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(n.icon, p.x, p.y + 0.5);
-            ctx.textBaseline = "alphabetic";
+            drawCanvasIcon(ctx, glyph, p.x, p.y, r * 1.05, "#16140f");
           }
         }
 
@@ -485,14 +561,14 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
           ctx.lineWidth = 2;
-          ctx.strokeStyle = "#fff";
+          ctx.strokeStyle = "#ece9e2"; // warm paper foreground (dark)
           ctx.stroke();
         }
         if (n === sim.selNode) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, r + (hasFace ? 2 : 0), 0, Math.PI * 2);
           ctx.lineWidth = 2.5;
-          ctx.strokeStyle = "#fff";
+          ctx.strokeStyle = "#2f7ce6"; // Wordsmith Blue — active/selected ring
           ctx.stroke();
         }
 
@@ -505,7 +581,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           !dim;
         if (showLabel) {
           ctx.globalAlpha = dim ? 0.2 : 0.92;
-          ctx.fillStyle = "#c0caf5";
+          ctx.fillStyle = "#d8d3c8"; // warm paper, slightly muted
           ctx.font = `${Math.max(
             10,
             Math.min(14, 10 * sim.view.k)
@@ -687,13 +763,14 @@ export function CrmGraph({ clientId }: { clientId: string }) {
 
   return (
     <section className="card overflow-hidden">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-            CRM knowledge graph
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">
+            CRM Knowledge Graph
           </p>
-          <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">
-            Client relationship web · people, channels &amp; recurring themes
+          <h2 className="mt-1 text-sm text-foreground">
+            People, channels and <span className="hl">recurring themes</span> for
+            this client
           </h2>
         </div>
         <input
@@ -702,23 +779,23 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search nodes…"
           autoComplete="off"
-          className="w-48 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-ink outline-none placeholder:text-slate-400 focus:border-accent focus:ring-1 focus:ring-accent"
+          className="w-48 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </header>
 
-      {/* dark canvas panel (matches the source's Obsidian-style look) */}
+      {/* dark canvas panel (intrinsic 3D-style surface, dark in both themes) */}
       <div
         ref={containerRef}
-        className="relative h-[560px] w-full select-none bg-slate-900"
+        className="relative h-[560px] w-full select-none bg-[#14110b]"
       >
         {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-slate-400">
-            Loading knowledge graph…
+          <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-[#9c9488]">
+            Building the relationship graph…
           </div>
         )}
         {error && !loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center px-6 text-center text-sm text-rose-300">
-            Could not load knowledge graph: {error}
+          <div className="absolute inset-0 z-10 flex items-center justify-center px-6 text-center text-sm text-[#d65c52]">
+            Could not load the knowledge graph: {error}
           </div>
         )}
 
@@ -729,18 +806,18 @@ export function CrmGraph({ clientId }: { clientId: string }) {
 
         {/* zoom controls + live % badge — top-right floating */}
         {data && !loading && (
-          <div className="pointer-events-auto absolute right-4 top-4 flex items-center gap-1 rounded-xl border border-slate-700/60 bg-slate-800/80 px-1.5 py-1 text-slate-200 shadow-pop backdrop-blur">
+          <div className="pointer-events-auto absolute right-4 top-4 flex items-center gap-1 rounded-md border border-border bg-popover/90 px-1.5 py-1 text-popover-foreground backdrop-blur-[2px]">
             <button
               type="button"
               onClick={() => zoomCentre(1 / 1.18)}
-              className="flex h-6 w-6 items-center justify-center rounded-md text-base leading-none text-slate-300 transition-colors hover:bg-slate-700/70 hover:text-white"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               aria-label="Zoom out"
               title="Zoom out (Ctrl/⌘ −)"
             >
-              −
+              <Minus className="h-4 w-4" />
             </button>
             <span
-              className="min-w-[3.25rem] text-center text-xs font-semibold tabular-nums text-slate-100"
+              className="min-w-[3.25rem] text-center text-xs font-medium tabular-nums text-foreground"
               aria-live="polite"
               title="Current zoom level"
             >
@@ -749,49 +826,56 @@ export function CrmGraph({ clientId }: { clientId: string }) {
             <button
               type="button"
               onClick={() => zoomCentre(1.18)}
-              className="flex h-6 w-6 items-center justify-center rounded-md text-base leading-none text-slate-300 transition-colors hover:bg-slate-700/70 hover:text-white"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               aria-label="Zoom in"
               title="Zoom in (Ctrl/⌘ +)"
             >
-              +
+              <Plus className="h-4 w-4" />
             </button>
           </div>
         )}
 
         {/* legend + reset — top-left floating panel */}
         {data && !loading && (
-          <div className="pointer-events-auto absolute left-4 top-4 w-56 rounded-xl border border-slate-700/60 bg-slate-800/80 p-3 text-slate-200 shadow-pop backdrop-blur">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-              Node types
+          <div className="pointer-events-auto absolute left-4 top-4 w-56 rounded-md border border-border bg-popover/90 p-3 text-popover-foreground backdrop-blur-[2px]">
+            <p className="mb-2 text-[11px] font-medium tracking-wide text-muted-foreground">
+              Node Types
             </p>
             <div className="flex flex-col gap-1.5">
-              {legendTypes.map((t) => (
-                <label
-                  key={t}
-                  className="flex cursor-pointer select-none items-center gap-2 text-xs"
-                >
-                  <input
-                    type="checkbox"
-                    checked={enabledTypes.has(t)}
-                    onChange={() => toggleType(t)}
-                    className="accent-accent"
-                  />
-                  <span
-                    className="h-2.5 w-2.5 flex-none rounded-full"
-                    style={{ background: TYPE_COLOR[t] }}
-                  />
-                  <span className="flex-1">{TYPE_LABELS[t]}</span>
-                  <span className="text-[11px] text-slate-400">
-                    {counts[t]}
-                  </span>
-                </label>
-              ))}
+              {legendTypes.map((t) => {
+                const Icon = TYPE_ICON[t];
+                return (
+                  <label
+                    key={t}
+                    className="flex cursor-pointer select-none items-center gap-2 text-xs"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={enabledTypes.has(t)}
+                      onChange={() => toggleType(t)}
+                      className="accent-primary"
+                    />
+                    <Icon
+                      className="h-3.5 w-3.5 flex-none"
+                      style={{ color: TYPE_COLOR[t] }}
+                      aria-hidden
+                    />
+                    <span className="flex-1 text-foreground">
+                      {TYPE_LABELS[t]}
+                    </span>
+                    <span className="text-[11px] tabular-nums text-muted-foreground">
+                      {counts[t]}
+                    </span>
+                  </label>
+                );
+              })}
             </div>
             <button
               type="button"
               onClick={resetView}
-              className="mt-3 w-full rounded-lg border border-slate-600 bg-slate-700/60 px-2 py-1.5 text-xs font-medium text-slate-200 transition-colors hover:border-accent hover:text-white"
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md border border-border bg-secondary px-2 py-1.5 text-xs font-medium text-secondary-foreground transition-colors hover:border-primary hover:text-foreground"
             >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
               Reset view
             </button>
           </div>
@@ -799,19 +883,24 @@ export function CrmGraph({ clientId }: { clientId: string }) {
 
         {/* hint — bottom-right */}
         {data && !loading && (
-          <div className="pointer-events-none absolute bottom-3 right-4 text-right text-[11px] leading-relaxed text-slate-500">
-            drag node · scroll / Ctrl ± zoom · drag bg pan · click node
+          <div className="pointer-events-none absolute bottom-3 right-4 text-right text-[11px] leading-relaxed text-[#7a7468]">
+            Drag a node · scroll or Ctrl ± to zoom · drag the background to pan ·
+            click to inspect
           </div>
         )}
 
         {/* detail panel — bottom-left, on selection */}
         {selected && (
-          <div className="pointer-events-auto absolute bottom-4 left-4 max-h-[42%] w-80 overflow-auto rounded-xl border border-slate-700/60 bg-slate-800/90 p-4 text-slate-200 shadow-pop backdrop-blur scroll-thin">
+          <div className="scroll-thin pointer-events-auto absolute bottom-4 left-4 max-h-[42%] w-80 overflow-auto rounded-md border border-border bg-popover/95 p-4 text-popover-foreground backdrop-blur-[2px]">
             <div className="mb-2 flex items-center justify-between gap-2">
               <span
-                className="inline-block rounded-full bg-slate-900/70 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-slate-400"
+                className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-wide"
                 style={{ color: TYPE_COLOR[selected.type] }}
               >
+                {(() => {
+                  const Icon = TYPE_ICON[selected.type];
+                  return <Icon className="h-3.5 w-3.5" aria-hidden />;
+                })()}
                 {TYPE_LABELS[selected.type] || selected.type}
               </span>
               <button
@@ -820,28 +909,24 @@ export function CrmGraph({ clientId }: { clientId: string }) {
                   if (simRef.current) simRef.current.selNode = null;
                   setSelected(null);
                 }}
-                className="text-slate-400 transition-colors hover:text-white"
+                className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 aria-label="Close detail"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <h3 className="text-sm font-semibold text-white">
+            <h3 className="text-sm font-semibold text-foreground">
               {selected.label}
             </h3>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs tabular-nums text-muted-foreground">
               {selected.type === "interaction"
-                ? [
-                    selected.date,
-                    selected.medium,
-                    selected.contact,
-                  ]
+                ? [selected.date, selected.medium, selected.contact]
                     .filter(Boolean)
                     .join(" · ")
                 : `${simRef.current?.adj.get(selected.id)?.size ?? 0} connections`}
             </p>
             {selected.detail && (
-              <p className="mt-2 text-[13px] leading-relaxed text-slate-200">
+              <p className="mt-2 text-[13px] leading-relaxed text-foreground">
                 {selected.detail}
               </p>
             )}
@@ -851,7 +936,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         {/* hover tooltip */}
         {tooltip && (
           <div
-            className="pointer-events-none absolute z-20 max-w-[280px] rounded-md border border-slate-600 bg-slate-950/95 px-2.5 py-1.5 text-xs text-slate-100 shadow-pop"
+            className="pointer-events-none absolute z-20 max-w-[280px] rounded-md border border-border bg-popover/95 px-2.5 py-1.5 text-xs text-popover-foreground"
             style={{ left: tooltip.x, top: tooltip.y }}
           >
             {tooltip.text}

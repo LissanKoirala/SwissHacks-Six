@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowRight, Check, CircleDot, Sparkles } from "lucide-react";
 import type {
   StrategyProposal,
   Swap,
@@ -18,11 +19,11 @@ import { ProvenanceList } from "./Provenance";
 import { ConfirmGate } from "./ConfirmGate";
 
 const ACTION_META: Record<SwapAction, string> = {
-  SWAP: "bg-accent-soft text-accent-ink ring-accent/30",
-  INCREASE: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  HOLD: "bg-slate-100 text-slate-600 ring-slate-200",
-  DIVEST: "bg-rose-50 text-rose-700 ring-rose-200",
-  REDUCE: "bg-amber-50 text-amber-700 ring-amber-200",
+  SWAP: "bg-primary/10 text-primary ring-primary/30",
+  INCREASE: "bg-success/10 text-success ring-success/20",
+  HOLD: "bg-muted text-muted-foreground ring-border",
+  DIVEST: "bg-destructive/10 text-destructive ring-destructive/20",
+  REDUCE: "bg-warning/10 text-warning ring-warning/20",
 };
 
 function ActionChip({ action }: { action: SwapAction }) {
@@ -57,37 +58,40 @@ function SubstitutionTable({ sub }: { sub: SubstitutionMetrics }) {
     },
   ];
   return (
-    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+    <div className="mt-3 rounded-md border border-border bg-muted/40 p-3">
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        <span className="text-xs font-medium tracking-wide text-muted-foreground">
           Substitution metrics
         </span>
         {sub.sector_match && (
-          <span className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
-            ✓ Same sector
+          <span className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20">
+            <Check className="h-3.5 w-3.5" />
+            Same sector
           </span>
         )}
         {sub.vol_delta != null && (
           <span
             className={`chip ring-1 ring-inset ${
               Math.abs(sub.vol_delta) <= 0.05
-                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                : "bg-amber-50 text-amber-700 ring-amber-200"
+                ? "bg-success/10 text-success ring-success/20"
+                : "bg-warning/10 text-warning ring-warning/20"
             }`}
           >
             Risk Δ {sub.vol_delta >= 0 ? "+" : ""}
-            {(sub.vol_delta * 100).toFixed(1)}pp
+            <span className="tabular-nums">
+              {(sub.vol_delta * 100).toFixed(1)}pp
+            </span>
           </span>
         )}
         {sub.risk_source && (
-          <span className="ml-auto text-[10px] text-slate-400">
+          <span className="ml-auto font-mono text-[10px] text-muted-foreground">
             risk: {sub.risk_source}
           </span>
         )}
       </div>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400">
+          <tr className="text-left text-[11px] font-medium tracking-wide text-muted-foreground">
             <th className="py-1 font-medium">Metric</th>
             <th className="py-1 text-right font-medium">
               {sub.sell_issuer ?? "Sold"}
@@ -99,14 +103,14 @@ function SubstitutionTable({ sub }: { sub: SubstitutionMetrics }) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.label} className="border-t border-slate-100">
-              <td className="py-1 text-slate-500">{r.label}</td>
-              <td className="py-1 text-right tabular-nums text-ink-soft">
+            <tr key={r.label} className="border-t border-border/60">
+              <td className="py-1 text-muted-foreground">{r.label}</td>
+              <td className="py-1 text-right tabular-nums text-foreground/80">
                 {r.sell}
               </td>
               <td
                 className={`py-1 text-right tabular-nums ${
-                  r.flag ? "text-amber-700" : "text-ink"
+                  r.flag ? "text-warning" : "text-foreground"
                 }`}
               >
                 {r.buy}
@@ -121,7 +125,7 @@ function SubstitutionTable({ sub }: { sub: SubstitutionMetrics }) {
             {sub.value_tags_sell.map((t) => (
               <span
                 key={t}
-                className="chip bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200"
+                className="chip bg-destructive/10 text-destructive ring-1 ring-inset ring-destructive/20"
               >
                 {t}
               </span>
@@ -131,7 +135,7 @@ function SubstitutionTable({ sub }: { sub: SubstitutionMetrics }) {
             {sub.value_tags_buy.map((t) => (
               <span
                 key={t}
-                className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+                className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20"
               >
                 {t}
               </span>
@@ -154,7 +158,7 @@ function SwapRow({ swap }: { swap: Swap }) {
       : swap.industry_group ?? "Position adjustment";
 
   return (
-    <div className="rounded-lg border border-slate-200 p-4">
+    <div className="rounded-md border border-border p-4">
       <div className="flex flex-wrap items-center gap-2">
         <ActionChip action={swap.action} />
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -162,51 +166,53 @@ function SwapRow({ swap }: { swap: Swap }) {
             <IssuerLogo issuer={swap.sell_issuer} isin={swap.sell_isin} size="sm" />
           )}
           {swap.sell_issuer && swap.buy_issuer && (
-            <span className="text-slate-400" aria-hidden>
-              →
-            </span>
+            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
           )}
           {swap.buy_issuer && (
             <IssuerLogo issuer={swap.buy_issuer} isin={swap.buy_isin} size="sm" />
           )}
-          <span className="text-sm font-semibold text-ink">{headline}</span>
+          <span className="text-sm font-semibold text-foreground">{headline}</span>
         </div>
-        <span className="ml-auto text-sm font-semibold text-ink">
+        <span className="ml-auto text-sm font-semibold tabular-nums text-foreground">
           {chf(swap.amount_chf)}
         </span>
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {swap.drift_safe ? (
-          <span className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
-            ✓ Drift-safe
+          <span className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20">
+            <Check className="h-3.5 w-3.5" />
+            Drift-safe
           </span>
         ) : (
-          <span className="chip bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200">
+          <span className="chip bg-warning/10 text-warning ring-1 ring-inset ring-warning/20">
             Minor drift
           </span>
         )}
         {swap.same_sector && (
-          <span className="chip bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">
+          <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
             Same sector{swap.industry_group ? ` · ${swap.industry_group}` : ""}
           </span>
         )}
         {swap.buy_live_price != null && (
           <span
-            className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+            className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20"
             title={
               swap.buy_live_ts
                 ? `SIX EOD · ${prettyDate(swap.buy_live_ts)}`
                 : "Live SIX price"
             }
           >
-            ● {swap.buy_issuer ? `${swap.buy_issuer} @ ` : "Live "}
-            {price(swap.buy_live_price, swap.buy_live_ccy)}
+            <CircleDot className="h-3.5 w-3.5" />
+            {swap.buy_issuer ? `${swap.buy_issuer} @ ` : "Live "}
+            <span className="tabular-nums">
+              {price(swap.buy_live_price, swap.buy_live_ccy)}
+            </span>
           </span>
         )}
       </div>
 
-      <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-3 text-sm leading-relaxed text-foreground/80">
         {swap.rationale}
       </p>
 
@@ -225,15 +231,18 @@ function SwapRow({ swap }: { swap: Swap }) {
 
 function GoodNewsBriefingCard({ briefing }: { briefing: GoodNewsBriefing }) {
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
-      <span className="chip bg-emerald-100 text-emerald-800 ring-1 ring-inset ring-emerald-200 font-semibold">
-        ✦ Good news briefing
+    <div className="rounded-lg border border-success/20 bg-success/[0.06] p-4">
+      <span className="chip bg-success/10 text-success ring-1 ring-inset ring-success/20 font-semibold">
+        <Sparkles className="h-3.5 w-3.5" />
+        Good news briefing
       </span>
-      <p className="mt-2 text-sm font-semibold text-ink">{briefing.headline}</p>
-      <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-2 text-sm font-semibold text-foreground">
+        {briefing.headline}
+      </p>
+      <p className="mt-1.5 text-sm leading-relaxed text-foreground/80">
         {briefing.why_authentic}
       </p>
-      <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-1.5 text-sm leading-relaxed text-foreground/80">
         {briefing.action_summary}
       </p>
       {briefing.provenance.length > 0 && (
@@ -280,7 +289,7 @@ function RMQueryBox({
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground">
         Ask the advisor
       </p>
       <div className="flex flex-wrap items-center gap-2">
@@ -289,12 +298,12 @@ function RMQueryBox({
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && q.trim() && ask({ question: q })}
           placeholder="Ask why, or for context…"
-          className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-ink placeholder:text-slate-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <button
           type="button"
           onClick={() => q.trim() && ask({ question: q })}
-          className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-ink"
+          className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           Ask
         </button>
@@ -304,17 +313,19 @@ function RMQueryBox({
             onClick={() =>
               ask({ question: "alternative", exclude_isin: currentBuyIsin })
             }
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-ink-soft hover:bg-slate-50"
+            className="rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground/80 hover:bg-muted"
           >
             Suggest an alternative
           </button>
         )}
       </div>
-      {loading && <p className="text-xs text-slate-400">Thinking…</p>}
+      {loading && <p className="text-xs text-muted-foreground">Thinking…</p>}
       {result && (result.answer || result.alternative) && (
-        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+        <div className="rounded-md border border-border bg-muted/40 p-3">
           {result.answer && (
-            <p className="text-sm leading-relaxed text-ink-soft">{result.answer}</p>
+            <p className="text-sm leading-relaxed text-foreground/80">
+              {result.answer}
+            </p>
           )}
           {result.alternative && (
             <div className="mt-3">
@@ -324,14 +335,14 @@ function RMQueryBox({
                   isin={result.alternative.buy_isin}
                   size="sm"
                 />
-                <span className="text-sm font-semibold text-ink">
+                <span className="text-sm font-semibold text-foreground">
                   BUY {result.alternative.buy_issuer}
                 </span>
-                <span className="chip bg-accent-soft text-accent-ink ring-1 ring-inset ring-accent/30">
+                <span className="chip bg-primary/10 text-primary ring-1 ring-inset ring-primary/30">
                   Alternative
                 </span>
               </div>
-              <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+              <p className="mt-1.5 text-sm leading-relaxed text-foreground/80">
                 {result.alternative.rationale}
               </p>
               <SubstitutionTable sub={result.alternative.substitution} />
@@ -357,22 +368,25 @@ export function StrategyPanel({
   proposal,
   clientId,
   matchId,
+  currentBuyIsin,
 }: {
   proposal: StrategyProposal | null;
   clientId?: string;
   matchId?: string | null;
+  currentBuyIsin?: string | null;
 }) {
-  const currentBuyIsin =
+  const buyIsin =
+    currentBuyIsin ??
     proposal?.swaps.find((s) => s.buy_isin && s.sell_isin)?.buy_isin ??
     proposal?.swaps.find((s) => s.buy_isin)?.buy_isin ??
     null;
   return (
     <section className="card flex flex-col">
-      <header className="border-b border-slate-200 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-          Strategy proposal
+      <header className="border-b border-border px-5 py-4">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground">
+          Strategy Proposal
         </p>
-        <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">
+        <h2 className="mt-1 text-base font-semibold leading-snug tracking-tight text-foreground">
           {proposal?.headline ?? "No strategy action for this client."}
         </h2>
       </header>
@@ -382,7 +396,7 @@ export function StrategyPanel({
           <GoodNewsBriefingCard briefing={proposal.good_news_briefing} />
         )}
         {!proposal || proposal.swaps.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-muted-foreground">
             Nothing to propose — the current portfolio stays within mandate and
             values.
           </p>
@@ -403,9 +417,9 @@ export function StrategyPanel({
                   {proposal.constraints_checked.map((c, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-2 text-sm text-ink-soft"
+                      className="flex items-start gap-2 text-sm text-foreground/80"
                     >
-                      <span className="mt-0.5 text-emerald-600">✓</span>
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" />
                       <span>{c}</span>
                     </li>
                   ))}
@@ -417,18 +431,18 @@ export function StrategyPanel({
       </div>
 
       {proposal && proposal.swaps.length > 0 && (
-        <footer className="space-y-4 border-t border-slate-200 px-5 py-4">
+        <footer className="space-y-4 border-t border-border px-5 py-4">
           {clientId && matchId && (
             <RMQueryBox
               clientId={clientId}
               matchId={matchId}
-              currentBuyIsin={currentBuyIsin}
+              currentBuyIsin={buyIsin}
             />
           )}
           <ConfirmGate
             action="Propose to client (RM approve)"
             confirmQuestion="Approve this proposal for the client conversation?"
-            approvedLabel="✓ Approved by RM — client decides"
+            approvedLabel="Approved by RM — client decides"
           />
         </footer>
       )}

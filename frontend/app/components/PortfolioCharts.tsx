@@ -26,28 +26,37 @@ import { IssuerLogo } from "./IssuerLogo";
 
 /* ---------------------------------------------------------------- palette --- */
 
-// Tasteful categorical palette — muted, Swiss-bank neutral with the blue accent first.
+// Categorical palette led by Wordsmith Blue, stepping out through the brand
+// accents (teal / purple / amber) and hue-neutral greys — no evergreen, no
+// indigo. All resolve against the active theme's CSS variables, so the series
+// follow light/dark and stay token-true.
 const SLICE_COLOURS = [
-  "#1f5fa6", // accent
-  "#3a7bc4",
-  "#6aa0d6",
-  "#9cc0e6",
-  "#5b8a72", // muted sage
-  "#c7a15a", // muted gold
-  "#a86b6b", // muted clay
-  "#7d8794", // slate
+  "hsl(var(--primary))", // Wordsmith Blue
+  "hsl(var(--accent-teal))", // teal accent
+  "hsl(var(--accent-purple))", // purple accent
+  "hsl(var(--accent-amber))", // amber accent
+  "hsl(var(--primary) / 0.55)", // blue, softened
+  "hsl(var(--accent-teal) / 0.55)", // teal, softened
+  "hsl(var(--muted-foreground))", // neutral grey
+  "hsl(var(--muted-foreground) / 0.5)", // pale grey
 ];
 
-const ACCENT = "#1f5fa6";
-const AMBER = "#d97706"; // amber-600
-const SLATE = "#94a3b8"; // slate-400
-const INK_SOFT = "#3a4049";
+// Series chrome — semantic finance tokens (warning = breach) resolved against the
+// active theme's CSS variables, so they follow light/dark and stay token-true.
+const ACCENT = "hsl(var(--primary))"; // Wordsmith Blue
+const WARNING = "hsl(var(--warning))"; // drift-breach signal
+const NEUTRAL_BAR = "hsl(var(--muted-foreground))"; // within-band bars
+
+// Theme-aware chrome — these resolve against the document's CSS variables at render
+// time, so axis text / gridlines follow the active light or dark theme.
+const AXIS_TEXT = "hsl(var(--muted-foreground))";
+const AXIS_LINE = "hsl(var(--border))";
 
 /* ------------------------------------------------------------- tooltips --- */
 
 function ChartTooltip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-pop">
+    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-pop dark:shadow-none">
       {children}
     </div>
   );
@@ -58,9 +67,9 @@ function AllocTooltip({ active, payload }: TooltipProps<number, string>) {
   const d = payload[0].payload as AllocationSlice;
   return (
     <ChartTooltip>
-      <p className="font-semibold text-ink">{d.name}</p>
-      <p className="mt-0.5 tabular-nums text-ink-soft">{chf(d.current_chf)}</p>
-      <p className="tabular-nums text-slate-500">{pct(d.pct, 1)}</p>
+      <p className="font-semibold text-foreground">{d.name}</p>
+      <p className="mt-0.5 tabular-nums text-foreground/80">{chf(d.current_chf)}</p>
+      <p className="tabular-nums text-muted-foreground">{pct(d.pct, 1)}</p>
     </ChartTooltip>
   );
 }
@@ -70,17 +79,17 @@ function DriftTooltip({ active, payload }: TooltipProps<number, string>) {
   const d = payload[0].payload as SubAssetClassRow;
   return (
     <ChartTooltip>
-      <p className="font-semibold text-ink">{d.name.trim()}</p>
-      <p className="mt-0.5 text-slate-500">{d.asset_class}</p>
+      <p className="font-semibold text-foreground">{d.name.trim()}</p>
+      <p className="mt-0.5 text-muted-foreground">{d.asset_class}</p>
       <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 tabular-nums">
-        <span className="text-slate-500">Target</span>
-        <span className="text-right text-ink-soft">{pct(d.target_pct, 1)}</span>
-        <span className="text-slate-500">Current</span>
-        <span className="text-right text-ink-soft">{pct(d.current_pct, 1)}</span>
-        <span className="text-slate-500">Drift</span>
+        <span className="text-muted-foreground">Target</span>
+        <span className="text-right text-foreground/80">{pct(d.target_pct, 1)}</span>
+        <span className="text-muted-foreground">Current</span>
+        <span className="text-right text-foreground/80">{pct(d.current_pct, 1)}</span>
+        <span className="text-muted-foreground">Drift</span>
         <span
           className={`text-right font-medium ${
-            d.breach ? "text-amber-700" : "text-ink-soft"
+            d.breach ? "text-warning" : "text-foreground/80"
           }`}
         >
           {signedPp(d.drift_pp)}
@@ -95,9 +104,9 @@ function SectorTooltip({ active, payload }: TooltipProps<number, string>) {
   const d = payload[0].payload as AllocationSlice;
   return (
     <ChartTooltip>
-      <p className="font-semibold text-ink">{d.name}</p>
-      <p className="mt-0.5 tabular-nums text-ink-soft">{pct(d.pct, 1)}</p>
-      <p className="tabular-nums text-slate-500">{chf(d.current_chf)}</p>
+      <p className="font-semibold text-foreground">{d.name}</p>
+      <p className="mt-0.5 tabular-nums text-foreground/80">{pct(d.pct, 1)}</p>
+      <p className="tabular-nums text-muted-foreground">{chf(d.current_chf)}</p>
     </ChartTooltip>
   );
 }
@@ -115,19 +124,21 @@ function FigureCard({
 }) {
   const toneCls =
     tone === "amber"
-      ? "text-amber-700"
+      ? "text-warning"
       : tone === "green"
-      ? "text-emerald-600"
+      ? "text-positive"
       : tone === "red"
-      ? "text-rose-600"
-      : "text-ink";
+      ? "text-negative"
+      : "text-foreground";
+  // KPI tiles read denser and quieter than the bordered data panels: a flat
+  // surface step, hairline ring, label-first stacking.
   return (
-    <div className="card px-4 py-3.5">
-      <p className={`text-2xl font-semibold tabular-nums leading-none ${toneCls}`}>
-        {value}
-      </p>
-      <p className="mt-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+    <div className="rounded-md bg-surface-2 px-3.5 py-3 ring-1 ring-inset ring-border/70">
+      <p className="text-[11px] font-medium tracking-wide text-muted-foreground">
         {label}
+      </p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums leading-none ${toneCls}`}>
+        {value}
       </p>
     </div>
   );
@@ -146,12 +157,12 @@ function SectionCard({
 }) {
   return (
     <section className="card overflow-hidden">
-      <div className="border-b border-slate-200 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <div className="flex flex-wrap items-baseline gap-x-2 border-b border-border px-4 py-2.5">
+        <p className="text-base font-semibold tracking-tight text-foreground">
           {title}
         </p>
         {subtitle && (
-          <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
         )}
       </div>
       <div className="p-4">{children}</div>
@@ -202,11 +213,11 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
   }, [data]);
 
   if (loading) {
-    return <p className="p-5 text-sm text-slate-500">Loading analytics…</p>;
+    return <p className="p-5 text-sm text-muted-foreground">Loading analytics…</p>;
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600">
+      <p className="p-5 text-sm text-negative">
         Could not load analytics: {error}
       </p>
     );
@@ -279,7 +290,7 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
                     innerRadius="62%"
                     outerRadius="92%"
                     paddingAngle={1.5}
-                    stroke="#ffffff"
+                    stroke="hsl(var(--card))"
                     strokeWidth={2}
                   >
                     {data.by_asset_class.map((_, i) => (
@@ -294,10 +305,10 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
               </ResponsiveContainer>
               {/* Centre total */}
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   Total
                 </span>
-                <span className="text-sm font-semibold tabular-nums text-ink">
+                <span className="text-sm font-semibold tabular-nums text-foreground">
                   {chf(f.total_chf)}
                 </span>
               </div>
@@ -316,8 +327,8 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
                       backgroundColor: SLICE_COLOURS[i % SLICE_COLOURS.length],
                     }}
                   />
-                  <span className="truncate text-ink-soft">{s.name}</span>
-                  <span className="ml-auto shrink-0 tabular-nums font-medium text-ink">
+                  <span className="truncate text-muted-foreground">{s.name}</span>
+                  <span className="ml-auto shrink-0 tabular-nums font-medium text-foreground">
                     {pct(s.pct, 1)}
                   </span>
                 </li>
@@ -343,59 +354,59 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
                   type="number"
                   domain={driftDomain}
                   tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v}`}
-                  tick={{ fontSize: 11, fill: INK_SOFT }}
-                  axisLine={{ stroke: "#e2e8f0" }}
+                  tick={{ fontSize: 11, fill: AXIS_TEXT }}
+                  axisLine={{ stroke: AXIS_LINE }}
                   tickLine={false}
                 />
                 <YAxis
                   type="category"
                   dataKey="name"
                   width={132}
-                  tick={{ fontSize: 11, fill: INK_SOFT }}
+                  tick={{ fontSize: 11, fill: AXIS_TEXT }}
                   axisLine={false}
                   tickLine={false}
                   interval={0}
                 />
                 <Tooltip
                   content={<DriftTooltip />}
-                  cursor={{ fill: "rgba(148,163,184,0.10)" }}
+                  cursor={{ fill: "hsl(var(--muted-foreground) / 0.10)" }}
                 />
                 {/* ±2.0pp band guides */}
                 <ReferenceLine
                   x={2}
-                  stroke={AMBER}
+                  stroke={WARNING}
                   strokeDasharray="4 3"
-                  strokeOpacity={0.55}
+                  strokeOpacity={0.6}
                 />
                 <ReferenceLine
                   x={-2}
-                  stroke={AMBER}
+                  stroke={WARNING}
                   strokeDasharray="4 3"
-                  strokeOpacity={0.55}
+                  strokeOpacity={0.6}
                 />
-                <ReferenceLine x={0} stroke="#cbd5e1" />
+                <ReferenceLine x={0} stroke={AXIS_LINE} />
                 <Bar dataKey="drift_pp" radius={[2, 2, 2, 2]} maxBarSize={18}>
                   {driftRows.map((r, i) => (
                     <Cell
                       key={i}
-                      fill={r.breach ? AMBER : SLATE}
+                      fill={r.breach ? WARNING : NEUTRAL_BAR}
                     />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
+          <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: AMBER }} />
+              <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: WARNING }} />
               Breach
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: SLATE }} />
+              <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: NEUTRAL_BAR }} />
               Within band
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-0 w-4 border-t border-dashed" style={{ borderColor: AMBER }} />
+              <span className="h-0 w-4 border-t border-dashed" style={{ borderColor: WARNING }} />
               ±2.0pp
             </span>
           </div>
@@ -418,22 +429,22 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
               <XAxis
                 type="number"
                 tickFormatter={(v: number) => `${v}%`}
-                tick={{ fontSize: 11, fill: INK_SOFT }}
-                axisLine={{ stroke: "#e2e8f0" }}
+                tick={{ fontSize: 11, fill: AXIS_TEXT }}
+                axisLine={{ stroke: AXIS_LINE }}
                 tickLine={false}
               />
               <YAxis
                 type="category"
                 dataKey="name"
                 width={156}
-                tick={{ fontSize: 11, fill: INK_SOFT }}
+                tick={{ fontSize: 11, fill: AXIS_TEXT }}
                 axisLine={false}
                 tickLine={false}
                 interval={0}
               />
               <Tooltip
                 content={<SectorTooltip />}
-                cursor={{ fill: "rgba(31,95,166,0.06)" }}
+                cursor={{ fill: "hsl(var(--primary) / 0.08)" }}
               />
               <Bar
                 dataKey="pct"
@@ -465,60 +476,58 @@ function TopHoldingsTable({ rows }: { rows: TopHolding[] }) {
     <div className="scroll-thin overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
-            <th className="px-3 py-2 font-medium">Issuer</th>
-            <th className="px-3 py-2 font-medium">Region</th>
-            <th className="px-3 py-2 font-medium">Industry group</th>
-            <th className="px-3 py-2 text-right font-medium">Value</th>
-            <th className="px-3 py-2 font-medium" style={{ width: "26%" }}>
-              Weight
-            </th>
+          <tr className="border-b border-border text-left text-xs font-medium tracking-wide text-muted-foreground [&>th]:px-3 [&>th]:py-2 [&>th]:font-medium">
+            <th>Issuer</th>
+            <th>Region</th>
+            <th>Industry Group</th>
+            <th className="text-right">Value</th>
+            <th style={{ width: "26%" }}>Weight</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((h, i) => (
             <tr
               key={`${h.isin}-${i}`}
-              className={`border-t border-slate-100 ${
+              className={`border-t border-border/60 transition-colors ${
                 h.in_alert
-                  ? "bg-amber-50 ring-1 ring-inset ring-amber-200"
-                  : "hover:bg-slate-50"
+                  ? "bg-warning/10 ring-1 ring-inset ring-warning/20"
+                  : "hover:bg-muted/50"
               }`}
             >
-              <td className="px-3 py-2">
+              <td className="px-3 py-1.5">
                 <div className="flex items-center gap-2">
                   <IssuerLogo issuer={h.issuer} isin={h.isin} size="sm" />
                   <div>
-                    <span className="font-medium text-ink">{h.issuer}</span>
+                    <span className="font-medium text-foreground">{h.issuer}</span>
                     {h.in_alert && (
-                      <span className="ml-2 chip bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200">
+                      <span className="ml-2 chip bg-warning/10 text-warning ring-1 ring-inset ring-warning/25">
                         In alert
                       </span>
                     )}
-                    <div className="font-mono text-[11px] text-slate-400">
-                      {h.isin}
+                    <div className="font-mono text-[11px] text-muted-foreground">
+                      <span className="citation">{h.isin}</span>
                     </div>
                   </div>
                 </div>
               </td>
-              <td className="px-3 py-2 text-slate-500">{h.region ?? "—"}</td>
-              <td className="px-3 py-2 text-ink-soft">
+              <td className="px-3 py-1.5 text-muted-foreground">{h.region ?? "—"}</td>
+              <td className="px-3 py-1.5 text-muted-foreground">
                 {h.industry_group ?? "—"}
               </td>
-              <td className="px-3 py-2 text-right tabular-nums text-ink-soft">
+              <td className="px-3 py-1.5 text-right tabular-nums text-foreground">
                 {chf(h.current_chf)}
               </td>
-              <td className="px-3 py-2">
+              <td className="px-3 py-1.5">
                 <div className="flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       className={`h-full rounded-full ${
-                        h.in_alert ? "bg-amber-500" : "bg-accent"
+                        h.in_alert ? "bg-warning" : "bg-primary"
                       }`}
                       style={{ width: `${(h.pct / maxPct) * 100}%` }}
                     />
                   </div>
-                  <span className="w-12 shrink-0 text-right tabular-nums text-xs text-slate-500">
+                  <span className="w-12 shrink-0 text-right tabular-nums text-xs text-muted-foreground">
                     {pct(h.pct, 1)}
                   </span>
                 </div>

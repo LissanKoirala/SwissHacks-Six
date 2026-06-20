@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { MapPin, Newspaper, Radio } from "lucide-react";
 import type {
   Globe as GlobeData,
   GlobeHolding,
@@ -63,31 +64,34 @@ type GlobePoint = {
 };
 
 const CAPTION =
-  "Bars = holdings (height proportional to weight, colour = verdict); tall pulses = alert signals; low pulses = ambient world news (colour = sentiment); dashed arcs = signal to affected holdings. Every item is cited on the right.";
+  "Bars are holdings (height tracks weight, colour shows verdict); tall pulses are alert signals; low pulses are ambient world news (colour shows sentiment); dashed arcs link a signal to the holdings it affects. Every item is cited on the right.";
 
 /* ----------------------------------------------------------- verdict meta --- */
 
+// Finance-semantic verdict colouring. `hex` feeds the 3D globe markers (dark
+// surface), so the dark-theme token hex values are used: negative / warning /
+// success from the design token table.
 const VERDICT_META: Record<
   GlobeHolding["verdict"],
   { label: string; cls: string; dot: string; hex: string }
 > = {
   VIOLATION: {
     label: "Violation",
-    cls: "bg-rose-50 text-rose-700 ring-rose-200",
-    dot: "bg-rose-500",
-    hex: "#f43f5e",
+    cls: "bg-negative/10 text-negative ring-negative/20",
+    dot: "bg-negative",
+    hex: "#d65c52", // negative (dark)
   },
   WATCH: {
     label: "Watch",
-    cls: "bg-amber-50 text-amber-700 ring-amber-200",
-    dot: "bg-amber-500",
-    hex: "#f59e0b",
+    cls: "bg-warning/10 text-warning ring-warning/20",
+    dot: "bg-warning",
+    hex: "#c89243", // warning (dark)
   },
   OK: {
     label: "OK",
-    cls: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-    dot: "bg-emerald-500",
-    hex: "#34d399",
+    cls: "bg-success/10 text-success ring-success/20",
+    dot: "bg-success",
+    hex: "#38a574", // success (dark)
   },
 };
 
@@ -101,26 +105,29 @@ function VerdictChip({ verdict }: { verdict: GlobeHolding["verdict"] }) {
   );
 }
 
+// Alert-signal pulse colour by severity (3D marker hex). High = negative,
+// medium = warning, low = Wordsmith Blue (informational, non-urgent signal).
 const SEVERITY_HEX: Record<GlobeEvent["severity"], string> = {
-  high: "#fb7185",
-  med: "#f59e0b",
-  low: "#22d3ee",
+  high: "#d65c52", // negative (dark)
+  med: "#c89243", // warning (dark)
+  low: "#2f7ce6", // Wordsmith Blue — informational signal
 };
 
-/* Ambient world-news pulse colour by sentiment: red = negative, green =
- * positive, cyan = neutral. Dimmer than the alert pulses by design. */
+/* Ambient world-news pulse colour by sentiment (3D marker hex): negative =
+ * loss-red, positive = gain-green, neutral = warm grey. Dimmer than the alert
+ * pulses by design. */
 function sentimentHex(score?: number): string {
-  if (score == null) return "#38bdf8";
-  if (score <= -0.3) return "#fb7185";
-  if (score >= 0.3) return "#34d399";
-  return "#38bdf8";
+  if (score == null) return "#9c9488"; // warm neutral
+  if (score <= -0.3) return "#d65c52"; // negative
+  if (score >= 0.3) return "#38a574"; // positive
+  return "#9c9488";
 }
 
 function sentimentLabel(score?: number): { text: string; cls: string } {
-  if (score == null) return { text: "neutral", cls: "text-slate-500" };
-  if (score <= -0.3) return { text: "negative", cls: "text-rose-600" };
-  if (score >= 0.3) return { text: "positive", cls: "text-emerald-600" };
-  return { text: "neutral", cls: "text-slate-500" };
+  if (score == null) return { text: "neutral", cls: "text-muted-foreground" };
+  if (score <= -0.3) return { text: "negative", cls: "text-negative" };
+  if (score >= 0.3) return { text: "positive", cls: "text-positive" };
+  return { text: "neutral", cls: "text-muted-foreground" };
 }
 
 /* globe.gl tooltips take an HTML string. Escape interpolated values so a stray
@@ -174,10 +181,10 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         kind: "holding",
         lat: h.lat,
         lng: h.lng,
-        label: `<div style="font:12px system-ui;color:#0f172a;background:#fff;padding:6px 8px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18)">
+        label: `<div style="font:12px system-ui;color:#1c1a17;background:#fffdf8;padding:6px 8px;border-radius:5px;border:1px solid #e4dfd3;box-shadow:0 1px 2px rgba(0,0,0,.05)">
           <strong>${esc(h.issuer)}</strong><br/>
           ${esc(h.city)}, ${esc(h.country)} · ${esc(chf(h.current_chf))}<br/>
-          <span style="color:#64748b">${esc(h.verdict)}</span>
+          <span style="color:#6f6a5f">${esc(h.verdict)}</span>
         </div>`,
         color: VERDICT_META[h.verdict]?.hex ?? VERDICT_META.OK.hex,
         altitude: 0.01 + h.weight * 0.18,
@@ -188,10 +195,10 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         kind: "event",
         lat: e.lat,
         lng: e.lng,
-        label: `<div style="font:12px system-ui;color:#0f172a;background:#fff;padding:6px 8px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18)">
+        label: `<div style="font:12px system-ui;color:#1c1a17;background:#fffdf8;padding:6px 8px;border-radius:5px;border:1px solid #e4dfd3;box-shadow:0 1px 2px rgba(0,0,0,.05)">
           <strong>${esc(e.summary)}</strong><br/>
           ${esc(e.source)} · ${esc(prettyDate(e.published_at))}<br/>
-          <span style="color:#64748b">${esc(e.headline)}</span>
+          <span style="color:#6f6a5f">${esc(e.headline)}</span>
         </div>`,
         color: SEVERITY_HEX[e.severity] ?? SEVERITY_HEX.low,
         altitude: 0.34,
@@ -202,10 +209,10 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         kind: "news",
         lat: e.lat,
         lng: e.lng,
-        label: `<div style="font:12px system-ui;color:#0f172a;background:#fff;padding:6px 8px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18)">
+        label: `<div style="font:12px system-ui;color:#1c1a17;background:#fffdf8;padding:6px 8px;border-radius:5px;border:1px solid #e4dfd3;box-shadow:0 1px 2px rgba(0,0,0,.05)">
           <strong>${esc(e.summary)}</strong><br/>
           ${esc(e.source)} · ${esc(e.country)} · ${esc(prettyDate(e.published_at))}<br/>
-          <span style="color:#64748b">world news · ${esc(e.headline)}</span>
+          <span style="color:#6f6a5f">world news · ${esc(e.headline)}</span>
         </div>`,
         color: sentimentHex(e.sentiment),
         altitude: 0.12,
@@ -219,7 +226,7 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         .bumpImageUrl("/textures/earth-topology.png")
         .backgroundImageUrl("/textures/night-sky.png")
         .showAtmosphere(true)
-        .atmosphereColor("#22d3ee")
+        .atmosphereColor("#2f7ce6") // Wordsmith Blue atmosphere
         .atmosphereAltitude(0.18)
         .pointsData([...holdingPoints, ...eventPoints, ...newsPoints])
         .pointLat((d: GlobePoint) => d.lat)
@@ -277,7 +284,7 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
   return (
     <div
       ref={wrapRef}
-      className="w-full overflow-hidden rounded-xl bg-slate-900"
+      className="w-full overflow-hidden rounded-md border border-border bg-[#14110b]"
     >
       <div
         ref={mountRef}
@@ -289,7 +296,7 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         }}
         aria-label="3D globe of portfolio holdings, news events and signal arcs"
       />
-      <p className="border-t border-slate-800 px-4 py-3 text-center text-[11px] leading-relaxed text-slate-400">
+      <p className="border-t border-white/10 px-4 py-3 text-center text-[11px] leading-relaxed text-[#9c9488]">
         {CAPTION}
       </p>
     </div>
@@ -302,29 +309,29 @@ function HoldingRow({ holding }: { holding: GlobeHolding }) {
   const flagged = holding.verdict !== "OK";
   return (
     <div
-      className={`rounded-lg border p-3 ${
+      className={`rounded-md border p-3 ${
         holding.verdict === "VIOLATION"
-          ? "border-rose-200 bg-rose-50/40"
+          ? "border-negative/30 bg-negative/[0.06]"
           : holding.verdict === "WATCH"
-          ? "border-amber-200 bg-amber-50/40"
-          : "border-slate-200 bg-white"
+          ? "border-warning/30 bg-warning/[0.06]"
+          : "border-border bg-card"
       }`}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-sm font-semibold text-ink">
+        <span className="text-sm font-semibold text-foreground">
           {holding.issuer}
         </span>
         {flagged && <VerdictChip verdict={holding.verdict} />}
-        <span className="ml-auto text-sm font-semibold tabular-nums text-ink">
+        <span className="ml-auto text-sm font-semibold tabular-nums text-foreground">
           {chf(holding.current_chf)}
         </span>
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-slate-500">
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
         <span>
           {holding.city}, {holding.country}
         </span>
         {holding.industry_group && <span>· {holding.industry_group}</span>}
-        <span className="font-mono text-[11px] text-slate-400">
+        <span className="font-mono text-[11px] text-muted-foreground">
           {holding.isin}
         </span>
         {holding.provenance && (
@@ -337,17 +344,17 @@ function HoldingRow({ holding }: { holding: GlobeHolding }) {
 
 function EventCard({ event }: { event: GlobeEvent }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="rounded-md border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-ink">{event.summary}</span>
-        <span className="ml-auto text-[11px] text-slate-400">
+        <span className="text-sm font-semibold text-foreground">{event.summary}</span>
+        <span className="ml-auto text-[11px] text-muted-foreground">
           {prettyDate(event.published_at)}
         </span>
       </div>
-      <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
         {event.headline}
       </p>
-      <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-slate-500">
+      <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
         {event.source} · {event.country} ·{" "}
         {event.linked_holding_ids.length} linked holding
         {event.linked_holding_ids.length === 1 ? "" : "s"}
@@ -362,9 +369,9 @@ function EventCard({ event }: { event: GlobeEvent }) {
 function NewsRow({ item }: { item: GlobeEvent }) {
   const senti = sentimentLabel(item.sentiment);
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-      <p className="text-sm font-medium leading-snug text-ink">{item.summary}</p>
-      <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-slate-500">
+    <div className="rounded-md border border-border bg-card px-3 py-2">
+      <p className="text-sm font-medium leading-snug text-foreground">{item.summary}</p>
+      <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
         {item.source} · {item.country} ·{" "}
         <span className={senti.cls}>{senti.text}</span>
         {item.provenance && (
@@ -414,14 +421,16 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
   if (loading) {
     return (
       <section className="card p-5">
-        <p className="text-sm text-slate-500">Loading investment map…</p>
+        <p className="text-sm text-muted-foreground">
+          Mapping holdings and signals…
+        </p>
       </section>
     );
   }
   if (error) {
     return (
       <section className="card p-5">
-        <p className="text-sm text-rose-600">
+        <p className="text-sm text-destructive">
           Could not load the investment map: {error}
         </p>
       </section>
@@ -434,23 +443,26 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
 
   return (
     <section className="card flex flex-col">
-      <header className="border-b border-slate-200 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-          Investment map
+      <header className="border-b border-border px-5 py-4">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground">
+          Investment Map
         </p>
-        <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">
-          {stats.holdings} holding{stats.holdings === 1 ? "" : "s"} ·{" "}
+        <h2 className="mt-1 text-sm leading-snug text-foreground">
+          <span className="tabular-nums">{stats.holdings}</span> holding
+          {stats.holdings === 1 ? "" : "s"} ·{" "}
           {flagged > 0 ? (
-            <span className="font-semibold text-rose-700">
+            <span className="font-semibold tabular-nums text-negative">
               {stats.violations} violation
               {stats.violations === 1 ? "" : "s"}, {stats.watches} watch
               {stats.watches === 1 ? "" : "es"}
             </span>
           ) : (
-            <span className="text-emerald-700">no live conflicts</span>
+            <span className="text-success">no live conflicts</span>
           )}{" "}
-          · {stats.events} signal{stats.events === 1 ? "" : "s"} ·{" "}
-          {stats.news} world-news pulse{stats.news === 1 ? "" : "s"}
+          · <span className="tabular-nums">{stats.events}</span> signal
+          {stats.events === 1 ? "" : "s"} ·{" "}
+          <span className="tabular-nums">{stats.news}</span> world-news pulse
+          {stats.news === 1 ? "" : "s"}
         </h2>
       </header>
 
@@ -459,8 +471,9 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
           {data.holdings.length > 0 ? (
             <GlobeCanvas data={data} />
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-slate-900 text-sm text-slate-400">
-              No holdings to map.
+            <div className="flex aspect-square w-full items-center justify-center rounded-md border border-border bg-[#14110b] px-6 text-center text-sm text-[#9c9488]">
+              No mapped holdings yet — geocoded positions appear once the
+              portfolio loads.
             </div>
           )}
         </div>
@@ -468,8 +481,10 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
         <div className="space-y-4">
           {data.events.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Live signals
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+                <Radio className="h-3.5 w-3.5" aria-hidden />
+                Live Signals
+                <span className="tabular-nums">· {data.events.length}</span>
               </p>
               <div className="space-y-3">
                 {data.events.map((e) => (
@@ -481,8 +496,10 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
 
           {data.news && data.news.length > 0 && (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                World news · {data.news.length}
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+                <Newspaper className="h-3.5 w-3.5" aria-hidden />
+                World News
+                <span className="tabular-nums">· {data.news.length}</span>
               </p>
               <div className="scroll-thin max-h-[300px] space-y-2 overflow-y-auto pr-1">
                 {data.news.map((e) => (
@@ -493,13 +510,14 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
           )}
 
           {data.holdings.length === 0 ? (
-            <p className="text-sm text-slate-500">
-              No holdings to show on the map.
+            <p className="text-sm text-muted-foreground">
+              No holdings to map for this client yet.
             </p>
           ) : (
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Holdings by location
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5" aria-hidden />
+                Holdings by Location
               </p>
               <div className="scroll-thin max-h-[520px] space-y-2 overflow-y-auto pr-1">
                 {holdings.map((h) => (
