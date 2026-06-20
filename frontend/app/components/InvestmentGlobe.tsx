@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapPin, Newspaper, Radio } from "lucide-react";
+import { Globe2, MapPin, Newspaper, Radio } from "lucide-react";
 import type {
   Globe as GlobeData,
   GlobeHolding,
@@ -50,6 +50,8 @@ type GlobeInstance = {
     ms?: number,
   ): GlobeInstance;
   controls(): { autoRotate: boolean; autoRotateSpeed: number };
+  pauseAnimation?: () => void;
+  resumeAnimation?: () => void;
   _destructor?: () => void;
 };
 
@@ -147,6 +149,20 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<GlobeInstance | null>(null);
   const [dim, setDim] = useState(0);
+  // Gates the skeleton: stays true until globe.gl has mounted and the scene is built.
+  const [ready, setReady] = useState(false);
+
+  // Honour the OS "reduce motion" preference: no perpetual spin, arcs drawn
+  // static rather than continuously animated. Drag-to-rotate still works.
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduceMotion(mq.matches);
+    sync();
+    mq.addEventListener?.("change", sync);
+    return () => mq.removeEventListener?.("change", sync);
+  }, []);
 
   // Size the square canvas to the tile width so the globe fills the rounded box.
   useEffect(() => {
@@ -248,12 +264,14 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         .arcDashLength(0.45)
         .arcDashGap(0.18)
         .arcDashInitialGap(() => Math.random())
-        .arcDashAnimateTime(2600);
+        // Reduced motion: a 0ms dash time draws the arcs static (no marching dashes).
+        .arcDashAnimateTime(reduceMotion ? 0 : 2600);
 
       globeRef.current = globe;
 
       const controls = globe.controls();
-      controls.autoRotate = true;
+      // Reduced motion: no perpetual auto-spin; drag-to-rotate stays enabled.
+      controls.autoRotate = !reduceMotion;
       controls.autoRotateSpeed = 0.32;
 
       const focus = data.events[0] ?? data.holdings[0];
@@ -263,11 +281,15 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
           0,
         );
       }
+
+      // Scene is built and textures are wired — drop the skeleton.
+      setReady(true);
     })();
 
     return () => {
       disposed = true;
       globeRef.current = null;
+      setReady(false);
       try {
         globe?._destructor?.();
       } catch {
@@ -275,11 +297,29 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
       }
       if (mount) mount.replaceChildren();
     };
-  }, [data, dim]);
+  }, [data, dim, reduceMotion]);
 
   useEffect(() => {
     if (dim > 0) globeRef.current?.width(dim).height(dim);
   }, [dim]);
+
+  // Pause the WebGL render/rotation loop while the canvas is scrolled off-screen
+  // (it's a secondary panel) so an idle globe costs no GPU. Resume on re-entry.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const g = globeRef.current;
+        if (!g) return;
+        if (entry.isIntersecting) g.resumeAnimation?.();
+        else g.pauseAnimation?.();
+      },
+      { threshold: 0 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ready]);
 
   return (
     <div
@@ -287,15 +327,30 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
       className="w-full overflow-hidden rounded-md border border-border bg-[#14110b]"
     >
       <div
-        ref={mountRef}
-        className="block w-full [&>canvas]:!block [&>canvas]:!h-full [&>canvas]:!w-full"
+        className="relative block w-full"
         style={{
           width: dim > 0 ? dim : "100%",
           height: dim > 0 ? dim : undefined,
           aspectRatio: dim > 0 ? undefined : "1 / 1",
         }}
-        aria-label="3D globe of portfolio holdings, news events and signal arcs"
-      />
+      >
+        <div
+          ref={mountRef}
+          className="block h-full w-full [&>canvas]:!block [&>canvas]:!h-full [&>canvas]:!w-full"
+          aria-label="3D globe of portfolio holdings, news events and signal arcs"
+        />
+        {/* Skeleton placeholder: holds the panel's shape until the globe
+            library and textures are ready, so there's no blank flash. */}
+        {!ready && (
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#14110b] text-[#9c9488]"
+            aria-hidden
+          >
+            <Globe2 className="h-6 w-6 animate-pulse motion-reduce:animate-none" />
+            <span className="text-[11px] tracking-wide">Rendering globe…</span>
+          </div>
+        )}
+      </div>
       <p className="border-t border-white/10 px-4 py-3 text-center text-[11px] leading-relaxed text-[#9c9488]">
         {CAPTION}
       </p>

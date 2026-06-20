@@ -34,8 +34,13 @@ import type {
 // Default to 127.0.0.1 (not "localhost"): on macOS "localhost" can resolve to IPv6 ::1 first,
 // where a backend bound to IPv4 0.0.0.0/127.0.0.1 isn't listening — the fetch then hangs.
 // Override with NEXT_PUBLIC_API_BASE for non-local backends.
+// Unset → the local dev backend. Empty string ("") → same-origin relative
+// requests, so a reverse-proxied / tunnelled deploy can route /clients, /api,
+// … to the backend on its own origin (see next.config rewrites).
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000";
+  process.env.NEXT_PUBLIC_API_BASE === undefined
+    ? "http://127.0.0.1:8000"
+    : process.env.NEXT_PUBLIC_API_BASE;
 
 // credentials:"include" — carry the signed session cookie on /auth + /briefing calls.
 async function get<T>(path: string): Promise<T> {

@@ -122,7 +122,13 @@ function seedTasks(clients: ClientSummary[]): Task[] {
 
 /* ------------------------------------------------------------- component --- */
 
-export function TasksBoard({ clients }: { clients: ClientSummary[] }) {
+export function TasksBoard({
+  clients,
+  onSelectClient,
+}: {
+  clients: ClientSummary[];
+  onSelectClient?: (id: string) => void;
+}) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -255,6 +261,11 @@ export function TasksBoard({ clients }: { clients: ClientSummary[] }) {
                         setDragOver(null);
                       }}
                       onDelete={() => deleteTask(task.id)}
+                      onOpenClient={
+                        task.clientId && onSelectClient
+                          ? () => onSelectClient(task.clientId as string)
+                          : undefined
+                      }
                     />
                   ))}
 
@@ -301,6 +312,7 @@ function TaskCard({
   onDragStart,
   onDragEnd,
   onDelete,
+  onOpenClient,
 }: {
   task: Task;
   clientName: string | null;
@@ -308,6 +320,7 @@ function TaskCard({
   onDragStart: () => void;
   onDragEnd: () => void;
   onDelete: () => void;
+  onOpenClient?: () => void;
 }) {
   const pri = PRIORITY_META[task.priority];
   return (
@@ -347,17 +360,33 @@ function TaskCard({
         >
           {pri.label}
         </Badge>
-        {task.clientId && (
-          <span className="ml-auto flex items-center gap-1.5">
-            <ClientAvatar
-              clientId={task.clientId}
-              name={clientName ?? ""}
-              size="sm"
-              className="!h-6 !w-6 !text-[10px] !ring-1"
-            />
-            <span className="text-xs text-muted-foreground">{clientName}</span>
-          </span>
-        )}
+        {task.clientId &&
+          (onOpenClient ? (
+            <button
+              type="button"
+              onClick={onOpenClient}
+              className="ml-auto flex items-center gap-1.5 rounded-md px-1 py-0.5 transition-colors hover:bg-accent focus-visible:focus-ring"
+              title={`Open ${clientName ?? "client"}`}
+            >
+              <ClientAvatar
+                clientId={task.clientId}
+                name={clientName ?? ""}
+                size="sm"
+                className="!h-6 !w-6 !text-[10px] !ring-1"
+              />
+              <span className="text-xs text-muted-foreground">{clientName}</span>
+            </button>
+          ) : (
+            <span className="ml-auto flex items-center gap-1.5">
+              <ClientAvatar
+                clientId={task.clientId}
+                name={clientName ?? ""}
+                size="sm"
+                className="!h-6 !w-6 !text-[10px] !ring-1"
+              />
+              <span className="text-xs text-muted-foreground">{clientName}</span>
+            </span>
+          ))}
       </div>
     </div>
   );
