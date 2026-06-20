@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { StagedPanel, extractErrorMessage } from "./CaptureStaged";
 import { GuidedPrompts } from "./CaptureGuided";
+import { CaptureInterview } from "./CaptureInterview";
 
 /* --------------------------------------------------------------- consts --- */
 
@@ -148,6 +149,7 @@ export function CaptureNote({
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const [serverSttEnabled, setServerSttEnabled] = useState<boolean | null>(null);
   const [sttProvider, setSttProvider] = useState<string>("");
+  const [serverTtsEnabled, setServerTtsEnabled] = useState<boolean>(false);
   const speechSupported = useMemo(() => getSpeechRecognitionCtor() !== null, []);
   const mediaSupported = useMemo(
     () =>
@@ -202,6 +204,7 @@ export function CaptureNote({
         if (!alive) return;
         setServerSttEnabled(!!d.stt?.enabled);
         setSttProvider(d.stt?.provider ?? "");
+        setServerTtsEnabled(!!d.tts?.enabled);
       })
       .catch(() => alive && setServerSttEnabled(false));
     return () => {
@@ -459,6 +462,10 @@ export function CaptureNote({
         facets: facets
           .filter((f) => f.selected && f.text.trim())
           .map((f) => ({ ...f, text: f.text.trim() })),
+        // Carry the analysis's risk cues so the timeline reflects this entry.
+        risk_signals: draft.risk_preview.signals.filter(
+          (s) => s.direction !== "flat",
+        ),
       });
       setResult(res);
       onSaved?.();
@@ -563,6 +570,16 @@ export function CaptureNote({
             you review and confirm.
           </p>
         </header>
+
+        {/* conversational capture — TTS asks follow-ups, RM answers aloud */}
+        <CaptureInterview
+          clientId={clientId}
+          baseNote={note}
+          serverSttEnabled={!!serverSttEnabled}
+          serverTtsEnabled={serverTtsEnabled}
+          mediaSupported={mediaSupported}
+          onAppend={(text) => setNote((prev) => appendToNote(prev, text))}
+        />
 
         {/* guided capture — client-aware quest prompts */}
         <GuidedPrompts

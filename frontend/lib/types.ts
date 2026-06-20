@@ -297,6 +297,7 @@ export interface IntegrationHealth {
   use_live: boolean;
   probes: IntegrationProbe[];
   stt?: { provider: string; enabled: boolean };
+  tts?: { provider: string; enabled: boolean };
   ocr?: { provider: string; enabled: boolean; model?: string };
 }
 
@@ -857,12 +858,14 @@ export interface ProposedEdge {
   polarity: Polarity;
   rationale: string;
   selected: boolean;
+  weight: number; // RM-set importance (1.0 = normal)
 }
 
 export interface ProposedFacet {
   facet: string;
   text: string;
   selected: boolean;
+  weight: number; // RM-set importance (1.0 = normal)
 }
 
 export interface RiskPreview {
@@ -902,6 +905,9 @@ export interface CaptureConfirm {
   date?: string;
   edges: ProposedEdge[];
   facets: ProposedFacet[];
+  // Risk cues from the staged draft, carried through so the timeline reflects the
+  // new entry without a second model call.
+  risk_signals?: { term: string; direction: "up" | "down" | "flat" }[];
 }
 
 export interface CaptureResult {
@@ -918,6 +924,20 @@ export interface CapturePrompt {
   kind: string;
   question: string;
   hint: string;
+}
+
+// Conversational capture — the TTS voice asks one follow-up at a time.
+export interface CaptureFollowupBody {
+  note: string;
+  asked: string[];
+}
+
+export interface CaptureFollowup {
+  id: string;
+  question: string;
+  done: boolean;
+  kind: string;
+  source: "llm" | "guided";
 }
 
 export interface CapturePrompts {

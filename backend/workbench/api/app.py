@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
@@ -18,7 +19,13 @@ from ..config import settings
 from ..db import get_db, init_db
 from ..db_models import RmUser
 from ..graph.crm_graph import build_crm_graph
-from ..models import CaptureConfirmRequest, CaptureExtractRequest, RMQueryRequest
+from ..models import (
+    CaptureConfirmRequest,
+    CaptureExtractRequest,
+    CaptureFollowupRequest,
+    RMQueryRequest,
+    TTSRequest,
+)
 from ..scheduler import start_scheduler
 from ..seed import build_world
 
@@ -59,6 +66,9 @@ def create_app() -> FastAPI:
             {"name": f"STT ({settings.stt_provider})", "configured": settings.stt_enabled,
              "live": settings.stt_enabled,
              "mode": "live" if settings.stt_enabled else "browser Web Speech fallback"},
+            {"name": f"TTS ({settings.tts_provider})", "configured": settings.tts_enabled,
+             "live": settings.tts_enabled,
+             "mode": "live" if settings.tts_enabled else "browser speechSynthesis fallback"},
             {"name": f"OCR ({settings.ocr_provider})", "configured": settings.ocr_enabled,
              "live": settings.ocr_enabled,
              "mode": "live" if settings.ocr_enabled else "unavailable"},
@@ -74,6 +84,8 @@ def create_app() -> FastAPI:
         ]
         return {"use_live": settings.use_live, "probes": probes, "stt": {
             "provider": settings.stt_provider, "enabled": settings.stt_enabled,
+        }, "tts": {
+            "provider": settings.tts_provider, "enabled": settings.tts_enabled,
         }, "ocr": {
             "provider": settings.ocr_provider, "enabled": settings.ocr_enabled,
             "model": settings.phoeniqs_ocr_model if settings.ocr_provider == "phoeniqs" else "",
@@ -276,12 +288,34 @@ def create_app() -> FastAPI:
             raise HTTPException(502, str(e))
         return {"text": text, "provider": settings.stt_provider}
 
+    @app.post("/api/tts")
+    def synthesize_speech(req: TTSRequest):
+        # Speaks one follow-up question for the conversational capture. Returns audio
+        # bytes; the frontend falls back to browser speechSynthesis when disabled.
+        from ..agents.tts import SynthError, get_synthesizer
+        if not settings.tts_enabled:
+            raise HTTPException(503, f"TTS not configured (provider={settings.tts_provider})")
+        if not (req.text or "").strip():
+            raise HTTPException(400, "empty text")
+        try:
+            audio, mime = get_synthesizer().synthesize(req.text)
+        except SynthError as e:
+            raise HTTPException(502, str(e))
+        return Response(content=audio, media_type=mime)
+
     @app.get("/clients/{client_id}/capture/prompts")
     def capture_prompts(client_id: str):
         if client_id not in world.clients:
             raise HTTPException(404, "unknown client")
         from ..agents.capture import build_capture_prompts
         return build_capture_prompts(world, client_id)
+
+    @app.post("/clients/{client_id}/capture/followup")
+    def capture_followup(client_id: str, req: CaptureFollowupRequest):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.capture import next_followup
+        return next_followup(world, client_id, req.note, req.asked)
 
     # --- Auth (Google sign-in) + Twilio morning briefing -------------------------
     init_db()

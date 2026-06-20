@@ -49,6 +49,13 @@ class Settings:
     elevenlabs_key = _clean(os.getenv("ELEVENLABS_API_KEY"))
     elevenlabs_stt_model = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v1").strip() or "scribe_v1"
 
+    # Text-to-speech for the conversational capture voice. ElevenLabs reuses the STT
+    # key; falls back to the browser's speechSynthesis when unset. "Rachel" is a
+    # default public voice id.
+    tts_provider = (os.getenv("TTS_PROVIDER", "elevenlabs").strip().lower() or "elevenlabs")
+    elevenlabs_tts_model = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_turbo_v2_5").strip() or "eleven_turbo_v2_5"
+    elevenlabs_voice_id = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM").strip() or "21m00Tcm4TlvDq8ikWAM"
+
     ocr_provider = (os.getenv("OCR_PROVIDER", "phoeniqs").strip().lower() or "phoeniqs")
     phoeniqs_ocr_model = os.getenv("PHOENIQS_OCR_MODEL", "inference-deepseek-ocr").strip() or "inference-deepseek-ocr"
 
@@ -105,6 +112,12 @@ class Settings:
         if self.stt_provider == "elevenlabs":
             return bool(self.elevenlabs_key)
         # phoeniqs path not wired yet — see transcribe.py
+        return False
+
+    @property
+    def tts_enabled(self) -> bool:
+        if self.tts_provider == "elevenlabs":
+            return bool(self.elevenlabs_key)
         return False
 
     @property
