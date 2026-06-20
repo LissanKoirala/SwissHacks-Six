@@ -38,10 +38,10 @@ const Step: React.FC<{ tag: string; tone: string; text: string; last: boolean }>
 );
 
 export const SchneiderScene: React.FC<{ dur: number }> = ({ dur }) => (
-  <Stage dur={dur} kicker="One thread, end to end">
+  <Stage dur={dur} kicker="Know your client">
     <Appear at={8}>
       <Headline size={64}>
-        The <HL>Schneider</HL> slice — every box, in one trigger.
+        <HL>Mr. Schneider</HL> — one trigger, every box.
       </Headline>
     </Appear>
 
