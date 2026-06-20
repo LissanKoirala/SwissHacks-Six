@@ -54,6 +54,67 @@ const ISSUER_TICKERS: Record<string, string> = {
   "Reliance Industries": "RELIANCE.NS",
 };
 
+/** Yahoo tickers for holdings that lack `yahoo` in portfolio data. */
+const ISIN_TICKERS: Record<string, string> = {
+  CH0047533523: "ZGLD.SW",
+  CH0210483332: "CFR.SW",
+  FR0000052292: "RMS.PA",
+  ES0148396007: "ITX.MC",
+  US7427181091: "PG",
+  LU0196152788: "PGHN.SW",
+  IE00BK7Y2R57: "IBTM.L",
+};
+
+/** Filenames (without `.png`) that exist under `public/logos/`. */
+const LOCAL_LOGO_KEYS = new Set([
+  "CH0010645932",
+  "CH0011075394",
+  "CH0012005267",
+  "CH0012032048",
+  "CH0012214059",
+  "CH0012221716",
+  "CH0030170408",
+  "CH0038863350",
+  "CH0244767585",
+  "CH0418792922",
+  "DE0007164600",
+  "DE0007236101",
+  "DE0008404005",
+  "DK0062498333",
+  "FR0000121014",
+  "FR0000121972",
+  "GB00B10RZP78",
+  "IE000S9YS762",
+  "NL0010273215",
+  "US02079K3059",
+  "US0231351067",
+  "US0378331005",
+  "US0605051046",
+  "US0846701086",
+  "US09062X1037",
+  "US11135F1012",
+  "US30231G1022",
+  "US30303M1027",
+  "US4370761029",
+  "US4567881085",
+  "US46625H1005",
+  "US5324571083",
+  "US57636Q1040",
+  "US5949181045",
+  "US67066G1040",
+  "US7223041028",
+  "US8740391003",
+  "US88160R1014",
+  "US92826C8394",
+  "extra_Cie Financière Richemont",
+  "extra_Costco Wholesale Corp.",
+  "extra_Unilever PLC",
+]);
+
+function isCashPosition(isin?: string | null): boolean {
+  return !!isin?.startsWith("Cash-");
+}
+
 export function getClientAvatar(clientId: string): string | null {
   return CLIENT_AVATARS[clientId] ?? null;
 }
@@ -92,19 +153,23 @@ export function resolveIssuerTicker(input: {
 }): string | null {
   const yahoo = input.yahoo?.trim();
   if (yahoo) return yahoo;
+  const isin = input.isin?.trim();
+  if (isin && ISIN_TICKERS[isin]) return ISIN_TICKERS[isin];
   const issuer = input.issuer?.trim();
   if (issuer && ISSUER_TICKERS[issuer]) return ISSUER_TICKERS[issuer];
   return null;
 }
 
-/** Local bundled logo path, if we have one under /public/logos. */
+/** Local bundled logo path, only when the file exists under /public/logos. */
 export function localIssuerLogo(input: {
   isin?: string | null;
   issuer?: string | null;
 }): string | null {
+  if (isCashPosition(input.isin)) return null;
   const key = logoFileKey(input.isin, input.issuer);
   if (!key) return null;
   const safe = key.replace(/:/g, "_");
+  if (!LOCAL_LOGO_KEYS.has(safe)) return null;
   return `/logos/${safe}.png`;
 }
 
@@ -114,6 +179,7 @@ export function issuerLogoSources(input: {
   issuer?: string | null;
   yahoo?: string | null;
 }): string[] {
+  if (isCashPosition(input.isin)) return [];
   const sources: string[] = [];
   const local = localIssuerLogo(input);
   if (local) sources.push(local);
