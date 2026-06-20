@@ -437,6 +437,17 @@ def create_app() -> FastAPI:
 
     start_scheduler(world)
 
+    @app.on_event("startup")
+    def _warm_insights_cache() -> None:
+        import threading
+        def _warm():
+            for cid in world.clients:
+                try:
+                    get_insights(world, cid)
+                except Exception:
+                    pass
+        threading.Thread(target=_warm, daemon=True).start()
+
     # --- The Front Door: inbox + agentic kanban board -----------------------
     # The agent proposes (creates tasks, drafts deliverables); the RM disposes (sign-off / move /
     # dismiss). Nothing here sends an email or places a trade (Golden rule §2).
