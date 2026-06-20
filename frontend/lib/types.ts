@@ -64,6 +64,13 @@ export interface Holding {
   valor?: string | null;
   mic?: string | null;
   yahoo?: string | null;
+  // Live SIX enrichment (present only in USE_LIVE mode where the listing has data).
+  live_price?: number | null;
+  live_ccy?: string | null;
+  live_ts?: string | null;
+  live_change_pct?: number | null;
+  price_source?: string | null;
+  six_ticker?: string | null;
 }
 
 export interface Match {
@@ -88,6 +95,9 @@ export interface Swap {
   amount_chf: number;
   rationale: string;
   drift_safe: boolean;
+  buy_live_price?: number | null;
+  buy_live_ccy?: string | null;
+  buy_live_ts?: string | null;
   provenance: Provenance[];
 }
 

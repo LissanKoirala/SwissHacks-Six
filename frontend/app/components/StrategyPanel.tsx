@@ -1,7 +1,7 @@
 "use client";
 
 import type { StrategyProposal, Swap, SwapAction } from "@/lib/types";
-import { chf } from "@/lib/format";
+import { chf, price, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
 import { Expander } from "./ui";
 import { ProvenanceList } from "./Provenance";
@@ -70,6 +70,19 @@ function SwapRow({ swap }: { swap: Swap }) {
         {swap.same_sector && (
           <span className="chip bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">
             Same sector{swap.industry_group ? ` · ${swap.industry_group}` : ""}
+          </span>
+        )}
+        {swap.buy_live_price != null && (
+          <span
+            className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+            title={
+              swap.buy_live_ts
+                ? `SIX EOD · ${prettyDate(swap.buy_live_ts)}`
+                : "Live SIX price"
+            }
+          >
+            ● {swap.buy_issuer ? `${swap.buy_issuer} @ ` : "Live "}
+            {price(swap.buy_live_price, swap.buy_live_ccy)}
           </span>
         )}
       </div>
