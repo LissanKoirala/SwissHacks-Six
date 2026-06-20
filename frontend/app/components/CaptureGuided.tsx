@@ -51,9 +51,9 @@ export function GuidedPrompts({
   };
 
   return (
-    <section className="mb-4 rounded-xl border border-accent/20 bg-accent-soft/40 p-4">
+    <section className="mb-4 rounded-xl border border-primary/20 bg-primary/10 p-4">
       <header className="flex items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-accent-ink">
+        <span className="text-xs font-semibold uppercase tracking-wide text-primary">
           Guided capture
         </span>
         <span className="hidden text-xs text-slate-500 sm:inline">
@@ -62,7 +62,7 @@ export function GuidedPrompts({
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="ml-auto text-xs font-medium text-accent hover:underline"
+          className="ml-auto text-xs font-medium text-primary hover:underline"
           aria-expanded={open}
         >
           {open ? "Hide" : "Show"}
@@ -145,7 +145,7 @@ export function GuidedPrompts({
                 title={p.question}
                 className={`rounded-full px-2 py-0.5 text-[11px] ring-1 ring-inset transition-colors ${
                   i === idx
-                    ? "bg-accent text-white ring-accent"
+                    ? "bg-primary text-white ring-primary"
                     : used.has(i)
                     ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
                     : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"

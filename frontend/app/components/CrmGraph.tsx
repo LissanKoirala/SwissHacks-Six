@@ -689,7 +689,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
     <section className="card overflow-hidden">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
             CRM knowledge graph
           </p>
           <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">
@@ -702,7 +702,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search nodes…"
           autoComplete="off"
-          className="w-48 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-ink outline-none placeholder:text-slate-400 focus:border-accent focus:ring-1 focus:ring-accent"
+          className="w-48 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-ink outline-none placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary"
         />
       </header>
 
@@ -790,7 +790,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
             <button
               type="button"
               onClick={resetView}
-              className="mt-3 w-full rounded-lg border border-slate-600 bg-slate-700/60 px-2 py-1.5 text-xs font-medium text-slate-200 transition-colors hover:border-accent hover:text-white"
+              className="mt-3 w-full rounded-lg border border-slate-600 bg-slate-700/60 px-2 py-1.5 text-xs font-medium text-slate-200 transition-colors hover:border-primary hover:text-white"
             >
               Reset view
             </button>

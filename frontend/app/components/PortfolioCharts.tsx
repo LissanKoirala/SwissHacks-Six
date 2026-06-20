@@ -507,7 +507,7 @@ function TopHoldingsTable({ rows }: { rows: TopHolding[] }) {
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
                     <div
                       className={`h-full rounded-full ${
-                        h.in_alert ? "bg-amber-500" : "bg-accent"
+                        h.in_alert ? "bg-amber-500" : "bg-primary"
                       }`}
                       style={{ width: `${(h.pct / maxPct) * 100}%` }}
                     />

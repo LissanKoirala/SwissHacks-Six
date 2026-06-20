@@ -426,7 +426,7 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
   return (
     <section className="card flex flex-col">
       <header className="border-b border-slate-200 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
           Investment map
         </p>
         <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">

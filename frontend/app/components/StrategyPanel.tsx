@@ -8,7 +8,7 @@ import { ProvenanceList } from "./Provenance";
 import { ConfirmGate } from "./ConfirmGate";
 
 const ACTION_META: Record<SwapAction, string> = {
-  SWAP: "bg-accent-soft text-accent-ink ring-accent/30",
+  SWAP: "bg-primary/10 text-primary ring-primary/30",
   INCREASE: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   HOLD: "bg-slate-100 text-slate-600 ring-slate-200",
   DIVEST: "bg-rose-50 text-rose-700 ring-rose-200",
@@ -97,7 +97,7 @@ export function StrategyPanel({
   return (
     <section className="card flex flex-col">
       <header className="border-b border-slate-200 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
           Strategy proposal
         </p>
         <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">

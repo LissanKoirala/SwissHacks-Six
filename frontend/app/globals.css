@@ -2,47 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 6%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 6%;
+    --primary: 234 58% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 12%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 240 5% 95%;
+    --accent-foreground: 240 10% 12%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 56% 40%;
+    --warning: 38 92% 50%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 234 58% 60%;
+    --radius: 0.5rem;
+    --sidebar: 240 5% 98%;
+    --sidebar-foreground: 240 10% 6%;
+    --sidebar-border: 240 6% 90%;
+  }
+  .dark {
+    --background: 240 6% 5%;
+    --foreground: 0 0% 91%;
+    --card: 240 5% 7%;
+    --card-foreground: 0 0% 91%;
+    --popover: 240 5% 9%;
+    --popover-foreground: 0 0% 91%;
+    --primary: 234 58% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4% 13%;
+    --secondary-foreground: 0 0% 91%;
+    --muted: 240 4% 13%;
+    --muted-foreground: 240 5% 60%;
+    --accent: 240 4% 15%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 62% 53%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 52% 47%;
+    --warning: 38 92% 56%;
+    --border: 240 5% 14%;
+    --input: 240 5% 17%;
+    --ring: 234 58% 64%;
+    --radius: 0.5rem;
+    --sidebar: 240 6% 6%;
+    --sidebar-foreground: 0 0% 91%;
+    --sidebar-border: 240 5% 13%;
+  }
 }
 
-html,
-body {
-  height: 100%;
+@layer base {
+  * { @apply border-border; }
+  html, body { height: 100%; }
+  body { @apply bg-background text-foreground antialiased; font-feature-settings: "tnum" 1; }
 }
 
-body {
-  @apply bg-slate-50 text-ink antialiased;
-  font-feature-settings: "tnum" 1, "cv05" 1;
-}
-
-/* Thin, unobtrusive scrollbars for the panels. */
-.scroll-thin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.scroll-thin::-webkit-scrollbar-thumb {
-  background: #cbd2db;
-  border-radius: 8px;
-}
-.scroll-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { @apply bg-border; border-radius: 8px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
 
 @layer components {
-  .card {
-    @apply rounded-xl border border-slate-200 bg-white shadow-card;
-  }
-  .chip {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
-  }
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50;
-  }
-  .btn-primary {
-    @apply btn bg-accent text-white hover:bg-accent-ink;
-  }
-  .btn-ghost {
-    @apply btn border border-slate-300 bg-white text-ink-soft hover:bg-slate-50;
-  }
+  .card { @apply rounded-lg border border-border bg-card text-card-foreground shadow-card; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50; }
+  .btn-primary { @apply btn bg-primary text-primary-foreground hover:bg-primary/90; }
+  .btn-ghost { @apply btn border border-border bg-transparent text-foreground/80 hover:bg-accent hover:text-accent-foreground; }
 }

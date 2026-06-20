@@ -21,10 +21,10 @@ const POLARITIES: Polarity[] = ["opportunity", "conflict", "neutral"];
 const FACETS = ["professional", "interests", "historical", "personality"] as const;
 
 const MINI_SELECT =
-  "rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-ink outline-none focus:border-accent focus:ring-1 focus:ring-accent/20";
+  "rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 const ROW = "rounded-lg border p-3 transition-colors";
 const CHECKBOX =
-  "mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-accent focus:ring-accent/30";
+  "mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-primary focus:ring-primary/30";
 
 // Direction → colour, matching the Risk Timeline lexicon.
 const DIR_HEX: Record<RiskPreview["direction"], string> = {
@@ -234,7 +234,7 @@ function FacetRow({
             value={facet.text}
             onChange={(e) => patch(index, { text: e.target.value })}
             rows={2}
-            className="w-full resize-y rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm leading-relaxed text-ink outline-none focus:border-accent focus:ring-1 focus:ring-accent/20"
+            className="w-full resize-y rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm leading-relaxed text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
           />
         </div>
       </div>
@@ -324,7 +324,7 @@ export function StagedPanel({
               {draft.detected_topics.map((t) => (
                 <span
                   key={t.topic}
-                  className="chip bg-accent/10 text-accent ring-1 ring-inset ring-accent/20"
+                  className="chip bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
                   title={t.topic}
                 >
                   {t.label}

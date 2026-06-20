@@ -12,7 +12,7 @@ export function DialoguePanel({
   return (
     <section className="card flex flex-col">
       <header className="border-b border-slate-200 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
           Dialogue suggestion
         </p>
         <h2 className="mt-1 text-sm font-medium leading-snug text-ink-soft">
@@ -28,7 +28,7 @@ export function DialoguePanel({
         ) : (
           <>
             {dialogue.style && (
-              <div className="rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent-ink">
+              <div className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
                 <span className="font-semibold">Tone — </span>
                 {dialogue.style}
               </div>
@@ -45,7 +45,7 @@ export function DialoguePanel({
                     key={i}
                     className="flex flex-wrap items-start gap-1 text-sm leading-relaxed text-ink-soft"
                   >
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                     <span className="flex-1">
                       {tp.text}
                       <ProvenanceTag prov={tp.provenance} />
@@ -60,7 +60,7 @@ export function DialoguePanel({
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Draft message
               </p>
-              <blockquote className="rounded-lg border-l-4 border-accent bg-slate-50 px-4 py-3 text-sm italic leading-relaxed text-ink-soft">
+              <blockquote className="rounded-lg border-l-4 border-primary bg-slate-50 px-4 py-3 text-sm italic leading-relaxed text-ink-soft">
                 {dialogue.draft_message}
               </blockquote>
             </div>

@@ -1,92 +1,90 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
 import type { Polarity, SourceType } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 /* ---------------------------------------------------------------- chips --- */
 
+const POLARITY_META: Record<
+  Polarity,
+  { label: string; cls: string; dot: string }
+> = {
+  conflict: {
+    label: "Conflict",
+    cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-inset ring-amber-500/20",
+    dot: "bg-amber-500",
+  },
+  opportunity: {
+    label: "Opportunity",
+    cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20",
+    dot: "bg-emerald-500",
+  },
+  neutral: {
+    label: "Neutral",
+    cls: "bg-muted text-muted-foreground ring-1 ring-inset ring-border",
+    dot: "bg-muted-foreground/60",
+  },
+};
+
 export function PolarityChip({ polarity }: { polarity: Polarity }) {
-  const map: Record<Polarity, { label: string; cls: string }> = {
-    conflict: {
-      label: "Conflict",
-      cls: "bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200",
-    },
-    opportunity: {
-      label: "Opportunity",
-      cls: "bg-emerald-100 text-emerald-800 ring-1 ring-inset ring-emerald-200",
-    },
-    neutral: {
-      label: "Neutral",
-      cls: "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200",
-    },
-  };
-  const m = map[polarity] ?? map.neutral;
+  const m = POLARITY_META[polarity] ?? POLARITY_META.neutral;
   return (
-    <span className={`chip ${m.cls}`}>
-      <Dot polarity={polarity} />
+    <span className={cn("chip", m.cls)}>
+      <span className={cn("h-1.5 w-1.5 rounded-full", m.dot)} />
       {m.label}
     </span>
   );
-}
-
-function Dot({ polarity }: { polarity: Polarity }) {
-  const color =
-    polarity === "conflict"
-      ? "bg-amber-500"
-      : polarity === "opportunity"
-      ? "bg-emerald-500"
-      : "bg-slate-400";
-  return <span className={`h-1.5 w-1.5 rounded-full ${color}`} />;
 }
 
 export function SentimentChip({ label }: { label: string }) {
   const up = /BULL|POSITIVE|POS/i.test(label);
   const down = /BEAR|NEGATIVE|NEG/i.test(label);
   const cls = up
-    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20"
     : down
-    ? "bg-rose-50 text-rose-700 ring-rose-200"
-    : "bg-slate-50 text-slate-600 ring-slate-200";
+    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/20"
+    : "bg-muted text-muted-foreground ring-border";
   return (
-    <span className={`chip ring-1 ring-inset ${cls}`}>
-      Sentiment · {label}
-    </span>
+    <span className={cn("chip ring-1 ring-inset", cls)}>Sentiment · {label}</span>
   );
 }
 
-const SOURCE_META: Record<
-  SourceType,
-  { label: string; cls: string }
-> = {
+const SOURCE_META: Record<SourceType, { label: string; cls: string }> = {
   crm_log: {
     label: "CRM log",
-    cls: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+    cls: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-indigo-500/20",
   },
-  news: { label: "News", cls: "bg-sky-50 text-sky-700 ring-sky-200" },
+  news: {
+    label: "News",
+    cls: "bg-sky-500/10 text-sky-600 dark:text-sky-400 ring-sky-500/20",
+  },
   cio_list: {
     label: "CIO list",
-    cls: "bg-violet-50 text-violet-700 ring-violet-200",
+    cls: "bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-violet-500/20",
   },
   portfolio: {
     label: "Portfolio",
-    cls: "bg-teal-50 text-teal-700 ring-teal-200",
+    cls: "bg-teal-500/10 text-teal-600 dark:text-teal-400 ring-teal-500/20",
   },
   mandate: {
     label: "Mandate",
-    cls: "bg-amber-50 text-amber-700 ring-amber-200",
+    cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20",
   },
   market_digest: {
     label: "Market digest",
-    cls: "bg-slate-100 text-slate-600 ring-slate-200",
+    cls: "bg-muted text-muted-foreground ring-border",
   },
 };
 
 export function SourceBadge({ type }: { type: SourceType }) {
   const m = SOURCE_META[type] ?? {
     label: type,
-    cls: "bg-slate-100 text-slate-600 ring-slate-200",
+    cls: "bg-muted text-muted-foreground ring-border",
   };
-  return <span className={`chip ring-1 ring-inset ${m.cls}`}>{m.label}</span>;
+  return <span className={cn("chip ring-1 ring-inset", m.cls)}>{m.label}</span>;
 }
 
 /* ------------------------------------------------------------ expander --- */
@@ -108,13 +106,15 @@ export function Expander({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 text-sm font-medium text-accent hover:text-accent-ink"
+        className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
         aria-expanded={open}
       >
-        <Caret open={open} />
+        <ChevronRight
+          className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")}
+        />
         {label}
         {typeof count === "number" && (
-          <span className="rounded-full bg-slate-100 px-1.5 text-xs text-slate-600">
+          <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground">
             {count}
           </span>
         )}
@@ -124,29 +124,13 @@ export function Expander({
   );
 }
 
-function Caret({ open }: { open: boolean }) {
-  return (
-    <svg
-      className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""}`}
-      viewBox="0 0 12 12"
-      fill="none"
-      aria-hidden
-    >
-      <path
-        d="M4 2.5 8 6l-4 3.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function MandatePill({ mandate }: { mandate: string }) {
   return (
-    <span className="chip bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">
+    <Badge
+      variant="secondary"
+      className="rounded-full font-medium text-muted-foreground"
+    >
       {mandate}
-    </span>
+    </Badge>
   );
 }

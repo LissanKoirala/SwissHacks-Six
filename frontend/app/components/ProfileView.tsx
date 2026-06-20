@@ -49,7 +49,7 @@ export function ProfileView({ clientId }: { clientId: string }) {
     <div className="grid gap-5 md:grid-cols-2">
       {keys.map((k) => (
         <section key={k} className="card p-5">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent">
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary">
             {titleCase(k)}
           </h3>
           <div className="space-y-3">

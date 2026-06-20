@@ -104,7 +104,7 @@ export function ClientView({ clientId }: { clientId: string }) {
         </header>
 
         {/* advisory-only banner — golden rule */}
-        <div className="mb-6 flex items-center gap-2 rounded-lg bg-accent-soft px-4 py-2.5 text-sm text-accent-ink ring-1 ring-inset ring-accent/20">
+        <div className="mb-6 flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2.5 text-sm text-primary ring-1 ring-inset ring-primary/20">
           <svg className="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden>
             <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3" />
             <path d="M8 7.2v4M8 5.2h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -136,7 +136,7 @@ export function ClientView({ clientId }: { clientId: string }) {
               onClick={() => setTab(id)}
               className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
                 tab === id
-                  ? "border-accent text-accent-ink"
+                  ? "border-primary text-primary"
                   : "border-transparent text-slate-500 hover:text-ink"
               }`}
             >

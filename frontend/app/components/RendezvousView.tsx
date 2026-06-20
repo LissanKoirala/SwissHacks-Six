@@ -43,7 +43,7 @@ function InterestChip({
       aria-expanded={active}
       className={`chip ring-1 ring-inset transition-colors ${
         active
-          ? "bg-accent-soft text-accent-ink ring-accent/30"
+          ? "bg-primary/10 text-primary ring-primary/30"
           : "bg-white text-ink-soft ring-slate-200 hover:bg-slate-50"
       } ${hasProv ? "cursor-pointer" : "cursor-default opacity-90"}`}
       title={hasProv ? "Show the CRM source" : "No direct citation"}
@@ -153,7 +153,7 @@ function SuggestionCard({
       {/* header */}
       <div className="flex items-start gap-3">
         <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-xl"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl"
           aria-hidden
         >
           {suggestion.icon}
@@ -203,7 +203,7 @@ function SuggestionCard({
             {matched.map((m) => (
               <span
                 key={m.id}
-                className="chip bg-accent-soft text-accent-ink ring-1 ring-inset ring-accent/20"
+                className="chip bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
               >
                 <span aria-hidden>{m.icon}</span>
                 {m.label}
@@ -225,7 +225,7 @@ function SuggestionCard({
                 key={i}
                 className="flex items-start gap-2 text-sm text-ink-soft"
               >
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent/60" />
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
                 <span>{p}</span>
               </li>
             ))}

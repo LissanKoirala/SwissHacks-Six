@@ -491,7 +491,7 @@ function PlayheadBar({
           disabled={!canAutoplay}
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1 ring-inset transition-colors ${
             canAutoplay
-              ? "bg-accent text-white ring-accent hover:bg-accent-ink"
+              ? "bg-primary text-white ring-primary hover:bg-primary/90"
               : "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200"
           }`}
           aria-label={playing ? "Pause timeline" : "Play timeline"}
@@ -720,7 +720,7 @@ function StatePanel({
           <ul className="space-y-1">
             {point.facet_changes.map((f, i) => (
               <li key={i} className="flex items-start gap-2 text-xs text-ink-soft">
-                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary" />
                 <span>
                   <span className="font-medium text-slate-500">{f.facet}:</span>{" "}
                   {f.text}
@@ -785,7 +785,7 @@ function MilestonesStrip({
             type="button"
             onClick={() => onJump(idx)}
             className={`chip ring-1 ring-inset transition-colors ${tone} ${
-              active ? "ring-2 ring-accent" : ""
+              active ? "ring-2 ring-primary" : ""
             }`}
             title={`${m.kind} · ${prettyDate(data.points[idx].date)}`}
           >
@@ -932,7 +932,7 @@ export function RiskTimeline({ clientId }: { clientId: string }) {
               <span className="h-2 w-2 rounded-full bg-slate-400" /> no signal
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-0 w-4 border-t-2 border-dashed border-accent" />{" "}
+              <span className="inline-block h-0 w-4 border-t-2 border-dashed border-primary" />{" "}
               mandate baseline
             </span>
           </div>

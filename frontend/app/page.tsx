@@ -5,11 +5,13 @@ import type { ClientSummary, IntegrationHealth } from "@/lib/types";
 import { api } from "@/lib/api";
 import { Sidebar } from "./components/Sidebar";
 import { ClientView } from "./components/ClientView";
+import { TasksBoard } from "./components/TasksBoard";
 
 export default function Home() {
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [health, setHealth] = useState<IntegrationHealth | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<"client" | "tasks">("client");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -40,31 +42,38 @@ export default function Home() {
     <main className="flex h-screen overflow-hidden">
       <Sidebar
         clients={clients}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
+        selectedId={view === "client" ? selectedId : null}
+        onSelect={(id) => {
+          setSelectedId(id);
+          setView("client");
+        }}
         health={health}
+        onShowTasks={() => setView("tasks")}
+        tasksActive={view === "tasks"}
       />
-      <div className="flex-1 overflow-hidden bg-slate-50">
+      <div className="flex-1 overflow-hidden bg-background">
         {loading ? (
-          <div className="grid h-full place-items-center text-sm text-slate-500">
+          <div className="grid h-full place-items-center text-sm text-muted-foreground">
             Loading clients…
           </div>
         ) : error ? (
           <div className="grid h-full place-items-center px-8 text-center">
             <div>
-              <p className="text-sm font-medium text-rose-600">
+              <p className="text-sm font-medium text-destructive">
                 Could not load the client list.
               </p>
-              <p className="mt-1 text-xs text-slate-500">{error}</p>
-              <p className="mt-2 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-muted-foreground">{error}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
                 Start the backend on http://localhost:8000, then reload.
               </p>
             </div>
           </div>
+        ) : view === "tasks" ? (
+          <TasksBoard clients={clients} />
         ) : selectedId ? (
           <ClientView clientId={selectedId} />
         ) : (
-          <div className="grid h-full place-items-center text-sm text-slate-500">
+          <div className="grid h-full place-items-center text-sm text-muted-foreground">
             Select a client to begin.
           </div>
         )}

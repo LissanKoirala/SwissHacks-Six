@@ -57,9 +57,9 @@ const LAYER_TINT: Record<
     band: "bg-emerald-50/40",
   },
   action: {
-    header: "bg-accent-soft",
-    headerText: "text-accent-ink",
-    band: "bg-accent-soft/50",
+    header: "bg-primary/10",
+    headerText: "text-primary",
+    band: "bg-primary/10",
   },
 };
 
@@ -183,7 +183,7 @@ function FlowNode({
       type="button"
       onClick={() => onSelect(node.id)}
       className={`absolute flex flex-col rounded-xl border bg-white p-2.5 text-left shadow-card ring-2 ring-transparent transition-all ${tone.border} ${tone.ring} ${
-        selected ? "ring-accent shadow-pop" : ""
+        selected ? "ring-primary shadow-pop" : ""
       }`}
       style={{
         left: placed.left,
@@ -201,7 +201,7 @@ function FlowNode({
           {node.subtitle}
         </span>
       )}
-      <span className="mt-auto flex items-center gap-1 pt-1 text-[10px] font-medium text-accent">
+      <span className="mt-auto flex items-center gap-1 pt-1 text-[10px] font-medium text-primary">
         <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden>
           <path
             d="M2 6h7M6 3l3 3-3 3"

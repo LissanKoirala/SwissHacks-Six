@@ -33,7 +33,7 @@ const NOTE_MAX = 5000; // mirror the backend cap (CAPTURE_CONTRACT §1).
 
 // Shared field styling — keep the long Tailwind strings in one place.
 const FIELD =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-ink outline-none placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/20";
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-ink outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20";
 const LABEL = "mb-1 block text-xs font-medium text-slate-500";
 
 function todayISO(): string {
@@ -437,7 +437,7 @@ export function CaptureNote({
       {/* ---------------------------------------------------- input card --- */}
       <section className="card p-5">
         <header className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
             New interaction note
           </p>
           <h2 className="mt-1 text-base font-semibold text-ink">
@@ -539,7 +539,7 @@ export function CaptureNote({
           rows={6}
           maxLength={NOTE_MAX}
           placeholder="Type the interaction here — or dictate / snap a photo above. e.g. “Lunch at Kronenhalle. Hubertus wants to fund Parkinson's research and is proud of the foundation's work.”"
-          className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-ink shadow-sm outline-none placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/20"
+          className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-ink shadow-sm outline-none placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
         <div className="mt-1 flex justify-between text-[11px] text-slate-400">
           <span>
