@@ -199,6 +199,7 @@ export interface IntegrationProbe {
 export interface IntegrationHealth {
   use_live: boolean;
   probes: IntegrationProbe[];
+  stt?: { provider: string; enabled: boolean };
 }
 
 // --- analytics (charts + 3D investment globe) ---

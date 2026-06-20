@@ -45,6 +45,17 @@ class Settings:
     news_key = _clean(os.getenv("NEWSAPI_KEY") or os.getenv("NEWSAI_API_KEY"))
     news_url = os.getenv("NEWSAI_API_URL", "https://eventregistry.org/api/v1").strip()
 
+    stt_provider = (os.getenv("STT_PROVIDER", "elevenlabs").strip().lower() or "elevenlabs")
+    elevenlabs_key = _clean(os.getenv("ELEVENLABS_API_KEY"))
+    elevenlabs_stt_model = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v1").strip() or "scribe_v1"
+
+    @property
+    def stt_enabled(self) -> bool:
+        if self.stt_provider == "elevenlabs":
+            return bool(self.elevenlabs_key)
+        # phoeniqs path not wired yet — see transcribe.py
+        return False
+
     @property
     def llm_enabled(self) -> bool:
         return self.use_live and bool(self.phoeniqs_key)
