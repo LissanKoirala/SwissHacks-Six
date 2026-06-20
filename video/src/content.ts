@@ -66,5 +66,18 @@ export const SCHNEIDER = {
     from: "Apr 2023",
     to: "May 2026",
     fit: "cautious-drift",
+    // Real milestones from build_risk_timeline — the events that moved the line.
+    events: [
+      { i: 1, date: "Jun 2023", label: "Drifts defensive", cue: "raised liquidity needs" },
+      { i: 9, date: "Nov 2024", label: "De-risking signal", cue: "“long-term” horizon" },
+      { i: 16, date: "Nov 2025", label: "De-risking signal", cue: "“protect” capital" },
+    ],
+    // X-axis ticks at real point dates.
+    ticks: [
+      { i: 0, label: "Apr ’23" },
+      { i: 8, label: "Sep ’24" },
+      { i: 16, label: "Nov ’25" },
+      { i: 25, label: "May ’26" },
+    ],
   },
 };
