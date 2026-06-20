@@ -27,7 +27,12 @@ TOPIC_VOCAB: dict[str, Topic] = {
         "Palm-oil deforestation, rainforest protection, reforestation and supply-chain ecology.",
         ["palm oil", "palm-oil", "deforestation", "rainforest", "reforestation", "reforest",
          "biodiversity", "amazon", "ecosystem", "ecological", "sustainable agriculture",
-         "supply chain ecology", "indigenous land", "conservation"],
+         "supply chain ecology", "indigenous land", "conservation",
+         # broadened synonyms / paraphrases
+         "forest", "forestry", "logging", "land clearing", "habitat", "wildlife",
+         "carbon sink", "tree planting", "plant trees", "soy", "cattle ranching",
+         "environmental", "sustainability", "green", "nature", "rewilding",
+         "supply chain ecolog", "clear-cut", "clearcut", "old-growth"],
     ),
     "neuro-research": Topic(
         "neuro-research",
@@ -35,7 +40,14 @@ TOPIC_VOCAB: dict[str, Topic] = {
         "Parkinson's / neurodegenerative / brain-disease research commitment by pharma holdings.",
         ["parkinson", "parkinson's", "neurodegenerative", "neuroscience", "neurology",
          "brain disease", "movement disorder", "neuro research", "clinical pipeline",
-         "neurological"],
+         "neurological",
+         # broadened synonyms / paraphrases
+         "alzheimer", "alzheimer's", "dementia", "huntington", "motor neurone",
+         "motor neuron", "multiple sclerosis", "epilepsy", "brain illness",
+         "brain-illness", "brain research", "neuro", "degenerative disease",
+         "research division", "research field", "research unit", "clinical trial",
+         "drug pipeline", "drug research", "therapeutic", "cure", "medical research",
+         "biomedical", "rare disease"],
     ),
     "labour-governance": Topic(
         "labour-governance",
@@ -45,7 +57,13 @@ TOPIC_VOCAB: dict[str, Topic] = {
         ["labour exploitation", "labor exploitation", "sweatshop", "forced labour",
          "forced labor", "wage theft", "child labour", "child labor", "supply-chain governance",
          "supply chain scandal", "worker exploitation", "labour scandal", "labor scandal",
-         "exploitation allegations", "modern slavery"],
+         "exploitation allegations", "modern slavery",
+         # broadened synonyms / paraphrases
+         "working conditions", "labour rights", "labor rights", "union", "strike",
+         "underpaid", "exploited workers", "exploited", "human rights",
+         "ethics scandal", "governance failure", "governance issue", "boycott",
+         "supplier audit", "factory conditions", "unethical", "mistreated workers",
+         "poor treatment of workers", "slave labour", "slave labor"],
     ),
     "us-tech-ai": Topic(
         "us-tech-ai",
@@ -53,7 +71,12 @@ TOPIC_VOCAB: dict[str, Topic] = {
         "US mega-cap technology and AI software — speculative growth the client is averse to.",
         ["artificial intelligence", "ai infrastructure", "ai boom", "mega-cap tech",
          "us tech", "software valuation", "silicon valley", "cloud software", "ai hype",
-         "tech bubble", "ai stocks", "ai rally"],
+         "tech bubble", "ai stocks", "ai rally",
+         # broadened synonyms / paraphrases
+         "nvidia", "openai", "magnificent seven", "mag 7", "chatgpt", "llm models",
+         "gpu", "data center", "data centre", "hyperscaler", "tech rally",
+         "speculative tech", "frothy tech", "nasdaq", "growth tech", "big tech",
+         "us technology", "american tech", "tech giants", "semiconductor"],
     ),
 }
 

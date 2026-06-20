@@ -2,8 +2,9 @@
 Renders the orchestrator's output; nothing here makes decisions."""
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
@@ -18,7 +19,17 @@ from ..config import settings
 from ..db import get_db, init_db
 from ..db_models import RmUser
 from ..graph.crm_graph import build_crm_graph
-from ..models import CaptureConfirmRequest, CaptureExtractRequest, RMQueryRequest
+from ..models import (
+    CaptureConfirmRequest,
+    CaptureExtractRequest,
+    CaptureFollowupRequest,
+    EmailIngestRequest,
+    RMQueryRequest,
+    TaskCreateRequest,
+    TaskSignoffRequest,
+    TaskUpdateRequest,
+    TTSRequest,
+)
 from ..scheduler import start_scheduler
 from ..seed import build_world
 
@@ -42,6 +53,69 @@ def create_app() -> FastAPI:
     world = build_world(use_live_news=settings.news_enabled)
     app.state.world = world
 
+    @app.on_event("startup")
+    async def _start_front_door():
+        # Autonomous intake. Two modes, picked by config:
+        #   • INSTANT push (Gmail watch→Pub/Sub→/gmail/push): register the watch and renew it daily
+        #     (Gmail expires it after 7 days). New mail then arrives via the webhook, not a poll.
+        #   • POLL (everything else): re-scan inbox + news on an interval.
+        # Both are idempotent (dedup keys). Advisory only — CREATE + DRAFT; RM sign-off gate intact.
+        import asyncio
+
+        if settings.gmail_push_enabled:
+            from ..ingestion.gmail_push import register_watch
+
+            async def _watch_loop():
+                while True:
+                    try:
+                        await asyncio.to_thread(register_watch)
+                    except Exception:
+                        pass
+                    await asyncio.sleep(6 * 60 * 60)  # renew every 6h, well under the 7-day expiry
+
+            app.state.poller_task = asyncio.create_task(_watch_loop())
+            return
+
+        if not settings.poll_enabled:
+            return
+        from ..taskboard import ingest_email, ingest_news
+
+        async def _poll_loop():
+            while True:
+                await asyncio.sleep(settings.front_door_poll_seconds)
+                try:  # one bad scan must never kill the loop
+                    await asyncio.to_thread(ingest_email, world, execute=True, use_llm=False)
+                    await asyncio.to_thread(ingest_news, world, execute=True)
+                except Exception:
+                    pass
+
+        app.state.poller_task = asyncio.create_task(_poll_loop())
+
+    @app.on_event("shutdown")
+    async def _stop_front_door():
+        task = getattr(app.state, "poller_task", None)
+        if task is not None:
+            task.cancel()
+
+    @app.post("/gmail/push")
+    async def gmail_push(request: Request):
+        """Pub/Sub push endpoint — Gmail notifies us here the instant mail arrives. Verifies the
+        shared-secret token, pulls everything new since the last historyId, and ingests it. Returns
+        fast so Pub/Sub doesn't retry. Read-only + advisory: it only opens tasks for the RM."""
+        import asyncio
+        if settings.gmail_push_token and request.query_params.get("token") != settings.gmail_push_token:
+            raise HTTPException(status_code=403, detail="invalid push token")
+        from ..ingestion.gmail_push import sync_new_messages
+        from ..taskboard import ingest_email
+
+        msgs = await asyncio.to_thread(sync_new_messages)
+        created = []
+        for m in msgs:
+            created += await asyncio.to_thread(
+                ingest_email, world, raw_email=m, execute=True, use_llm=False
+            )
+        return {"ok": True, "ingested": len(msgs), "tasks_created": len(created)}
+
     @app.get("/health")
     def health():
         return {"status": "ok", "clients": list(world.clients.keys()),
@@ -59,6 +133,9 @@ def create_app() -> FastAPI:
             {"name": f"STT ({settings.stt_provider})", "configured": settings.stt_enabled,
              "live": settings.stt_enabled,
              "mode": "live" if settings.stt_enabled else "browser Web Speech fallback"},
+            {"name": f"TTS ({settings.tts_provider})", "configured": settings.tts_enabled,
+             "live": settings.tts_enabled,
+             "mode": "live" if settings.tts_enabled else "browser speechSynthesis fallback"},
             {"name": f"OCR ({settings.ocr_provider})", "configured": settings.ocr_enabled,
              "live": settings.ocr_enabled,
              "mode": "live" if settings.ocr_enabled else "unavailable"},
@@ -71,9 +148,20 @@ def create_app() -> FastAPI:
             {"name": "Google Flights (fli)", "configured": _fli_installed(),
              "live": settings.flights_enabled and _fli_installed(),
              "mode": "live" if settings.flights_enabled else "heuristic estimates"},
+            {"name": f"Email inbox ({settings.email_provider})", "configured": settings.email_configured,
+             "live": settings.email_enabled,
+             "mode": (f"live {settings.email_provider}" if settings.email_enabled
+                      else "seed inbox fixtures")},
+            {"name": "Front Door intake", "configured": True,
+             "live": settings.gmail_push_enabled or settings.poll_enabled,
+             "mode": ("instant (Gmail push → /gmail/push)" if settings.gmail_push_enabled
+                      else f"autonomous poll · every {settings.front_door_poll_seconds}s" if settings.poll_enabled
+                      else "on-demand (boot + POST /ingest/*)")},
         ]
         return {"use_live": settings.use_live, "probes": probes, "stt": {
             "provider": settings.stt_provider, "enabled": settings.stt_enabled,
+        }, "tts": {
+            "provider": settings.tts_provider, "enabled": settings.tts_enabled,
         }, "ocr": {
             "provider": settings.ocr_provider, "enabled": settings.ocr_enabled,
             "model": settings.phoeniqs_ocr_model if settings.ocr_provider == "phoeniqs" else "",
@@ -276,12 +364,34 @@ def create_app() -> FastAPI:
             raise HTTPException(502, str(e))
         return {"text": text, "provider": settings.stt_provider}
 
+    @app.post("/api/tts")
+    def synthesize_speech(req: TTSRequest):
+        # Speaks one follow-up question for the conversational capture. Returns audio
+        # bytes; the frontend falls back to browser speechSynthesis when disabled.
+        from ..agents.tts import SynthError, get_synthesizer
+        if not settings.tts_enabled:
+            raise HTTPException(503, f"TTS not configured (provider={settings.tts_provider})")
+        if not (req.text or "").strip():
+            raise HTTPException(400, "empty text")
+        try:
+            audio, mime = get_synthesizer().synthesize(req.text)
+        except SynthError as e:
+            raise HTTPException(502, str(e))
+        return Response(content=audio, media_type=mime)
+
     @app.get("/clients/{client_id}/capture/prompts")
     def capture_prompts(client_id: str):
         if client_id not in world.clients:
             raise HTTPException(404, "unknown client")
         from ..agents.capture import build_capture_prompts
         return build_capture_prompts(world, client_id)
+
+    @app.post("/clients/{client_id}/capture/followup")
+    def capture_followup(client_id: str, req: CaptureFollowupRequest):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.capture import next_followup
+        return next_followup(world, client_id, req.note, req.asked)
 
     # --- Auth (Google sign-in) + Twilio morning briefing -------------------------
     init_db()
@@ -326,6 +436,109 @@ def create_app() -> FastAPI:
         return {"text": compose_for(world)}
 
     start_scheduler(world)
+
+    @app.on_event("startup")
+    def _warm_insights_cache() -> None:
+        import threading
+        def _warm():
+            for cid in world.clients:
+                try:
+                    get_insights(world, cid)
+                except Exception:
+                    pass
+        threading.Thread(target=_warm, daemon=True).start()
+
+    # --- The Front Door: inbox + agentic kanban board -----------------------
+    # The agent proposes (creates tasks, drafts deliverables); the RM disposes (sign-off / move /
+    # dismiss). Nothing here sends an email or places a trade (Golden rule §2).
+
+    @app.get("/inbox")
+    def inbox():
+        """The triaged inbound-email feed behind the board (seed fixtures, or live IMAP)."""
+        return [e.model_dump() for e in world.inbox]
+
+    @app.get("/tasks")
+    def tasks(client_id: str | None = None, status: str | None = None):
+        from ..taskboard import list_tasks
+        if client_id and client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        return [t.model_dump() for t in list_tasks(world, client_id=client_id, status=status)]
+
+    @app.get("/clients/{client_id}/tasks")
+    def client_tasks(client_id: str):
+        from ..taskboard import list_tasks
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        return [t.model_dump() for t in list_tasks(world, client_id=client_id)]
+
+    @app.get("/tasks/{task_id}")
+    def get_task(task_id: str):
+        t = world.task_by_id(task_id)
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/tasks")
+    def create_task(req: TaskCreateRequest):
+        from ..taskboard import add_task
+        from ..agents.task_executor import execute_task
+        if req.client_id and req.client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        task = add_task(world, title=req.title, detail=req.detail, client_id=req.client_id,
+                        kind=req.kind, priority=req.priority, source="manual")
+        if req.execute:
+            execute_task(world, task)
+            from ..taskboard import _save
+            _save(world)
+        return task.model_dump()
+
+    @app.patch("/tasks/{task_id}")
+    def patch_task(task_id: str, req: TaskUpdateRequest):
+        from ..taskboard import update_task
+        t = update_task(world, task_id, status=req.status, priority=req.priority,
+                        title=req.title, detail=req.detail)
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/tasks/{task_id}/execute")
+    def execute_task_route(task_id: str):
+        from ..taskboard import run_task
+        t = run_task(world, task_id)
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/tasks/{task_id}/signoff")
+    def signoff_task_route(task_id: str, req: TaskSignoffRequest):
+        from ..taskboard import signoff_task
+        t = signoff_task(world, task_id, rm_name=req.rm_name, edited_body=req.edited_body)
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/tasks/{task_id}/dismiss")
+    def dismiss_task_route(task_id: str):
+        from ..taskboard import update_task
+        t = update_task(world, task_id, status="dismissed")
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/ingest/email")
+    def ingest_email_route(req: EmailIngestRequest | None = None):
+        """Scan the inbox (seed fixtures or live IMAP) → triage → create + attempt tasks."""
+        from ..taskboard import ingest_email
+        raw = req.raw_email if req else None
+        created = ingest_email(world, raw_email=raw)
+        return {"created": [t.model_dump() for t in created], "count": len(created)}
+
+    @app.post("/ingest/news")
+    def ingest_news_route():
+        """Run the selective news/risk watch → create + attempt tasks on material signals only."""
+        from ..taskboard import ingest_news
+        created = ingest_news(world)
+        return {"created": [t.model_dump() for t in created], "count": len(created)}
 
     return app
 
