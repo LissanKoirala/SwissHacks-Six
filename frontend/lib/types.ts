@@ -926,3 +926,152 @@ export interface CapturePrompts {
   first_name: string;
   prompts: CapturePrompt[];
 }
+
+// --- Overview dashboard (RM morning landing, aggregate across all clients) ---
+
+export type Severity = "high" | "med" | "low";
+export type MoveDirection = "up" | "down" | "flat";
+export type PortfolioEventKind = "earnings" | "filing" | "ipo";
+
+export interface OverviewTask {
+  id: string;
+  client_id: string;
+  client_name: string;
+  mandate: string;
+  severity: Severity;
+  polarity: Polarity;
+  title: string;
+  reason: string;
+  trigger_headline: string;
+  trigger_source: string;
+  suggested_action: string;
+  affected_issuer?: string | null;
+  provenance: Provenance[];
+}
+
+export interface OverviewMeeting {
+  id: string;
+  client_id: string;
+  client_name: string;
+  mandate: string;
+  date: string;
+  day_label: string;
+  time: string;
+  channel: string;
+  agenda: string;
+  venue?: string | null;
+  last_met?: string | null;
+  last_modality?: string | null;
+  has_alert: boolean;
+  prep: string[];
+  provenance: Provenance[];
+}
+
+export interface MarketMove {
+  id: string;
+  headline: string;
+  source: string;
+  published_at: string;
+  direction: MoveDirection;
+  sentiment: number;
+  summary: string;
+  url?: string | null;
+  provenance: Provenance;
+}
+
+export interface EventHolder {
+  client_id: string;
+  client_name: string;
+}
+
+export interface PortfolioEvent {
+  id: string;
+  kind: PortfolioEventKind;
+  issuer: string;
+  isin: string;
+  date: string;
+  day_label: string;
+  title: string;
+  detail: string;
+  held_by: EventHolder[];
+  exposure_chf: number;
+  provenance: Provenance;
+}
+
+export interface NewsClientRef {
+  client_id: string;
+  client_name: string;
+  polarity: Polarity;
+}
+
+export interface NewsWireItem {
+  id: string;
+  title: string;
+  source: string;
+  published_at: string;
+  topics: string[];
+  sentiment_score: number;
+  sentiment_label: string;
+  issuer_name?: string | null;
+  url?: string | null;
+  relevant_clients: NewsClientRef[];
+  provenance: Provenance;
+}
+
+export interface OverviewKpis {
+  clients: number;
+  priority_tasks: number;
+  meetings_upcoming: number;
+  market_moves: number;
+  portfolio_events: number;
+  aum_chf: number;
+}
+
+export interface Overview {
+  generated_at: string;
+  today: string;
+  use_live: boolean;
+  rm_name: string;
+  briefing: string;
+  kpis: OverviewKpis;
+  priority_tasks: OverviewTask[];
+  meetings: OverviewMeeting[];
+  market_moves: MarketMove[];
+  portfolio_events: PortfolioEvent[];
+  news: NewsWireItem[];
+}
+
+// --- Auth (Google sign-in) + Twilio morning briefing ---
+
+export interface MeUser {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string | null;
+  phone_e164?: string | null;
+  briefing_hour: number;
+  briefing_enabled: boolean;
+}
+
+export interface BriefingPrefsBody {
+  phone_e164?: string | null;
+  briefing_hour?: number;
+  briefing_enabled?: boolean;
+}
+
+export interface BriefingPrefsResult {
+  ok: boolean;
+  phone_e164?: string | null;
+  briefing_hour: number;
+  briefing_enabled: boolean;
+}
+
+export interface SendTestResult {
+  ok: boolean;
+  text: string;
+  sent: boolean;
+  status?: string;
+  sid?: string;
+  error?: string;
+  skipped?: string;
+}

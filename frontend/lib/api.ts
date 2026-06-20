@@ -20,10 +20,15 @@ import type {
   CaptureConfirm,
   CaptureResult,
   CapturePrompts,
+  Overview,
   Opportunity,
   TransactionsData,
   RMQueryBody,
   RMQueryResult,
+  MeUser,
+  BriefingPrefsBody,
+  BriefingPrefsResult,
+  SendTestResult,
 } from "./types";
 
 // Default to 127.0.0.1 (not "localhost"): on macOS "localhost" can resolve to IPv6 ::1 first,
@@ -32,10 +37,12 @@ import type {
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000";
 
+// credentials:"include" — carry the signed session cookie on /auth + /briefing calls.
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { Accept: "application/json" },
     cache: "no-store",
+    credentials: "include",
   });
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText} — GET ${path}`);
@@ -43,20 +50,25 @@ async function get<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
+async function send<T>(method: "POST" | "PUT", path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
+    method,
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     cache: "no-store",
+    credentials: "include",
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText} — POST ${path}`);
+    throw new Error(`${res.status} ${res.statusText} — ${method} ${path}`);
   }
   return (await res.json()) as T;
 }
 
+const post = <T>(path: string, body: unknown) => send<T>("POST", path, body);
+const put = <T>(path: string, body: unknown) => send<T>("PUT", path, body);
+
 export const api = {
+  overview: () => get<Overview>("/overview"),
   clients: () => get<ClientSummary[]>("/clients"),
   insights: (id: string) => get<Insights>(`/clients/${id}/insights`),
   portfolio: (id: string) => get<Portfolio>(`/clients/${id}/portfolio`),
@@ -103,6 +115,17 @@ export const api = {
   query: (id: string, body: RMQueryBody) =>
     post<RMQueryResult>(`/clients/${id}/query`, body),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
+
+  // --- auth (Google sign-in, identity only) + Twilio morning briefing ---
+  me: () => get<MeUser | null>("/auth/me"),
+  authConfig: () =>
+    get<{ google_enabled: boolean; twilio_enabled: boolean }>("/auth/config"),
+  loginUrl: () => `${API_BASE}/auth/google/login`,
+  logout: () => post<{ ok: boolean }>("/auth/logout", {}),
+  briefingPreview: () => get<{ text: string }>("/briefing/preview"),
+  updateBriefing: (body: BriefingPrefsBody) =>
+    put<BriefingPrefsResult>("/me/briefing", body),
+  sendTestBriefing: () => post<SendTestResult>("/briefing/send-test", {}),
   ocr: async (image: Blob, filename = "note.png"): Promise<{ text: string; provider: string; model?: string }> => {
     const form = new FormData();
     form.append("file", image, filename);

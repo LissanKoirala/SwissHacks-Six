@@ -5,13 +5,16 @@ import type { ClientSummary, IntegrationHealth } from "@/lib/types";
 import { api } from "@/lib/api";
 import { Sidebar } from "./components/Sidebar";
 import { ClientView } from "./components/ClientView";
+import { OverviewDashboard } from "./components/OverviewDashboard";
 import { TasksBoard } from "./components/TasksBoard";
+
+type View = "overview" | "client" | "tasks";
 
 export default function Home() {
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [health, setHealth] = useState<IntegrationHealth | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<"client" | "tasks">("client");
+  const [view, setView] = useState<View>("overview");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -22,7 +25,7 @@ export default function Home() {
       .then((cs) => {
         if (!alive) return;
         setClients(cs);
-        if (cs.length > 0) setSelectedId(cs[0].client_id);
+        // default landing is the Overview, per the desk philosophy
       })
       .catch((e) => alive && setError(String(e)))
       .finally(() => alive && setLoading(false));
@@ -38,15 +41,19 @@ export default function Home() {
     };
   }, []);
 
+  const openClient = (id: string) => {
+    setSelectedId(id);
+    setView("client");
+  };
+
   return (
     <main className="flex h-screen overflow-hidden">
       <Sidebar
         clients={clients}
         selectedId={view === "client" ? selectedId : null}
-        onSelect={(id) => {
-          setSelectedId(id);
-          setView("client");
-        }}
+        onSelect={openClient}
+        onHome={() => setView("overview")}
+        overviewActive={view === "overview"}
         health={health}
         onShowTasks={() => setView("tasks")}
         tasksActive={view === "tasks"}
@@ -70,12 +77,10 @@ export default function Home() {
           </div>
         ) : view === "tasks" ? (
           <TasksBoard clients={clients} />
-        ) : selectedId ? (
+        ) : view === "client" && selectedId ? (
           <ClientView clientId={selectedId} />
         ) : (
-          <div className="grid h-full place-items-center text-sm text-muted-foreground">
-            Select a client to begin.
-          </div>
+          <OverviewDashboard onOpenClient={openClient} />
         )}
       </div>
     </main>
