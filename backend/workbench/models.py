@@ -65,6 +65,10 @@ class Statement(BaseModel):
     text: str
     provenance: Provenance
     weight: float = 1.0
+    # How this fact entered the profile: "seed" (curated ground truth), "log" (auto-derived from
+    # the meeting log by the CRM agent), or "capture" (materialised from an RM note). Lets the UI
+    # show that the DNA is genuinely read from the logs, not hand-entered (CLAUDE.md §8.B).
+    origin: Literal["seed", "log", "capture"] = "seed"
 
 
 class InterestEdge(BaseModel):
@@ -77,6 +81,10 @@ class InterestEdge(BaseModel):
     polarity: Polarity
     weight: float = 1.0
     provenance: Provenance
+    origin: Literal["seed", "log", "capture"] = "seed"
+    # How many meeting-log entries independently corroborate this edge — evidence that the DNA
+    # is grounded in the conversation history (shown as "n entries" in the UI).
+    log_support: int = 1
 
 
 class Profile(BaseModel):
@@ -87,6 +95,9 @@ class Profile(BaseModel):
     headline: str
     facets: dict[str, list[Statement]] = Field(default_factory=dict)
     interest_edges: list[InterestEdge] = Field(default_factory=list)
+    # How many meeting-log entries the CRM agent read to build this DNA — surfaced as
+    # "auto-built from N CRM entries" so the read-the-logs claim is visible (CLAUDE.md §8.B).
+    log_entries_scanned: int = 0
 
 
 # --- RM Capture (multimodal note → stage → confirm) -------------------------
@@ -150,6 +161,9 @@ class CaptureConfirmRequest(BaseModel):
 class Sentiment(BaseModel):
     score: float  # [-1, 1]
     label: SentimentLabel
+    # Where the score/label came from and how it was thresholded — so an RM can audit *why* an
+    # item reads BULLISH/BEARISH, not just that it does (Trust & Explainability, CLAUDE.md §2).
+    source: Optional[str] = None  # e.g. "Event Registry · |score|>0.2" / "stock-labels · |score|>0.2"
 
 
 class NewsItem(BaseModel):
@@ -359,6 +373,9 @@ class SubstitutionMetrics(BaseModel):
     value_tags_sell: list[str] = Field(default_factory=list)
     value_tags_buy: list[str] = Field(default_factory=list)
     risk_source: Optional[str] = None       # "SIX EOD" | "sector model"
+    # Pointers behind the quantitative comparison (the sold + bought CIO rows, the risk source) so
+    # every metric in the side-by-side is clickable, not just asserted (Trust, §2/§7.5).
+    provenance: list[Provenance] = Field(default_factory=list)
 
 
 class SwapProposal(BaseModel):
@@ -409,6 +426,9 @@ class DialogueSuggestion(BaseModel):
     style: str
     talking_points: list[Statement] = Field(default_factory=list)
     draft_message: str
+    # How the draft was produced: "llm" (Phoeniqs, style-tuned) or "template" (deterministic,
+    # style-aware fallback). Surfaced to the RM so the provenance of the prose itself is honest.
+    draft_source: Literal["llm", "template"] = "template"
     market_context: list[Statement] = Field(default_factory=list)
     provenance: list[Provenance] = Field(default_factory=list)
 

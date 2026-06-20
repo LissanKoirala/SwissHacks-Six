@@ -27,6 +27,7 @@ import { DecisionFlow } from "./DecisionFlow";
 import { RiskTimeline } from "./RiskTimeline";
 import { CaptureNote } from "./CaptureNote";
 import { OpportunitiesPanel } from "./OpportunitiesPanel";
+import { AuditPanel } from "./AuditPanel";
 import { TransactionsView } from "./TransactionsView";
 
 function loadRendezvousView() {
@@ -57,7 +58,7 @@ const RendezvousView = dynamic(() => loadRendezvousView(), {
 });
 
 type Area = "advisory" | "portfolio" | "client" | "capture";
-type PortfolioSub = "holdings" | "allocation" | "transactions" | "risk" | "map";
+type PortfolioSub = "holdings" | "audit" | "allocation" | "transactions" | "risk" | "map";
 type ClientSub = "profile" | "network" | "rendezvous";
 
 const ACTION_CHIP: Record<SwapAction, string> = {
@@ -291,7 +292,7 @@ export function ClientView({ clientId }: { clientId: string }) {
               name={client.name}
               size="lg"
             />
-            <h1 className="font-display text-4xl font-light tracking-tight text-foreground">
+            <h1 className="font-display text-[2.5rem] leading-[1.1] font-light tracking-tight text-foreground">
               {client.name}
             </h1>
             <MandatePill mandate={client.mandate} />
@@ -420,6 +421,7 @@ export function ClientView({ clientId }: { clientId: string }) {
                 onChange={setPortfolioSub}
                 items={[
                   { id: "holdings", label: "Holdings" },
+                  { id: "audit", label: "Audit" },
                   { id: "allocation", label: "Allocation" },
                   { id: "transactions", label: "Transactions" },
                   { id: "risk", label: "Risk Timeline" },
@@ -429,6 +431,7 @@ export function ClientView({ clientId }: { clientId: string }) {
               {portfolioSub === "holdings" && (
                 <PortfolioView clientId={clientId} affectedIsin={affectedIsin} />
               )}
+              {portfolioSub === "audit" && <AuditPanel clientId={clientId} />}
               {portfolioSub === "allocation" && (
                 <PortfolioCharts clientId={clientId} />
               )}

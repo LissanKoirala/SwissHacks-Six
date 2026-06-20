@@ -107,6 +107,12 @@ class Settings:
     briefing_tz = os.getenv("BRIEFING_TZ", "Europe/Zurich").strip() or "Europe/Zurich"
     scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "1").strip() in ("1", "true", "True")
 
+    # 24/7 news watch (the News Agent's live tick). Opt-in: polls the live feeds every
+    # NEWS_WATCH_MINUTES and surfaces freshly-matched items as breaking alerts. Off by default so
+    # the offline/seed demo and tests are untouched.
+    news_watch_enabled = os.getenv("NEWS_WATCH_ENABLED", "0").strip() in ("1", "true", "True")
+    news_watch_minutes = int(os.getenv("NEWS_WATCH_MINUTES", "10").strip() or "10")
+
     # Google Flights via the ``flights`` (fli) library — no API key; can be slow on first load.
     live_flights = os.getenv("USE_LIVE_FLIGHTS", "0").strip() in ("1", "true", "True")
 

@@ -45,6 +45,8 @@ export interface LinkPreview {
 export interface Sentiment {
   score: number;
   label: string;
+  // Where the score/label came from + the threshold that turned it into a label (Trust).
+  source?: string | null;
 }
 
 export interface NewsItem {
@@ -153,6 +155,8 @@ export interface SubstitutionMetrics {
   value_tags_sell: string[];
   value_tags_buy: string[];
   risk_source?: string | null;
+  // Pointers behind the side-by-side comparison (sold/bought rows + risk source).
+  provenance?: Provenance[];
 }
 
 export interface Swap {
@@ -229,6 +233,9 @@ export interface DialogueSuggestion {
   style: string;
   talking_points: TalkingPoint[];
   draft_message: string;
+  // How the draft was produced: "llm" (Phoeniqs, style-tuned) or "template" (deterministic,
+  // style-aware fallback) — surfaced so the prose's provenance is honest.
+  draft_source?: "llm" | "template";
   market_context: MarketContextItem[];
   provenance: Provenance[];
 }
@@ -280,6 +287,19 @@ export interface Portfolio {
 export interface FacetEntry {
   text: string;
   provenance: Provenance;
+  // How this fact entered the DNA: curated ground truth, auto-derived from the log, or captured.
+  origin?: "seed" | "log" | "capture";
+}
+
+export interface ProfileInterestEdge {
+  client_id: string;
+  topic: string;
+  facet: string;
+  polarity: Polarity;
+  weight: number;
+  provenance: Provenance;
+  origin?: "seed" | "log" | "capture";
+  log_support?: number; // # of meeting-log entries that corroborate this edge
 }
 
 export interface ClientDetail {
@@ -289,10 +309,72 @@ export interface ClientDetail {
     mandate: string;
     headline: string;
     facets: Record<string, FacetEntry[]>;
-    interest_edges?: unknown[];
+    interest_edges?: ProfileInterestEdge[];
+    log_entries_scanned?: number; // # of CRM entries the agent read to build this DNA
   };
   mandate?: string;
   log_count?: number;
+}
+
+// --- Portfolio audit (proactive standing deviations) ---------------------------------------
+
+export interface AuditValueConflict {
+  isin: string;
+  issuer: string;
+  industry_group?: string | null;
+  current_chf: number;
+  conflicting_tags: string[];
+  topics: string[];
+  severity: string;
+  reason: string;
+  provenance: Provenance[];
+}
+
+export interface AuditCioDeviation {
+  isin: string;
+  issuer: string;
+  status: string;
+  current_chf: number;
+  severity: string;
+  reason: string;
+  provenance: Provenance[];
+}
+
+export interface AuditDriftBreach {
+  sub_asset_class: string;
+  drift_pp: number;
+  target_pct: number;
+  current_pct: number;
+  severity: string;
+  reason: string;
+  provenance: Provenance[];
+}
+
+export interface PortfolioAudit {
+  client_id: string;
+  value_conflicts: AuditValueConflict[];
+  cio_deviations: AuditCioDeviation[];
+  drift_breaches: AuditDriftBreach[];
+  total_deviations: number;
+  clean: boolean;
+}
+
+// --- 24/7 news watch ----------------------------------------------------------------------
+
+export interface BreakingAlert {
+  client_id: string;
+  client_name: string;
+  polarity: Polarity;
+  headline: string;
+  news_id: string;
+  news_title: string;
+  affected_holding?: string | null;
+  detected_at: string;
+}
+
+export interface BreakingFeed {
+  alerts: BreakingAlert[];
+  watch_enabled: boolean;
 }
 
 export interface IntegrationProbe {

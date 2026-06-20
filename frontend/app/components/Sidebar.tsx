@@ -54,7 +54,7 @@ export function Sidebar({
           AW
         </div>
         <div className="min-w-0">
-          <p className="truncate font-display text-base font-light tracking-tight text-foreground">
+          <p className="truncate text-base font-semibold tracking-tight text-foreground">
             Advisory Workbench
           </p>
           <p className="truncate text-xs text-muted-foreground">

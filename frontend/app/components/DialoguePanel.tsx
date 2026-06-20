@@ -65,6 +65,17 @@ export function DialoguePanel({
               <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
                 <Quote className="h-3.5 w-3.5" />
                 Draft Message
+                {/* honest provenance of the prose itself: model-written vs deterministic template */}
+                <span
+                  className="ml-1 rounded-full bg-muted px-1.5 py-px text-[10px] font-medium text-muted-foreground ring-1 ring-inset ring-border"
+                  title={
+                    dialogue.draft_source === "llm"
+                      ? "Drafted by the language model, tuned to the client's style"
+                      : "Deterministic, style-aware fallback draft (no model call)"
+                  }
+                >
+                  {dialogue.draft_source === "llm" ? "AI-drafted" : "Template draft"}
+                </span>
               </p>
               <blockquote className="rounded-md bg-muted/40 px-4 py-3 text-sm leading-relaxed text-foreground/80">
                 {dialogue.draft_message}

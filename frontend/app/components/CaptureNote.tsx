@@ -562,7 +562,7 @@ export function CaptureNote({
           <p className="text-xs font-medium tracking-wide text-muted-foreground">
             New Interaction Note
           </p>
-          <h2 className="mt-1 font-display text-4xl font-light tracking-tight text-foreground">
+          <h2 className="mt-1 font-display text-[2.5rem] leading-[1.1] font-light tracking-tight text-foreground">
             Capture by text, voice or photo
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
