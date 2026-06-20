@@ -36,6 +36,14 @@ class Provenance(BaseModel):
 
 # --- CRM graph --------------------------------------------------------------
 
+class RiskSignal(BaseModel):
+    """A risk-appetite cue lifted from a note: a short phrase and its direction.
+    `direction` is "up" (risk-on) or "down" (de-risk). Stored on the log entry so the
+    risk timeline can reuse the analysis instead of re-scoring (CLAUDE.md §9)."""
+    term: str
+    direction: str  # "up" | "down"
+
+
 class MeetingLogEntry(BaseModel):
     """Immutable, append-only raw entry (CLAUDE.md §3)."""
     id: str
@@ -46,12 +54,17 @@ class MeetingLogEntry(BaseModel):
     rm_name: Optional[str] = None
     note: str
     source: Provenance
+    # Risk cues captured by the analysis at confirm time. Empty → the timeline falls
+    # back to its keyword lexicon for this entry.
+    risk_signals: list[RiskSignal] = Field(default_factory=list)
 
 
 class Statement(BaseModel):
-    """One distilled profile point, with a pointer back to the log line that justifies it."""
+    """One distilled profile point, with a pointer back to the log line that justifies it.
+    `weight` is the RM-set importance (1.0 = normal) so the desk can rank what matters."""
     text: str
     provenance: Provenance
+    weight: float = 1.0
 
 
 class InterestEdge(BaseModel):
@@ -87,6 +100,18 @@ class CaptureExtractRequest(BaseModel):
     date: str = ""                  # ISO yyyy-mm-dd; default = server today if empty
 
 
+class CaptureFollowupRequest(BaseModel):
+    """Conversational capture turn: the note gathered so far + the ids of questions
+    already asked → the single best next spoken follow-up (read-only)."""
+    note: str = ""                  # transcript accumulated so far
+    asked: list[str] = []           # question ids already asked this session
+
+
+class TTSRequest(BaseModel):
+    """Text to speak aloud for the conversational capture voice."""
+    text: str
+
+
 class ProposedEdge(BaseModel):
     """A candidate interest edge the RM can deselect/edit before confirm."""
     topic: str                      # MUST be a TOPIC_VOCAB key
@@ -95,6 +120,7 @@ class ProposedEdge(BaseModel):
     polarity: str                   # opportunity / conflict / neutral
     rationale: str                  # short why, quotes the cue
     selected: bool = True           # default-on; RM can deselect/edit
+    weight: float = 1.0             # RM-set importance (1.0 = normal)
 
 
 class ProposedFacet(BaseModel):
@@ -102,6 +128,7 @@ class ProposedFacet(BaseModel):
     facet: str
     text: str
     selected: bool = True
+    weight: float = 1.0             # RM-set importance (1.0 = normal)
 
 
 class CaptureConfirmRequest(BaseModel):
@@ -113,6 +140,9 @@ class CaptureConfirmRequest(BaseModel):
     date: str = ""
     edges: list[ProposedEdge] = []  # only the RM-kept ones (selected) are applied
     facets: list[ProposedFacet] = []
+    # Risk cues the analysis surfaced for this note (from the staged draft). Carried
+    # through so the timeline reflects the new entry without a second model call.
+    risk_signals: list[RiskSignal] = []
 
 
 # --- News graph -------------------------------------------------------------

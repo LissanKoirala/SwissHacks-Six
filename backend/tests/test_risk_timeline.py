@@ -6,6 +6,7 @@ point, and tracks mandate fit. Deterministic — no LLM."""
 import pytest
 from fastapi.testclient import TestClient
 
+from workbench.agents.risk_timeline import _DELTA_CAP
 from workbench.api import create_app
 
 client = TestClient(create_app())
@@ -57,8 +58,8 @@ def test_risk_timeline_contract(client_id):
     for p in points:
         # every score in range
         assert 0.05 <= p["risk_score"] <= 0.95, p
-        # delta clamped
-        assert -0.18 <= p["delta"] <= 0.18, p
+        # delta clamped to the per-entry cap
+        assert -_DELTA_CAP <= p["delta"] <= _DELTA_CAP, p
         assert p["direction"] in DIRECTIONS
         assert p["mandate_fit"] in FITS
         assert isinstance(p["risk_relevant"], bool)
@@ -77,9 +78,11 @@ def test_risk_timeline_contract(client_id):
         assert prov["source_type"] == "crm_log"
         assert prov["excerpt"]
 
-    # first point: baseline ± its own first delta
+    # first point: baseline ± its own first delta, clamped to the score band
     first = points[0]
-    assert first["risk_score"] == pytest.approx(round(baseline + first["delta"], 3))
+    assert first["risk_score"] == pytest.approx(
+        round(min(0.95, max(0.05, baseline + first["delta"])), 3)
+    )
 
     # at least one risk-relevant point (the lexicon fires somewhere in 3 years of logs)
     assert any(p["risk_relevant"] for p in points)
@@ -99,3 +102,27 @@ def test_risk_timeline_contract(client_id):
 
 def test_unknown_client_404():
     assert client.get("/clients/nobody/risk-timeline").status_code == 404
+
+
+def test_strong_terms_swing_harder_than_mild():
+    """A strong conviction word (bullish/bearish) moves the line ~2x a mild one."""
+    from workbench.agents.risk_timeline import score_note
+
+    mild_up = score_note("Happy to add to the position.")["delta"]
+    strong_up = score_note("He is very bullish.")["delta"]
+    assert strong_up > mild_up > 0
+
+    mild_down = score_note("He wants to be careful.")["delta"]
+    strong_down = score_note("He has turned bearish.")["delta"]
+    assert strong_down < mild_down < 0
+
+    # the strong cue roughly doubles the mild one
+    assert abs(strong_up) > 1.8 * abs(mild_up)
+    assert abs(strong_down) > 1.8 * abs(mild_down)
+
+
+def test_signal_weight_picks_strong_tier():
+    from workbench.agents.risk_timeline import signal_weight
+
+    assert abs(signal_weight("very bullish on tech", "up")) > abs(signal_weight("add a little", "up"))
+    assert abs(signal_weight("bearish, wants out", "down")) > abs(signal_weight("a touch cautious", "down"))

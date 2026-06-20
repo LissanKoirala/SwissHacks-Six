@@ -45,6 +45,25 @@ import { Expander, PolarityChip } from "./ui";
 const POLARITIES: Polarity[] = ["opportunity", "conflict", "neutral"];
 const FACETS = ["professional", "interests", "historical", "personality"] as const;
 
+// RM-set importance → stored as an edge/statement weight (1.0 = normal). Discrete
+// levels keep the choice fast; the nearest level is shown for any incoming weight.
+const IMPORTANCE: { label: string; weight: number }[] = [
+  { label: "Low", weight: 0.5 },
+  { label: "Normal", weight: 1 },
+  { label: "High", weight: 2 },
+  { label: "Critical", weight: 3 },
+];
+
+function weightToLabel(w: number): string {
+  return IMPORTANCE.reduce((a, b) =>
+    Math.abs(b.weight - w) < Math.abs(a.weight - w) ? b : a,
+  ).label;
+}
+
+function labelToWeight(label: string): number {
+  return IMPORTANCE.find((i) => i.label === label)?.weight ?? 1;
+}
+
 const MINI_SELECT = "h-7 w-auto gap-1 px-2 py-1 text-xs";
 const ROW = "rounded-md border p-3 transition-colors";
 const CHECKBOX =
@@ -151,6 +170,38 @@ function FacetSelect({
         {FACETS.map((f) => (
           <SelectItem key={f} value={f}>
             {titleCaseFacet(f)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// Importance picker — maps the discrete level to a stored weight. "Critical"
+// gets a subtle accent so a high-priority item reads at a glance.
+function ImportanceSelect({
+  weight,
+  onChange,
+}: {
+  weight: number;
+  onChange: (w: number) => void;
+}) {
+  const label = weightToLabel(weight);
+  return (
+    <Select value={label} onValueChange={(v) => onChange(labelToWeight(v))}>
+      <SelectTrigger
+        className={cn(
+          MINI_SELECT,
+          "font-medium",
+          weight >= 2 ? "text-warning" : "text-muted-foreground",
+        )}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {IMPORTANCE.map((i) => (
+          <SelectItem key={i.label} value={i.label}>
+            {i.label}
           </SelectItem>
         ))}
       </SelectContent>
@@ -284,11 +335,11 @@ function EdgeRow({
             </span>
             <span className="citation font-mono text-[11px]">{edge.topic}</span>
           </div>
-          {/* detail on demand: edit polarity / facet + read the rationale */}
+          {/* detail on demand: edit polarity / facet / importance + read the rationale */}
           <div className="mt-2">
             <Expander
               label="Detail"
-              summary={edge.rationale ? "rationale, polarity, facet" : "polarity, facet"}
+              summary={edge.rationale ? "rationale, polarity, facet, importance" : "polarity, facet, importance"}
             >
               <div className="flex flex-wrap items-center gap-2">
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -320,6 +371,13 @@ function EdgeRow({
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   Facet
                   <FacetSelect value={edge.facet} onChange={(v) => patch(index, { facet: v })} />
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  Importance
+                  <ImportanceSelect
+                    weight={edge.weight}
+                    onChange={(w) => patch(index, { weight: w })}
+                  />
                 </label>
               </div>
               {edge.rationale && (
@@ -368,17 +426,31 @@ function FacetRow({
             <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
               {titleCaseFacet(facet.facet)}
             </span>
+            {facet.weight >= 2 && (
+              <span className="chip bg-warning/10 text-warning ring-1 ring-inset ring-warning/20">
+                {weightToLabel(facet.weight)}
+              </span>
+            )}
             <span className="min-w-0 flex-1 truncate text-sm text-foreground/80">
               {facet.text}
             </span>
           </div>
-          {/* detail on demand: edit the facet + the statement text */}
+          {/* detail on demand: edit the facet / importance + the statement text */}
           <div className="mt-2">
             <Expander label="Edit statement">
-              <label className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                Facet
-                <FacetSelect value={facet.facet} onChange={(v) => patch(index, { facet: v })} />
-              </label>
+              <div className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  Facet
+                  <FacetSelect value={facet.facet} onChange={(v) => patch(index, { facet: v })} />
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  Importance
+                  <ImportanceSelect
+                    weight={facet.weight}
+                    onChange={(w) => patch(index, { weight: w })}
+                  />
+                </label>
+              </div>
               <Textarea
                 value={facet.text}
                 onChange={(e) => patch(index, { text: e.target.value })}
