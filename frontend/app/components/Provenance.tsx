@@ -15,7 +15,7 @@ export function Provenance({ prov }: { prov: Prov }) {
     <div className="rounded-lg border border-border bg-muted/40 p-3">
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
         <SourceBadge type={prov.source_type} />
-        <span className="font-mono text-[11px] text-muted-foreground">
+        <span className="citation font-mono text-[11px]">
           {prov.source_id}
         </span>
         {prov.timestamp && (
@@ -77,7 +77,7 @@ export function ProvenanceTag({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground ring-1 ring-inset ring-border hover:bg-accent"
+        className="citation ml-1 font-mono text-[11px] ring-1 ring-inset ring-primary/20 transition-colors hover:bg-primary/15"
         aria-expanded={open}
       >
         {label}

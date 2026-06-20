@@ -428,7 +428,7 @@ function RecommendationBar({ decision }: { decision: Decision }) {
           {r.action}
         </span>
         {move && (
-          <span className="text-sm font-semibold text-foreground">{move}</span>
+          <span className="hl text-sm font-semibold">{move}</span>
         )}
         <span className="ml-auto">
           <PolarityChip polarity={decision.polarity} />

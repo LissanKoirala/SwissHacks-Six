@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk } from "next/font/google";
-import { GeistMono } from "geist/font/mono";
+import { DM_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const hanken = Hanken_Grotesk({
+const dmSans = DM_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-hanken",
+  variable: "--font-dm-sans",
+});
+
+const gtUltra = localFont({
+  src: "./fonts/GT-Ultra-Median-Light.woff2",
+  weight: "300",
+  variable: "--font-gt-ultra",
 });
 
 export const metadata: Metadata = {
@@ -22,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en-GB" suppressHydrationWarning className={`${hanken.variable} ${GeistMono.variable}`}>
+    <html lang="en-GB" suppressHydrationWarning className={`${dmSans.variable} ${gtUltra.variable}`}>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <Providers>{children}</Providers>
       </body>

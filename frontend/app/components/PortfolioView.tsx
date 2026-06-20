@@ -64,7 +64,7 @@ export function PortfolioView({
     <div className="space-y-6">
       <div className="flex flex-wrap items-baseline gap-2">
         <h3 className="text-base font-semibold tracking-tight text-foreground">
-          {data.mandate.name} mandate
+          <span className="hl">{data.mandate.name}</span> mandate
         </h3>
         <span className="text-sm tabular-nums text-muted-foreground">
           total {chf(data.total_chf)}
@@ -195,7 +195,7 @@ export function PortfolioView({
                             </span>
                           )}
                           <div className="font-mono text-[11px] text-muted-foreground">
-                            {h.isin}
+                            <span className="citation">{h.isin}</span>
                             {h.six_ticker ? ` · ${h.six_ticker}` : ""}
                           </div>
                         </div>

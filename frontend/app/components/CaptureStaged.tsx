@@ -229,7 +229,7 @@ function EdgeRow({
             <span className="text-sm font-semibold text-foreground">
               {edge.topic_label}
             </span>
-            <span className="font-mono text-[11px] text-muted-foreground">
+            <span className="citation font-mono text-[11px]">
               {edge.topic}
             </span>
           </div>
@@ -378,7 +378,7 @@ export function StagedPanel({
           {draft.contact && <MetaChip>{draft.contact}</MetaChip>}
           {draft.rm_name && <MetaChip>RM · {draft.rm_name}</MetaChip>}
           <span className="ml-auto font-mono text-[11px] text-muted-foreground">
-            will be {draft.preview_entry_id}
+            will be <span className="citation">{draft.preview_entry_id}</span>
           </span>
         </div>
 

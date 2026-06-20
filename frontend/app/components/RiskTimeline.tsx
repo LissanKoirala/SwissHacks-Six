@@ -670,7 +670,7 @@ function StatePanel({
         </div>
         <div className="text-right">
           <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-            {pctLabel(point.risk_score)}
+            <span className="hl">{pctLabel(point.risk_score)}</span>
           </p>
           <p className="text-[11px] text-muted-foreground">
             risk appetite · {band?.label ?? "—"}

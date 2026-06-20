@@ -365,8 +365,9 @@ export function RendezvousView({ clientId }: { clientId: string }) {
               {data.client_name}
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-foreground/80">
-              A next-meeting plan — venues, conversation openers and topics to
-              steer around, each cited back to the CRM history.
+              A <span className="hl">next-meeting plan</span> — venues,
+              conversation openers and topics to steer around, each cited back to
+              the CRM history.
             </p>
           </div>
           {hasSuggestions && (

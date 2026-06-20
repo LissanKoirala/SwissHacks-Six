@@ -23,13 +23,13 @@ const POLARITY_META: Record<
 > = {
   conflict: {
     label: "Conflict",
-    cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-inset ring-amber-500/20",
-    dot: "bg-amber-500",
+    cls: "bg-warning/10 text-warning ring-1 ring-inset ring-warning/20",
+    dot: "bg-warning",
   },
   opportunity: {
     label: "Opportunity",
-    cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20",
-    dot: "bg-emerald-500",
+    cls: "bg-success/10 text-success ring-1 ring-inset ring-success/20",
+    dot: "bg-success",
   },
   neutral: {
     label: "Neutral",
@@ -52,9 +52,9 @@ export function SentimentChip({ label }: { label: string }) {
   const up = /BULL|POSITIVE|POS/i.test(label);
   const down = /BEAR|NEGATIVE|NEG/i.test(label);
   const cls = up
-    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20"
+    ? "bg-success/10 text-success ring-success/20"
     : down
-    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/20"
+    ? "bg-destructive/10 text-destructive ring-destructive/20"
     : "bg-muted text-muted-foreground ring-border";
   return (
     <span className={cn("chip ring-1 ring-inset", cls)}>Sentiment · {label}</span>

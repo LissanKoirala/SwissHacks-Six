@@ -106,11 +106,11 @@ function VerdictChip({ verdict }: { verdict: GlobeHolding["verdict"] }) {
 }
 
 // Alert-signal pulse colour by severity (3D marker hex). High = negative,
-// medium = warning, low = muted evergreen rather than a cyan accent.
+// medium = warning, low = Wordsmith Blue (informational, non-urgent signal).
 const SEVERITY_HEX: Record<GlobeEvent["severity"], string> = {
   high: "#d65c52", // negative (dark)
   med: "#c89243", // warning (dark)
-  low: "#7da78f", // desaturated evergreen
+  low: "#2f7ce6", // Wordsmith Blue — informational signal
 };
 
 /* Ambient world-news pulse colour by sentiment (3D marker hex): negative =
@@ -226,7 +226,7 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         .bumpImageUrl("/textures/earth-topology.png")
         .backgroundImageUrl("/textures/night-sky.png")
         .showAtmosphere(true)
-        .atmosphereColor("#3f8a67")
+        .atmosphereColor("#2f7ce6") // Wordsmith Blue atmosphere
         .atmosphereAltitude(0.18)
         .pointsData([...holdingPoints, ...eventPoints, ...newsPoints])
         .pointLat((d: GlobePoint) => d.lat)

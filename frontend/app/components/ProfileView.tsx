@@ -71,12 +71,16 @@ export function ProfileView({ clientId }: { clientId: string }) {
         </section>
       ))}
       {keys.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No profile facets recorded yet. The profile is built from confirmed
-          meeting notes — capture a note under Add Note, confirm the extracted
-          facts, and the professional, interests, historical and personality
-          facets will populate here.
-        </p>
+        <div className="md:col-span-2">
+          <h3 className="font-display text-4xl font-light tracking-tight text-foreground">
+            No profile yet
+          </h3>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            The profile is built from confirmed meeting notes — capture a note
+            under Add Note, confirm the extracted facts, and the professional,
+            interests, historical and personality facets will populate here.
+          </p>
+        </div>
       )}
     </div>
   );

@@ -97,7 +97,7 @@ export function AlertCard({ match }: { match: Match }) {
                 >
                   <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
                     <Hash className="h-3.5 w-3.5" />
-                    Shared topic · {titleCase(st.topic)}
+                    Shared topic · <span className="hl">{titleCase(st.topic)}</span>
                   </p>
                   <div className="grid gap-2 md:grid-cols-2">
                     <div>

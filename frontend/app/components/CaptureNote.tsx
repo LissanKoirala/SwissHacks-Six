@@ -416,7 +416,7 @@ export function CaptureNote({
               and risk timeline.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="chip bg-primary/10 font-mono text-[11px] text-primary ring-1 ring-inset ring-primary/20">
+              <span className="citation font-mono text-[11px]">
                 {result.entry_id}
               </span>
               <MetaChip>
@@ -451,7 +451,7 @@ export function CaptureNote({
           <p className="text-xs font-medium tracking-wide text-muted-foreground">
             New Interaction Note
           </p>
-          <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">
+          <h2 className="mt-1 font-display text-4xl font-light tracking-tight text-foreground">
             Capture by text, voice or photo
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">

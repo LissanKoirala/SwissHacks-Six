@@ -71,7 +71,7 @@ export function GuidedPrompts({
     <section className="mb-4 rounded-md border border-primary/20 bg-primary/[0.06] p-4">
       <header className="flex items-center gap-2">
         <span className="text-xs font-medium tracking-wide text-muted-foreground">
-          Guided Capture
+          <span className="hl">Guided</span> Capture
         </span>
         <span className="hidden text-xs text-muted-foreground sm:inline">
           — work the prompts for a richer log

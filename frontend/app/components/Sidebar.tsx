@@ -31,7 +31,7 @@ export function Sidebar({
           AW
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">
+          <p className="truncate font-display text-base font-light tracking-tight text-foreground">
             Advisory Workbench
           </p>
           <p className="truncate text-xs text-muted-foreground">
@@ -92,7 +92,7 @@ export function Sidebar({
                     {c.alert_count > 0 && (
                       <Badge
                         variant="outline"
-                        className="h-5 shrink-0 rounded-full border-amber-500/30 bg-amber-500/10 px-1.5 text-[11px] font-semibold tabular-nums text-amber-600 dark:text-amber-400"
+                        className="h-5 shrink-0 rounded-full border-warning/30 bg-warning/10 px-1.5 text-[11px] font-semibold tabular-nums text-warning"
                       >
                         {c.alert_count}
                       </Badge>
@@ -126,7 +126,7 @@ export function Sidebar({
                 <span
                   className={cn(
                     "h-1.5 w-1.5 rounded-full",
-                    p.live ? "bg-emerald-500" : "bg-muted-foreground/40"
+                    p.live ? "bg-success" : "bg-muted-foreground/40"
                   )}
                 />
                 <span className="font-medium text-foreground/80">{p.name}</span>

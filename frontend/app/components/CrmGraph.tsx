@@ -29,16 +29,17 @@ const TYPE_LABELS: Record<NodeType, string> = {
   theme: "Theme",
 };
 
-// Warm-neutral + evergreen canvas palette (the dark 3D surface keeps its own
-// fills; these stay legible on the near-black canvas while honouring the token
-// hues — evergreen for the client/RM core, muted neutrals for structure).
+// Wordsmith-Blue-led canvas palette (the dark surface keeps its own fills; these
+// stay legible on the near-black canvas). Blue leads the relationship core
+// (RM/client); distinct semantic categories take the brand accents — teal for
+// channels, purple for themes — with neutral greys for structural nodes.
 const TYPE_COLOR: Record<NodeType, string> = {
-  rm: "#3f8a67", // evergreen (primary, dark)
-  client: "#c89243", // warning-warm gold — the focal client
-  person: "#9c9488", // warm neutral
-  medium: "#7da78f", // desaturated evergreen
-  interaction: "#6f6a5f", // warm grey
-  theme: "#b07d2b", // ochre
+  rm: "#2f7ce6", // Wordsmith Blue (primary, dark)
+  client: "#5b9bf0", // lighter Wordsmith Blue — the focal client
+  person: "#9a9aa2", // neutral grey
+  medium: "#1aa899", // teal accent — channels (distinct category)
+  interaction: "#6e6e76", // neutral grey
+  theme: "#9d4dff", // purple accent — recurring themes (distinct category)
 };
 
 // Per-type Lucide glyph for the legend chips (replaces emoji entirely).
@@ -474,8 +475,11 @@ export function CrmGraph({ clientId }: { clientId: string }) {
         } else {
           ctx.shadowBlur = 0;
         }
+        // Active edges (touching the focused node) lead on Wordsmith Blue so the
+        // selection reads as the primary accent; idle edges keep the recency
+        // warmth ramp as an ambient cue.
         ctx.strokeStyle = active
-          ? `hsla(${hue}, ${Math.max(60, sat)}%, 70%, ${alpha})`
+          ? `hsla(215, 79%, 62%, ${alpha})`
           : `hsla(${hue}, ${sat}%, ${56 + 12 * rec}%, ${alpha})`;
         ctx.beginPath();
         ctx.moveTo(pa.x, pa.y);
@@ -564,7 +568,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           ctx.beginPath();
           ctx.arc(p.x, p.y, r + (hasFace ? 2 : 0), 0, Math.PI * 2);
           ctx.lineWidth = 2.5;
-          ctx.strokeStyle = "#3f8a67"; // evergreen — active/selected
+          ctx.strokeStyle = "#2f7ce6"; // Wordsmith Blue — active/selected ring
           ctx.stroke();
         }
 
@@ -765,7 +769,8 @@ export function CrmGraph({ clientId }: { clientId: string }) {
             CRM Knowledge Graph
           </p>
           <h2 className="mt-1 text-sm text-foreground">
-            People, channels and recurring themes for this client
+            People, channels and <span className="hl">recurring themes</span> for
+            this client
           </h2>
         </div>
         <input

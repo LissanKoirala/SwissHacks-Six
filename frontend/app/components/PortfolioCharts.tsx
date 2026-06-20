@@ -26,22 +26,24 @@ import { IssuerLogo } from "./IssuerLogo";
 
 /* ---------------------------------------------------------------- palette --- */
 
-// Categorical palette led by the evergreen primary, stepping out through warm
-// paper neutrals — no indigo. Reads on both light and dark surfaces.
+// Categorical palette led by Wordsmith Blue, stepping out through the brand
+// accents (teal / purple / amber) and hue-neutral greys — no evergreen, no
+// indigo. All resolve against the active theme's CSS variables, so the series
+// follow light/dark and stay token-true.
 const SLICE_COLOURS = [
-  "#2f6b4f", // evergreen primary
-  "#4f8a6c", // evergreen, lighter
-  "#7aa890", // sage
-  "#a8c2b3", // pale sage
-  "#b07d2b", // warm gold (neutral here, not a finance signal)
-  "#c7a978", // tan
-  "#9c9488", // warm grey
-  "#cabfae", // pale sand
+  "hsl(var(--primary))", // Wordsmith Blue
+  "hsl(var(--accent-teal))", // teal accent
+  "hsl(var(--accent-purple))", // purple accent
+  "hsl(var(--accent-amber))", // amber accent
+  "hsl(var(--primary) / 0.55)", // blue, softened
+  "hsl(var(--accent-teal) / 0.55)", // teal, softened
+  "hsl(var(--muted-foreground))", // neutral grey
+  "hsl(var(--muted-foreground) / 0.5)", // pale grey
 ];
 
 // Series chrome — semantic finance tokens (warning = breach) resolved against the
 // active theme's CSS variables, so they follow light/dark and stay token-true.
-const ACCENT = "hsl(var(--primary))"; // evergreen
+const ACCENT = "hsl(var(--primary))"; // Wordsmith Blue
 const WARNING = "hsl(var(--warning))"; // drift-breach signal
 const NEUTRAL_BAR = "hsl(var(--muted-foreground))"; // within-band bars
 
@@ -497,7 +499,7 @@ function TopHoldingsTable({ rows }: { rows: TopHolding[] }) {
                       </span>
                     )}
                     <div className="font-mono text-[11px] text-muted-foreground">
-                      {h.isin}
+                      <span className="citation">{h.isin}</span>
                     </div>
                   </div>
                 </div>
