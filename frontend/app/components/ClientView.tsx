@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Insights } from "@/lib/types";
 import { api } from "@/lib/api";
 import { prettyDate } from "@/lib/format";
+import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill } from "./ui";
 import { AlertCard } from "./AlertCard";
 import { StrategyPanel } from "./StrategyPanel";
@@ -81,6 +82,11 @@ export function ClientView({ clientId }: { clientId: string }) {
         {/* header */}
         <header className="mb-4">
           <div className="flex flex-wrap items-center gap-3">
+            <ClientAvatar
+              clientId={client.client_id}
+              name={client.name}
+              size="lg"
+            />
             <h1 className="text-2xl font-semibold text-ink">{client.name}</h1>
             <MandatePill mandate={client.mandate} />
             <span className="text-xs text-slate-400">

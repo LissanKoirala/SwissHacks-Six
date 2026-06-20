@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Portfolio } from "@/lib/types";
 import { api } from "@/lib/api";
 import { chf, pct, signedPp } from "@/lib/format";
+import { IssuerLogo } from "./IssuerLogo";
 
 export function PortfolioView({
   clientId,
@@ -155,14 +156,24 @@ export function PortfolioView({
                     }`}
                   >
                     <td className="px-4 py-2">
-                      <span className="font-medium text-ink">{h.issuer}</span>
-                      {affected && (
-                        <span className="ml-2 chip bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200">
-                          In alert
-                        </span>
-                      )}
-                      <div className="font-mono text-[11px] text-slate-400">
-                        {h.isin}
+                      <div className="flex items-center gap-2">
+                        <IssuerLogo
+                          issuer={h.issuer}
+                          isin={h.isin}
+                          yahoo={h.yahoo}
+                          size="sm"
+                        />
+                        <div>
+                          <span className="font-medium text-ink">{h.issuer}</span>
+                          {affected && (
+                            <span className="ml-2 chip bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200">
+                              In alert
+                            </span>
+                          )}
+                          <div className="font-mono text-[11px] text-slate-400">
+                            {h.isin}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-2 text-ink-soft">

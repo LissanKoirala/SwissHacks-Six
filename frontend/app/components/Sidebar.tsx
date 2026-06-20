@@ -1,6 +1,7 @@
 "use client";
 
 import type { ClientSummary, IntegrationHealth } from "@/lib/types";
+import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill } from "./ui";
 
 export function Sidebar({
@@ -48,26 +49,31 @@ export function Sidebar({
                   : "hover:bg-slate-50"
               }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span
-                  className={`text-sm font-medium ${
-                    active ? "text-accent-ink" : "text-ink"
-                  }`}
-                >
-                  {c.name}
-                </span>
-                {c.alert_count > 0 && (
-                  <span className="grid h-5 min-w-5 place-items-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-white">
-                    {c.alert_count}
-                  </span>
-                )}
+              <div className="flex items-start gap-3">
+                <ClientAvatar clientId={c.client_id} name={c.name} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`text-sm font-medium ${
+                        active ? "text-accent-ink" : "text-ink"
+                      }`}
+                    >
+                      {c.name}
+                    </span>
+                    {c.alert_count > 0 && (
+                      <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-white">
+                        {c.alert_count}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <MandatePill mandate={c.mandate} />
+                  </div>
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-500">
+                    {c.headline}
+                  </p>
+                </div>
               </div>
-              <div className="mt-1.5 flex items-center gap-2">
-                <MandatePill mandate={c.mandate} />
-              </div>
-              <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-500">
-                {c.headline}
-              </p>
             </button>
           );
         })}

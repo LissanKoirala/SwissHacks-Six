@@ -2,6 +2,7 @@
 
 import type { Match } from "@/lib/types";
 import { chf, prettyDate, titleCase } from "@/lib/format";
+import { IssuerLogo } from "./IssuerLogo";
 import { PolarityChip, SentimentChip, Expander } from "./ui";
 import { Provenance } from "./Provenance";
 
@@ -32,9 +33,20 @@ export function AlertCard({ match }: { match: Match }) {
             ))}
           </div>
 
-          <h3 className="text-base font-semibold leading-snug text-ink">
-            {match.headline}
-          </h3>
+          <div className="flex items-start gap-3">
+            {match.affected_holding && (
+              <IssuerLogo
+                issuer={match.affected_holding.issuer}
+                isin={match.affected_holding.isin}
+                yahoo={match.affected_holding.yahoo}
+                size="lg"
+                className="mt-0.5"
+              />
+            )}
+            <h3 className="text-base font-semibold leading-snug text-ink">
+              {match.headline}
+            </h3>
+          </div>
 
           {/* news item */}
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
@@ -58,6 +70,12 @@ export function AlertCard({ match }: { match: Match }) {
           {/* affected holding */}
           {match.affected_holding && (
             <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-inset ring-amber-200">
+              <IssuerLogo
+                issuer={match.affected_holding.issuer}
+                isin={match.affected_holding.isin}
+                yahoo={match.affected_holding.yahoo}
+                size="sm"
+              />
               <span className="font-semibold">Affected holding:</span>
               <span>{match.affected_holding.issuer}</span>
               <span className="text-amber-700">

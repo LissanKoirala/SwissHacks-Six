@@ -22,6 +22,7 @@ import type {
 } from "@/lib/types";
 import { api } from "@/lib/api";
 import { chf, pct, signedPp } from "@/lib/format";
+import { IssuerLogo } from "./IssuerLogo";
 
 /* ---------------------------------------------------------------- palette --- */
 
@@ -479,14 +480,19 @@ function TopHoldingsTable({ rows }: { rows: TopHolding[] }) {
               }`}
             >
               <td className="px-3 py-2">
-                <span className="font-medium text-ink">{h.issuer}</span>
-                {h.in_alert && (
-                  <span className="ml-2 chip bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200">
-                    In alert
-                  </span>
-                )}
-                <div className="font-mono text-[11px] text-slate-400">
-                  {h.isin}
+                <div className="flex items-center gap-2">
+                  <IssuerLogo issuer={h.issuer} isin={h.isin} size="sm" />
+                  <div>
+                    <span className="font-medium text-ink">{h.issuer}</span>
+                    {h.in_alert && (
+                      <span className="ml-2 chip bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200">
+                        In alert
+                      </span>
+                    )}
+                    <div className="font-mono text-[11px] text-slate-400">
+                      {h.isin}
+                    </div>
+                  </div>
                 </div>
               </td>
               <td className="px-3 py-2 text-slate-500">{h.region ?? "—"}</td>

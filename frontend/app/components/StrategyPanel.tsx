@@ -2,6 +2,7 @@
 
 import type { StrategyProposal, Swap, SwapAction } from "@/lib/types";
 import { chf } from "@/lib/format";
+import { IssuerLogo } from "./IssuerLogo";
 import { Expander } from "./ui";
 import { ProvenanceList } from "./Provenance";
 import { ConfirmGate } from "./ConfirmGate";
@@ -37,7 +38,20 @@ function SwapRow({ swap }: { swap: Swap }) {
     <div className="rounded-lg border border-slate-200 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <ActionChip action={swap.action} />
-        <span className="text-sm font-semibold text-ink">{headline}</span>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          {swap.sell_issuer && (
+            <IssuerLogo issuer={swap.sell_issuer} isin={swap.sell_isin} size="sm" />
+          )}
+          {swap.sell_issuer && swap.buy_issuer && (
+            <span className="text-slate-400" aria-hidden>
+              →
+            </span>
+          )}
+          {swap.buy_issuer && (
+            <IssuerLogo issuer={swap.buy_issuer} isin={swap.buy_isin} size="sm" />
+          )}
+          <span className="text-sm font-semibold text-ink">{headline}</span>
+        </div>
         <span className="ml-auto text-sm font-semibold text-ink">
           {chf(swap.amount_chf)}
         </span>
