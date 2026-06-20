@@ -62,7 +62,8 @@ type GlobePoint = {
   radius: number;
 };
 
-const GLOBE_SIZE = 480; // CSS px, square — matches the old cobe footprint
+const CAPTION =
+  "Bars = holdings (height proportional to weight, colour = verdict); tall pulses = alert signals; low pulses = ambient world news (colour = sentiment); dashed arcs = signal to affected holdings. Every item is cited on the right.";
 
 /* ----------------------------------------------------------- verdict meta --- */
 
@@ -135,10 +136,27 @@ function esc(s: string): string {
 /* --------------------------------------------------------------- globe --- */
 
 function GlobeCanvas({ data }: { data: GlobeData }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
+  const globeRef = useRef<GlobeInstance | null>(null);
+  const [dim, setDim] = useState(0);
+
+  // Size the square canvas to the tile width so the globe fills the rounded box.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = Math.floor(el.clientWidth);
+      if (w > 0) setDim(w);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || dim <= 0) return;
     const mount = mountRef.current;
     if (!mount) return;
 
@@ -147,7 +165,6 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
 
     (async () => {
       // Dynamic import keeps three/WebGL out of the SSR bundle.
-      // globe.gl's default export is curried: Globe(config?)(domElement).
       const Globe = (await import("globe.gl")).default as unknown as () => (
         el: HTMLElement,
       ) => GlobeInstance;
@@ -181,8 +198,6 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         radius: 0.9,
       }));
 
-      // Ambient world news — the rest of the news graph, dimmer + shorter so
-      // it reads as background context against the tall, bright alert pulses.
       const newsPoints: GlobePoint[] = (data.news ?? []).map((e) => ({
         kind: "news",
         lat: e.lat,
@@ -198,8 +213,8 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
       }));
 
       globe = Globe()(mountRef.current)
-        .width(GLOBE_SIZE)
-        .height(GLOBE_SIZE)
+        .width(dim)
+        .height(dim)
         .globeImageUrl("/textures/earth-night.jpg")
         .bumpImageUrl("/textures/earth-topology.png")
         .backgroundImageUrl("/textures/night-sky.png")
@@ -228,7 +243,8 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         .arcDashInitialGap(() => Math.random())
         .arcDashAnimateTime(2600);
 
-      // Slow auto-rotation; frame the densest event when present.
+      globeRef.current = globe;
+
       const controls = globe.controls();
       controls.autoRotate = true;
       controls.autoRotateSpeed = 0.32;
@@ -244,7 +260,7 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
 
     return () => {
       disposed = true;
-      // globe.gl exposes a kapsule destructor; guard for version drift.
+      globeRef.current = null;
       try {
         globe?._destructor?.();
       } catch {
@@ -252,23 +268,29 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
       }
       if (mount) mount.replaceChildren();
     };
-  }, [data]);
+  }, [data, dim]);
+
+  useEffect(() => {
+    if (dim > 0) globeRef.current?.width(dim).height(dim);
+  }, [dim]);
 
   return (
-    <div className="flex flex-col items-center rounded-xl bg-slate-900 p-6">
+    <div
+      ref={wrapRef}
+      className="w-full overflow-hidden rounded-xl bg-slate-900"
+    >
       <div
         ref={mountRef}
+        className="block w-full [&>canvas]:!block [&>canvas]:!h-full [&>canvas]:!w-full"
         style={{
-          width: GLOBE_SIZE,
-          height: GLOBE_SIZE,
-          maxWidth: "100%",
+          width: dim > 0 ? dim : "100%",
+          height: dim > 0 ? dim : undefined,
+          aspectRatio: dim > 0 ? undefined : "1 / 1",
         }}
         aria-label="3D globe of portfolio holdings, news events and signal arcs"
       />
-      <p className="mt-3 text-center text-[11px] text-slate-400">
-        Bars = holdings (height ∝ weight, colour = verdict); tall pulses = alert
-        signals; low pulses = ambient world news (colour = sentiment); dashed
-        arcs = signal → affected holdings. Every item is cited on the right.
+      <p className="border-t border-slate-800 px-4 py-3 text-center text-[11px] leading-relaxed text-slate-400">
+        {CAPTION}
       </p>
     </div>
   );
@@ -314,10 +336,6 @@ function EventCard({ event }: { event: GlobeEvent }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{ backgroundColor: SEVERITY_HEX[event.severity] }}
-        />
         <span className="text-sm font-semibold text-ink">{event.summary}</span>
         <span className="ml-auto text-[11px] text-slate-400">
           {prettyDate(event.published_at)}
@@ -338,20 +356,12 @@ function EventCard({ event }: { event: GlobeEvent }) {
 function NewsRow({ item }: { item: GlobeEvent }) {
   const senti = sentimentLabel(item.sentiment);
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-      <span
-        className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-        style={{ backgroundColor: sentimentHex(item.sentiment) }}
-      />
-      <div className="min-w-0">
-        <p className="text-sm font-medium leading-snug text-ink">
-          {item.summary}
-        </p>
-        <p className="mt-0.5 text-xs text-slate-500">
-          {item.source} · {item.country} ·{" "}
-          <span className={senti.cls}>{senti.text}</span>
-        </p>
-      </div>
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+      <p className="text-sm font-medium leading-snug text-ink">{item.summary}</p>
+      <p className="mt-0.5 text-xs text-slate-500">
+        {item.source} · {item.country} ·{" "}
+        <span className={senti.cls}>{senti.text}</span>
+      </p>
     </div>
   );
 }
@@ -436,11 +446,11 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
       </header>
 
       <div className="grid gap-5 p-5 lg:grid-cols-2">
-        <div className="lg:sticky lg:top-5 lg:self-start">
+        <div className="w-full lg:sticky lg:top-5 lg:self-start">
           {data.holdings.length > 0 ? (
             <GlobeCanvas data={data} />
           ) : (
-            <div className="flex h-[480px] items-center justify-center rounded-xl bg-slate-900 text-sm text-slate-400">
+            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-slate-900 text-sm text-slate-400">
               No holdings to map.
             </div>
           )}
