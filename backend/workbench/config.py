@@ -88,6 +88,17 @@ class Settings:
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000").strip() or "http://localhost:3000"
     database_url = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR / 'workbench.db'}").strip()
 
+    # Google Workspace (Gmail read/draft + Calendar read/add). Sensitive/restricted scopes —
+    # fine in Testing mode for added test users. Stored tokens are Fernet-encrypted at rest.
+    google_scopes = os.getenv(
+        "GOOGLE_SCOPES",
+        "openid email profile "
+        "https://www.googleapis.com/auth/gmail.readonly "
+        "https://www.googleapis.com/auth/gmail.compose "
+        "https://www.googleapis.com/auth/calendar.events",
+    ).strip()
+    token_enc_key = _clean(os.getenv("TOKEN_ENC_KEY"))
+
     # --- Twilio SMS morning briefing (spec §6–§8) ---
     twilio_account_sid = _clean(os.getenv("TWILIO_ACCOUNT_SID"))
     twilio_auth_token = _clean(os.getenv("TWILIO_AUTH_TOKEN"))
@@ -151,6 +162,19 @@ class Settings:
     @property
     def google_enabled(self) -> bool:
         return bool(self.google_client_id and self.google_client_secret)
+
+    @property
+    def gmail_scope(self) -> bool:
+        return "gmail" in self.google_scopes
+
+    @property
+    def calendar_scope(self) -> bool:
+        return "calendar" in self.google_scopes
+
+    @property
+    def workspace_enabled(self) -> bool:
+        # Gmail/Calendar API calls need the encryption key to store tokens at rest.
+        return self.google_enabled and bool(self.token_enc_key) and (self.gmail_scope or self.calendar_scope)
 
     @property
     def twilio_enabled(self) -> bool:

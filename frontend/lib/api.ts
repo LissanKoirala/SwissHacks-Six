@@ -31,6 +31,13 @@ import type {
   BriefingPrefsBody,
   BriefingPrefsResult,
   SendTestResult,
+  AuthConfig,
+  GmailMessage,
+  CalendarEvent,
+  DraftBody,
+  DraftResult,
+  EventBody,
+  AddEventResult,
   Task,
   TaskCreateBody,
   TaskUpdateBody,
@@ -147,14 +154,22 @@ export const api = {
 
   // --- auth (Google sign-in, identity only) + Twilio morning briefing ---
   me: () => get<MeUser | null>("/auth/me"),
-  authConfig: () =>
-    get<{ google_enabled: boolean; twilio_enabled: boolean }>("/auth/config"),
+  authConfig: () => get<AuthConfig>("/auth/config"),
   loginUrl: () => `${API_BASE}/auth/google/login`,
   logout: () => post<{ ok: boolean }>("/auth/logout", {}),
   briefingPreview: () => get<{ text: string }>("/briefing/preview"),
   updateBriefing: (body: BriefingPrefsBody) =>
     put<BriefingPrefsResult>("/me/briefing", body),
   sendTestBriefing: () => post<SendTestResult>("/briefing/send-test", {}),
+
+  // --- Google Workspace (Gmail read/draft + Calendar read/add) ---
+  gmailInbox: () => get<{ messages: GmailMessage[] }>("/integrations/google/inbox"),
+  gmailDraft: (body: DraftBody) =>
+    post<DraftResult>("/integrations/google/draft", body),
+  calendarEvents: () =>
+    get<{ events: CalendarEvent[] }>("/integrations/google/calendar"),
+  addCalendarEvent: (body: EventBody) =>
+    post<AddEventResult>("/integrations/google/calendar", body),
 
   // --- The Front Door: inbox + agentic kanban board ---
   tasks: (clientId?: string) =>
