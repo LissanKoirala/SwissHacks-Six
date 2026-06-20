@@ -117,6 +117,13 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "unknown client")
         return get_insights(world, client_id, refresh=refresh).model_dump()
 
+    @app.get("/clients/{client_id}/twin")
+    def client_twin(client_id: str, refresh: bool = False):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.twin import build_twin
+        return build_twin(world, client_id, refresh=refresh).model_dump()
+
     @app.get("/clients/{client_id}/portfolio")
     def client_portfolio(client_id: str):
         if client_id not in world.clients:

@@ -413,6 +413,37 @@ class DialogueSuggestion(BaseModel):
     provenance: list[Provenance] = Field(default_factory=list)
 
 
+# --- Client Digital Twin (pre-mortem on a proposal; advisory only) ----------
+
+class TwinDriver(BaseModel):
+    """One reason the client is likely to react the way they do, grounded in a weighted
+    profile fact and citing its source. `contribution` is the signed effect on the stance
+    (negative = pushes toward objection)."""
+    label: str                      # human-readable driver, e.g. "Avoids US mega-cap software"
+    kind: str                       # value-aligned | value-conflict | risk-reassurance | risk-mismatch | framing
+    stance: str                     # supportive | opposing | neutral
+    weight: float                   # the underlying fact's RM-set importance
+    contribution: float             # signed effect on the aggregate stance
+    detail: str                     # short, plain explanation
+    provenance: Provenance
+
+
+class ClientTwin(BaseModel):
+    """Predicted client reaction to the current proposal, to help the RM prepare. Never
+    contacts the client (CLAUDE.md §2: advisory only — the agent proposes, the RM decides)."""
+    client_id: str
+    client_name: str
+    stance: str                     # receptive | mixed | likely_to_object
+    score: float                    # aggregate stance score (signed)
+    confidence: str                 # low | medium | high
+    summary: str                    # one-line read (deterministic, or LLM-polished)
+    anticipated_objection: Optional[str] = None  # "what the client might say" (LLM, optional)
+    suggested_framing: Optional[str] = None      # how to pre-empt it (LLM, optional) → feeds dialogue
+    drivers: list[TwinDriver] = Field(default_factory=list)
+    llm_used: bool = False
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
 # --- API contract (CLAUDE.md §7.4) -----------------------------------------
 
 class RMQueryRequest(BaseModel):
