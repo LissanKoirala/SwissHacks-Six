@@ -64,6 +64,8 @@ class Rendezvous(BaseModel):
     suggestions: list[RendezvousSuggestion] = Field(default_factory=list)
     talking_points: list[RendezvousTalkingPoint] = Field(default_factory=list)
     avoid: list[str] = Field(default_factory=list)
+    # Event-optimiser output (meeting_optimizer.py): where to convene + flight-grounded travel.
+    meeting: dict = Field(default_factory=dict)
 
 
 # --- log grounding helpers ---------------------------------------------------
@@ -479,11 +481,61 @@ def _build_generic(world: World, client_id: str, p: Optional[Profile]) -> Rendez
                      ["Avoid leading with returns; build rapport first."])
 
 
-def build_rendezvous(world: World, client_id: str) -> dict:
+def build_rendezvous(
+    world: World,
+    client_id: str,
+    *,
+    mode: Optional[str] = None,
+    event_start: Optional[str] = None,
+) -> dict:
     """Build the next-meeting plan for a client, grounded in their CRM history.
 
     Returns the Rendezvous shape (§1) as a plain dict (snake_case), ready for the API."""
+    from .meeting_optimizer import OptimizationMode, optimize_meeting
+
     profile = world.profiles.get(client_id)
     builder = _BUILDERS.get(client_id)
     rdv = builder(world, profile) if builder else _build_generic(world, client_id, profile)
-    return rdv.model_dump()
+
+    topics: set[str] = set()
+    for edge in world.interest_by_client.get(client_id, []):
+        topics.add((getattr(edge, "topic", "") or "").lower())
+
+    opt_mode: Optional[OptimizationMode] = None
+    if mode in ("fairness", "environmental"):
+        opt_mode = mode  # type: ignore[assignment]
+
+    optimization = optimize_meeting(
+        client_id,
+        rdv.client_name,
+        profile_topics=topics,
+        interest_ids=[i.id for i in rdv.interests],
+        mode=opt_mode,
+        event_start_iso=event_start,
+        include_live_flight_quotes=False,
+    )
+    out = rdv.model_copy(update={"meeting": optimization.model_dump()})
+    return out.model_dump()
+
+
+def build_flight_quotes(
+    world: World,
+    client_id: str,
+    iata: str,
+    *,
+    event_start: Optional[str] = None,
+) -> dict:
+    """Lazy flight-price fetch for one candidate city."""
+    from .meeting_optimizer import flight_quotes_for_iata
+
+    profile = world.profiles.get(client_id)
+    builder = _BUILDERS.get(client_id)
+    rdv = builder(world, profile) if builder else _build_generic(world, client_id, profile)
+
+    return flight_quotes_for_iata(
+        client_id,
+        rdv.client_name,
+        iata,
+        interest_ids=[i.id for i in rdv.interests],
+        event_start_iso=event_start,
+    )

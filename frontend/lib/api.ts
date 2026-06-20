@@ -11,6 +11,7 @@ import type {
   Analytics,
   CrmGraph,
   Rendezvous,
+  CandidateFlightQuotes,
   Decision,
   Globe,
   RiskTimeline,
@@ -80,7 +81,27 @@ export const api = {
   transactions: (id: string) =>
     get<TransactionsData>(`/clients/${id}/transactions`),
   graph: (id: string) => get<CrmGraph>(`/clients/${id}/graph`),
-  rendezvous: (id: string) => get<Rendezvous>(`/clients/${id}/rendezvous`),
+  rendezvous: (
+    id: string,
+    opts?: { mode?: "fairness" | "environmental"; eventStart?: string },
+  ) => {
+    const q = new URLSearchParams();
+    if (opts?.mode) q.set("mode", opts.mode);
+    if (opts?.eventStart) q.set("event_start", opts.eventStart);
+    const qs = q.toString();
+    return get<Rendezvous>(`/clients/${id}/rendezvous${qs ? `?${qs}` : ""}`);
+  },
+  rendezvousFlightQuotes: (
+    id: string,
+    iata: string,
+    opts?: { eventStart?: string },
+  ) => {
+    const q = new URLSearchParams({ iata });
+    if (opts?.eventStart) q.set("event_start", opts.eventStart);
+    return get<CandidateFlightQuotes>(
+      `/clients/${id}/rendezvous/flight-quotes?${q.toString()}`,
+    );
+  },
   decision: (id: string) => get<Decision>(`/clients/${id}/decision`),
   globe: (id: string) => get<Globe>(`/clients/${id}/globe`),
   riskTimeline: (id: string) =>

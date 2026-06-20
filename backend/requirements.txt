@@ -13,3 +13,4 @@ apscheduler>=3.10
 # bundled SQLite fallback for interpreters built without stdlib sqlite3 (no-op otherwise)
 pysqlite3-binary>=0.5; sys_platform == "linux"
 pytest>=8.0
+flights>=0.9

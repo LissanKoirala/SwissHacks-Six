@@ -89,6 +89,9 @@ class Settings:
     briefing_tz = os.getenv("BRIEFING_TZ", "Europe/Zurich").strip() or "Europe/Zurich"
     scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "1").strip() in ("1", "true", "True")
 
+    # Google Flights via the ``flights`` (fli) library — no API key; can be slow on first load.
+    live_flights = os.getenv("USE_LIVE_FLIGHTS", "0").strip() in ("1", "true", "True")
+
     @property
     def google_enabled(self) -> bool:
         return bool(self.google_client_id and self.google_client_secret)
@@ -109,6 +112,10 @@ class Settings:
         if self.ocr_provider == "phoeniqs":
             return bool(self.phoeniqs_key)
         return False
+
+    @property
+    def flights_enabled(self) -> bool:
+        return self.live_flights
 
     @property
     def llm_enabled(self) -> bool:

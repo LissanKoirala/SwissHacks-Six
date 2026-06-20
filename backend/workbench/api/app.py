@@ -13,6 +13,7 @@ from ..analytics import build_analytics
 from ..auth import init_oauth, require_user
 from ..auth import router as auth_router
 from ..briefing_service import compose_for, send_briefing
+from ..agents.flight_fli import _fli_installed
 from ..config import settings
 from ..db import get_db, init_db
 from ..db_models import RmUser
@@ -67,6 +68,9 @@ def create_app() -> FastAPI:
              "live": settings.fmp_enabled, "mode": "live" if settings.fmp_enabled else "seed signal fixtures"},
             {"name": "Macro/FX (Frankfurter/ECB)", "configured": True,
              "live": settings.macro_enabled, "mode": "live (no key)" if settings.macro_enabled else "seed macro fixtures"},
+            {"name": "Google Flights (fli)", "configured": _fli_installed(),
+             "live": settings.flights_enabled and _fli_installed(),
+             "mode": "live" if settings.flights_enabled else "heuristic estimates"},
         ]
         return {"use_live": settings.use_live, "probes": probes, "stt": {
             "provider": settings.stt_provider, "enabled": settings.stt_enabled,
@@ -156,11 +160,29 @@ def create_app() -> FastAPI:
         return out.model_dump() if hasattr(out, "model_dump") else out
 
     @app.get("/clients/{client_id}/rendezvous")
-    def client_rendezvous(client_id: str):
+    def client_rendezvous(
+        client_id: str,
+        mode: str | None = None,
+        event_start: str | None = None,
+    ):
         if client_id not in world.clients:
             raise HTTPException(404, "unknown client")
         from ..agents.rendezvous import build_rendezvous
-        return _dump(build_rendezvous(world, client_id))
+        return _dump(build_rendezvous(world, client_id, mode=mode, event_start=event_start))
+
+    @app.get("/clients/{client_id}/rendezvous/flight-quotes")
+    def client_rendezvous_flight_quotes(
+        client_id: str,
+        iata: str,
+        event_start: str | None = None,
+    ):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.rendezvous import build_flight_quotes
+        try:
+            return build_flight_quotes(world, client_id, iata, event_start=event_start)
+        except ValueError as exc:
+            raise HTTPException(404, str(exc)) from exc
 
     @app.get("/clients/{client_id}/decision")
     def client_decision(client_id: str):
