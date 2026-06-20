@@ -96,6 +96,38 @@ def get_insights(world: World, client_id: str, *, refresh: bool = False) -> Clie
     return insights
 
 
+def get_overview_insights(world: World, client_id: str) -> ClientInsights:
+    """LLM-free insights for the desk overview / morning briefing (CLAUDE.md §9).
+
+    The overview and SMS briefing only need the client summary + grounded matches — never the
+    strong-model dialogue prose. Building those here keeps the strong model LAZY: it runs only when
+    the RM actually opens a client (full `get_insights`), not speculatively for every desk refresh.
+    Reuses a full cached entry if one already exists; otherwise computes just the cheap, deterministic
+    parts (matching is a free index intersection) and does NOT poison the cache, so a later open still
+    builds the real proposal + dialogue."""
+    cached = world.insights_cache.get(client_id)
+    if cached is not None:
+        return cached
+
+    meta = world.clients.get(client_id, {})
+    matches = match_client(world, client_id)
+    return ClientInsights(
+        client=ClientSummary(
+            client_id=client_id,
+            name=meta.get("name", client_id),
+            mandate=meta.get("mandate", ""),
+            headline=meta.get("headline", ""),
+            alert_count=len(matches),
+        ),
+        matches=matches,
+        strategy_proposal=None,
+        dialogue_suggestion=None,
+        additional_proposals=[],
+        generated_at=_now(),
+        llm_used=False,
+    )
+
+
 def clear_cache(world: Optional[World] = None) -> None:
     if world is not None:
         world.insights_cache.clear()

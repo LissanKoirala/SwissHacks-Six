@@ -71,7 +71,9 @@ class Settings:
     # Financial Modeling Prep (free tier): ESG controversy ratings, earnings calendar/results,
     # analyst ratings + price targets, fundamentals + dividends. One key, several adapters.
     fmp_key = _clean(os.getenv("FMP_API_KEY"))
-    fmp_url = os.getenv("FMP_API_URL", "https://financialmodelingprep.com/api/v3").strip()
+    # FMP retired the /api/v3 "legacy" endpoints (Aug 2025) for keys issued after that date;
+    # the current API lives under /stable. Override via FMP_API_URL only for legacy keys.
+    fmp_url = os.getenv("FMP_API_URL", "https://financialmodelingprep.com/stable").strip()
 
     # Macro/FX digest. Frankfurter (ECB rates) needs NO key; FRED key is optional enrichment.
     fred_key = _clean(os.getenv("FRED_API_KEY"))
@@ -86,6 +88,13 @@ class Settings:
     session_secret = os.getenv("SESSION_SECRET", "dev-insecure-change-me").strip() or "dev-insecure-change-me"
     session_https_only = os.getenv("SESSION_HTTPS_ONLY", "0").strip() in ("1", "true", "True")
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000").strip() or "http://localhost:3000"
+    # Extra allowed CORS origins for prod (comma-separated, exact scheme+host, no trailing slash),
+    # e.g. "https://billionaire.lissan.dev". Localhost is always allowed via a regex.
+    cors_origins = os.getenv("CORS_ORIGINS", "").strip()
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
     database_url = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR / 'workbench.db'}").strip()
 
     # Google Workspace (Gmail read/draft + Calendar read/add). Sensitive/restricted scopes —

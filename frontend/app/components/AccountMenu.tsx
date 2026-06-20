@@ -219,7 +219,7 @@ export function AccountMenu() {
               <div className="rounded-lg border border-border bg-muted/40 p-3">
                 <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {result.sent
-                    ? `Sent ✓${result.sid ? ` · ${result.sid}` : ""}`
+                    ? `Sent ✓ — can take up to a minute to arrive${result.sid ? ` · ${result.sid}` : ""}`
                     : result.status === "no_phone"
                     ? "Add a phone number to receive it"
                     : `Not sent — ${result.error ?? result.status ?? "unknown"}`}
