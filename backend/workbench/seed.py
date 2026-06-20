@@ -78,6 +78,14 @@ def build_world(use_live_news: bool = False) -> World:
         world.profiles[cid] = profile
         world.interest_by_client[cid] = profile.interest_edges
 
+    # --- RM Capture: replay persisted captures so they survive a restart ---
+    # Non-persisting apply (no double-write); guarded so a bad file never crashes boot.
+    try:
+        from .agents.capture import replay_captures
+        replay_captures(world)
+    except Exception:
+        pass
+
     return world
 
 

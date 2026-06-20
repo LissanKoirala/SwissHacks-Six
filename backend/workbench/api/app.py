@@ -9,6 +9,7 @@ from ..agents.orchestrator import get_insights
 from ..analytics import build_analytics
 from ..config import settings
 from ..graph.crm_graph import build_crm_graph
+from ..models import CaptureConfirmRequest, CaptureExtractRequest
 from ..seed import build_world
 
 
@@ -126,6 +127,29 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "unknown client")
         from ..globe import build_globe
         return _dump(build_globe(world, client_id))
+
+    @app.get("/clients/{client_id}/risk-timeline")
+    def client_risk_timeline(client_id: str):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.risk_timeline import build_risk_timeline
+        return _dump(build_risk_timeline(world, client_id))
+
+    # --- RM Capture (the app's first POSTs — agent proposes, RM confirms) ---
+
+    @app.post("/clients/{client_id}/capture/extract")
+    def capture_extract(client_id: str, req: CaptureExtractRequest):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.capture import extract_draft
+        return _dump(extract_draft(world, client_id, req))
+
+    @app.post("/clients/{client_id}/capture/confirm")
+    def capture_confirm(client_id: str, req: CaptureConfirmRequest):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.capture import confirm_capture
+        return _dump(confirm_capture(world, client_id, req))
 
     return app
 

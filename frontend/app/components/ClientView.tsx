@@ -15,16 +15,20 @@ import { InvestmentGlobe } from "./InvestmentGlobe";
 import { CrmGraph } from "./CrmGraph";
 import { DecisionFlow } from "./DecisionFlow";
 import { RendezvousView } from "./RendezvousView";
+import { RiskTimeline } from "./RiskTimeline";
+import { CaptureNote } from "./CaptureNote";
 
 type Tab =
   | "advisory"
   | "decision"
   | "portfolio"
   | "analytics"
+  | "risk"
   | "map"
   | "network"
   | "rendezvous"
-  | "profile";
+  | "profile"
+  | "capture";
 
 export function ClientView({ clientId }: { clientId: string }) {
   const [insights, setInsights] = useState<Insights | null>(null);
@@ -113,10 +117,12 @@ export function ClientView({ clientId }: { clientId: string }) {
             ["decision", "Decision Flow"],
             ["portfolio", "Portfolio"],
             ["analytics", "Analytics"],
+            ["risk", "Risk Timeline"],
             ["map", "Investment Map"],
             ["network", "CRM Network"],
             ["rendezvous", "Rendezvous"],
             ["profile", "Profile"],
+            ["capture", "＋ Add Note"],
           ] as [Tab, string][]).map(([id, label]) => (
             <button
               key={id}
@@ -129,6 +135,12 @@ export function ClientView({ clientId }: { clientId: string }) {
               }`}
             >
               {label}
+              {/* TO-TEST markers — pending RM sign-off; remove this block when cleared */}
+              {(id === "risk" || id === "capture") && (
+                <span className="ml-1.5 inline-block rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-inset ring-amber-300">
+                  To test
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -165,6 +177,8 @@ export function ClientView({ clientId }: { clientId: string }) {
 
         {tab === "analytics" && <PortfolioCharts clientId={clientId} />}
 
+        {tab === "risk" && <RiskTimeline clientId={clientId} />}
+
         {tab === "map" && <InvestmentGlobe clientId={clientId} />}
 
         {tab === "network" && <CrmGraph clientId={clientId} />}
@@ -172,6 +186,8 @@ export function ClientView({ clientId }: { clientId: string }) {
         {tab === "rendezvous" && <RendezvousView clientId={clientId} />}
 
         {tab === "profile" && <ProfileView clientId={clientId} />}
+
+        {tab === "capture" && <CaptureNote clientId={clientId} />}
       </div>
     </div>
   );

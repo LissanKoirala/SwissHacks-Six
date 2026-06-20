@@ -435,3 +435,114 @@ export interface Globe {
     news: number;
   };
 }
+
+// --- Risk Timeline (per-client risk-appetite scrubber over the CRM log) ---
+
+export interface RiskBand {
+  id: string;
+  label: string;
+  lo: number;
+  hi: number;
+}
+
+export interface RiskSignal {
+  term: string;
+  direction: "up" | "down" | "flat";
+  weight: number;
+}
+
+export interface RiskPoint {
+  id: string;
+  date: string;
+  modality: string;
+  contact: string;
+  note_excerpt: string;
+  risk_score: number;
+  delta: number;
+  direction: "up" | "down" | "flat";
+  risk_relevant: boolean;
+  signals: RiskSignal[];
+  mandate_gap: number;
+  mandate_fit: "aligned" | "cautious-drift" | "risk-on-drift";
+  edges_known: number;
+  facets_known: number;
+  facet_changes: { facet: string; text: string }[];
+  provenance: Provenance;
+}
+
+export interface RiskTimeline {
+  client_id: string;
+  client_name: string;
+  mandate: string;
+  baseline: number;
+  band: { lo: number; hi: number; label: string };
+  bands: RiskBand[];
+  start_date: string;
+  end_date: string;
+  points: RiskPoint[];
+  milestones: { point_id: string; label: string; kind: string }[];
+  current: RiskPoint;
+}
+
+// --- RM Capture (multimodal note → staged preview → RM confirm) ---
+
+export interface ProposedEdge {
+  topic: string;
+  topic_label: string;
+  facet: string;
+  polarity: Polarity;
+  rationale: string;
+  selected: boolean;
+}
+
+export interface ProposedFacet {
+  facet: string;
+  text: string;
+  selected: boolean;
+}
+
+export interface RiskPreview {
+  delta: number;
+  direction: "up" | "down" | "flat";
+  signals: { term: string; direction: "up" | "down" | "flat" }[];
+}
+
+export interface CaptureDraft {
+  client_id: string;
+  note: string;
+  date: string;
+  modality: string;
+  modality_icon: string;
+  contact: string;
+  rm_name: string;
+  detected_topics: { topic: string; label: string }[];
+  proposed_edges: ProposedEdge[];
+  proposed_facets: ProposedFacet[];
+  risk_preview: RiskPreview;
+  preview_entry_id: string;
+}
+
+export interface CaptureExtractBody {
+  note: string;
+  modality: string;
+  contact?: string;
+  rm_name?: string;
+  date?: string;
+}
+
+export interface CaptureConfirm {
+  note: string;
+  modality: string;
+  contact?: string;
+  rm_name?: string;
+  date?: string;
+  edges: ProposedEdge[];
+  facets: ProposedFacet[];
+}
+
+export interface CaptureResult {
+  ok: boolean;
+  entry_id: string;
+  applied: { edges: number; facets: number };
+  log_count: number;
+}
