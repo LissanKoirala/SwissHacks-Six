@@ -79,6 +79,29 @@ const SOURCE_META: Record<
     label: "Market digest",
     cls: "bg-slate-100 text-slate-600 ring-slate-200",
   },
+  // additional free data sources (CLAUDE.md §6)
+  sec_filing: {
+    label: "SEC filing",
+    cls: "bg-blue-50 text-blue-700 ring-blue-200",
+  },
+  esg: { label: "ESG", cls: "bg-green-50 text-green-700 ring-green-200" },
+  earnings: {
+    label: "Earnings",
+    cls: "bg-orange-50 text-orange-700 ring-orange-200",
+  },
+  analyst: {
+    label: "Analyst",
+    cls: "bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200",
+  },
+  macro: { label: "Macro/FX", cls: "bg-slate-100 text-slate-600 ring-slate-200" },
+  fundamentals: {
+    label: "Fundamentals",
+    cls: "bg-cyan-50 text-cyan-700 ring-cyan-200",
+  },
+  insider: {
+    label: "Insider",
+    cls: "bg-rose-50 text-rose-700 ring-rose-200",
+  },
 };
 
 export function SourceBadge({ type }: { type: SourceType }) {

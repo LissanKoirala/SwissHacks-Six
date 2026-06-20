@@ -214,6 +214,7 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
   if (!data) return null;
 
   const f = data.figures;
+  const deviationCount = (f.off_list_count ?? 0) + (f.sell_rated_count ?? 0);
   const sentimentTone: "green" | "red" =
     f.weighted_sentiment >= 0 ? "green" : "red";
   const sentimentValue = `${f.weighted_sentiment >= 0 ? "+" : ""}${f.weighted_sentiment.toFixed(
@@ -233,13 +234,18 @@ export function PortfolioCharts({ clientId }: { clientId: string }) {
   return (
     <div className="space-y-6">
       {/* 1. Figure cards ------------------------------------------------- */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <FigureCard label="Total value" value={chf(f.total_chf)} />
         <FigureCard label="Holdings" value={String(f.holding_count)} />
         <FigureCard
           label="Drift breaches"
           value={String(f.drift_breaches)}
           tone={f.drift_breaches > 0 ? "amber" : "ink"}
+        />
+        <FigureCard
+          label="CIO deviations"
+          value={String(deviationCount)}
+          tone={deviationCount > 0 ? "amber" : "ink"}
         />
         <FigureCard
           label="News sentiment"

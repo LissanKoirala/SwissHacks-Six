@@ -1,0 +1,168 @@
+{
+  "_comment": "Seed-first fixtures for the additional free data sources (CLAUDE.md §6). Anchored to the existing persona universe (ISINs match stock_labels.json / the portfolio workbook) so event signals classify to the right topics and corroborate each persona's primary alert. Sentiment magnitudes are kept just below the original news items so those stay the primary match; these add hard-evidence corroboration. Live adapters fall back to exactly this shape.",
+
+  "sec_filings": [
+    {
+      "id": "sec-biogen-8k-neuro-shutdown",
+      "title": "Biogen Inc. — Form 8-K: Item 2.05 Costs Associated with Exit Activities (neurodegenerative research wind-down)",
+      "body": "Biogen Inc. filed a Form 8-K disclosing a material restructuring: the Board approved winding down the company's dedicated neurodegenerative research division, discontinuing several early-stage Parkinson's disease and movement-disorder programmes. The filing records expected severance and impairment charges and confirms the redeployment of capital toward higher-margin metabolic therapeutics. This is the primary regulatory source behind subsequent press coverage of the brain-disease research retreat.",
+      "source": "SEC EDGAR · Form 8-K",
+      "form_type": "8-K",
+      "cik": "0000875045",
+      "accession": "0000875045-26-000041",
+      "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000875045&type=8-K",
+      "published_at": "2026-06-11",
+      "sentiment": -0.6,
+      "issuer_name": "Biogen Inc.",
+      "issuer_isin": "US09062X1037"
+    },
+    {
+      "id": "sec-pdd-8k-labour-probe",
+      "title": "PDD Holdings Inc. — Form 6-K: disclosure of supply-chain forced-labour regulatory inquiries",
+      "body": "PDD Holdings disclosed in a Form 6-K that regulators in two jurisdictions have opened inquiries into allegations of forced labour and labour exploitation across its third-party supplier network, including wage-theft and modern-slavery claims at subcontractor facilities. The company states it is cooperating. The disclosure is the regulatory record underpinning the supply-chain governance scrutiny in the press.",
+      "source": "SEC EDGAR · Form 6-K",
+      "form_type": "6-K",
+      "cik": "0001737806",
+      "accession": "0001737806-26-000033",
+      "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001737806&type=6-K",
+      "published_at": "2026-06-13",
+      "sentiment": -0.55,
+      "issuer_name": "PDD Holdings Inc.",
+      "issuer_isin": "US7223041028"
+    }
+  ],
+
+  "esg": [
+    {
+      "id": "esg-unilever-deforestation-leader",
+      "title": "ESG controversy monitor: Unilever upgraded to deforestation leader after absolute palm-oil supplier cut-off",
+      "body": "Unilever's controversy exposure on land-use and biodiversity was downgraded to low after the company cut off all palm-oil suppliers tied to deforestation and funded a rainforest reforestation foundation. The screen flags the move as genuine supply-chain ecology leadership rather than greenwashing, citing the absolute stance on deforestation and active reforestation commitments.",
+      "source": "ESG Controversy Monitor",
+      "esg_score": 82,
+      "controversy_level": "Low",
+      "url": "https://example.com/esg/unilever",
+      "published_at": "2026-06-15",
+      "sentiment": 0.66,
+      "issuer_name": "Unilever PLC",
+      "issuer_isin": "GB00B10RZP78"
+    },
+    {
+      "id": "esg-pdd-labour-controversy",
+      "title": "ESG controversy monitor: PDD Holdings flagged severe labour & supply-chain governance controversy",
+      "body": "PDD Holdings was flagged at the most severe controversy band for labour exploitation, forced labour and supply-chain governance failures across its supplier network. The screen notes wage-theft and sweatshop allegations and active regulatory probes, marking the name as a live reputational and labour-rights liability.",
+      "source": "ESG Controversy Monitor",
+      "esg_score": 28,
+      "controversy_level": "Severe",
+      "url": "https://example.com/esg/pdd",
+      "published_at": "2026-06-14",
+      "sentiment": -0.66,
+      "issuer_name": "PDD Holdings Inc.",
+      "issuer_isin": "US7223041028"
+    }
+  ],
+
+  "earnings": [
+    {
+      "id": "earn-roche-q2-beat-neuro",
+      "title": "Roche Q2 earnings beat: neuroscience pipeline funding reaffirmed",
+      "body": "Roche reported quarterly results ahead of consensus and explicitly reaffirmed investment in its neuroscience and neurodegenerative research pipeline, including ongoing Parkinson's and movement-disorder programmes. Management framed brain-disease research as a durable franchise, contrasting with peers retreating from the field.",
+      "source": "Earnings Desk",
+      "eps_actual": 5.42,
+      "eps_estimate": 5.10,
+      "surprise_pct": 6.3,
+      "url": "https://example.com/earnings/roche-q2",
+      "published_at": "2026-06-09",
+      "sentiment": 0.38,
+      "issuer_name": "Roche Holding AG",
+      "issuer_isin": "CH0012032048"
+    },
+    {
+      "id": "earn-asml-q2-beat",
+      "title": "ASML Q2 earnings beat on lithography machinery demand",
+      "body": "ASML reported quarterly revenue and bookings ahead of expectations, driven by demand for its physical lithography machinery. Management pointed to a healthy order backlog for the tangible hardware that underpins advanced semiconductor manufacturing. No change to the dividend policy was announced.",
+      "source": "Earnings Desk",
+      "eps_actual": 4.90,
+      "eps_estimate": 4.55,
+      "surprise_pct": 7.7,
+      "url": "https://example.com/earnings/asml-q2",
+      "published_at": "2026-06-08",
+      "sentiment": 0.3,
+      "issuer_name": "ASML Holding NV",
+      "issuer_isin": "NL0010273215"
+    }
+  ],
+
+  "analyst": [
+    {
+      "id": "analyst-ai-megacap-caution",
+      "title": "Analysts cut price targets across mega-cap US AI names on stretched valuations",
+      "body": "Sell-side analysts trimmed price targets on mega-cap US technology and AI infrastructure leaders, warning that the AI rally has pushed software valuations to levels reminiscent of prior tech bubbles. Several desks moved ratings from Buy to Hold, cautioning that AI-stocks momentum may be running ahead of fundamentals.",
+      "source": "Analyst Consensus",
+      "rating_from": "Buy",
+      "rating_to": "Hold",
+      "price_target": 980.0,
+      "url": "https://example.com/analyst/ai-caution",
+      "published_at": "2026-06-10",
+      "sentiment": -0.3,
+      "issuer_name": "NVIDIA Corporation",
+      "issuer_isin": "US67066G1040"
+    }
+  ],
+
+  "macro": [
+    {
+      "id": "macro-ecb-hold",
+      "title": "ECB holds rates; signals patience on further cuts",
+      "body": "The European Central Bank kept its policy rate unchanged and signalled a patient stance on further easing, supporting high-grade fixed income and dividend-paying defensives across the euro area.",
+      "source": "Macro Desk · ECB",
+      "url": "https://example.com/macro/ecb",
+      "published_at": "2026-06-18",
+      "sentiment": 0.15
+    },
+    {
+      "id": "macro-chf-strength",
+      "title": "Swiss franc firms as safe-haven demand persists",
+      "body": "The Swiss franc strengthened against the euro and dollar as investors sought safe-haven assets, supporting domestic defensive equities and Swiss-franc denominated bonds.",
+      "source": "Macro Desk · SNB/FX",
+      "url": "https://example.com/macro/chf",
+      "published_at": "2026-06-18",
+      "sentiment": 0.1
+    },
+    {
+      "id": "macro-gold-bid",
+      "title": "Gold holds near record as real yields ease",
+      "body": "Gold traded near record highs as real yields eased and geopolitical uncertainty persisted, reinforcing its role as a portfolio diversifier for capital-preservation mandates.",
+      "source": "Macro Desk · Commodities",
+      "url": "https://example.com/macro/gold",
+      "published_at": "2026-06-17",
+      "sentiment": 0.08
+    }
+  ],
+
+  "fundamentals": [
+    {"isin": "CH0012032048", "issuer": "Roche Holding AG", "as_of": "2026-06-18", "currency": "CHF",
+     "pe_ratio": 16.2, "dividend_yield": 3.6, "next_ex_dividend": "2027-03-12",
+     "market_cap": 240000000000, "week52_high": 290.0, "week52_low": 228.0},
+    {"isin": "GB00B10RZP78", "issuer": "Unilever PLC", "as_of": "2026-06-18", "currency": "GBP",
+     "pe_ratio": 18.5, "dividend_yield": 3.4, "next_ex_dividend": "2026-08-07",
+     "market_cap": 118000000000, "week52_high": 52.4, "week52_low": 41.1},
+    {"isin": "NL0010273215", "issuer": "ASML Holding NV", "as_of": "2026-06-18", "currency": "EUR",
+     "pe_ratio": 34.0, "dividend_yield": 1.0, "next_ex_dividend": "2026-07-29",
+     "market_cap": 320000000000, "week52_high": 1020.0, "week52_low": 690.0},
+    {"isin": "US67066G1040", "issuer": "NVIDIA Corporation", "as_of": "2026-06-18", "currency": "USD",
+     "pe_ratio": 45.0, "dividend_yield": 0.03, "next_ex_dividend": "2026-09-11",
+     "market_cap": 2900000000000, "week52_high": 1180.0, "week52_low": 620.0},
+    {"isin": "US09062X1037", "issuer": "Biogen Inc.", "as_of": "2026-06-18", "currency": "USD",
+     "pe_ratio": 12.5, "dividend_yield": 0.0, "next_ex_dividend": null,
+     "market_cap": 28000000000, "week52_high": 265.0, "week52_low": 188.0}
+  ],
+
+  "insider": [
+    {"isin": "US09062X1037", "issuer": "Biogen Inc.", "insider": "Biogen CFO", "role": "Chief Financial Officer",
+     "transaction": "SELL", "shares": 12000, "value_usd": 2640000, "date": "2026-06-10",
+     "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000875045&type=4"},
+    {"isin": "GB00B10RZP78", "issuer": "Unilever PLC", "insider": "Unilever Non-Executive Director", "role": "Director",
+     "transaction": "BUY", "shares": 5000, "value_usd": 320000, "date": "2026-06-16",
+     "url": "https://example.com/insider/unilever"}
+  ]
+}

@@ -1,9 +1,9 @@
 "use client";
 
-import type { Match } from "@/lib/types";
+import type { Match, SourceType } from "@/lib/types";
 import { chf, prettyDate, titleCase } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
-import { PolarityChip, SentimentChip, Expander } from "./ui";
+import { PolarityChip, SentimentChip, SourceBadge, Expander } from "./ui";
 import { Provenance } from "./Provenance";
 
 export function AlertCard({ match }: { match: Match }) {
@@ -23,6 +23,9 @@ export function AlertCard({ match }: { match: Match }) {
         <div className="p-5">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <PolarityChip polarity={match.polarity} />
+            {news.signal_type && news.signal_type !== "news" && (
+              <SourceBadge type={news.signal_type as SourceType} />
+            )}
             {news.topics.map((t) => (
               <span
                 key={t}

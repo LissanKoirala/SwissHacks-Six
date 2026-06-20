@@ -6,6 +6,7 @@ import type {
   Insights,
   Portfolio,
   ClientDetail,
+  Fundamentals,
   IntegrationHealth,
   Analytics,
   CrmGraph,
@@ -51,6 +52,8 @@ export const api = {
   clients: () => get<ClientSummary[]>("/clients"),
   insights: (id: string) => get<Insights>(`/clients/${id}/insights`),
   portfolio: (id: string) => get<Portfolio>(`/clients/${id}/portfolio`),
+  fundamentals: (id: string) =>
+    get<Fundamentals[]>(`/clients/${id}/fundamentals`),
   client: (id: string) => get<ClientDetail>(`/clients/${id}`),
   analytics: (id: string) => get<Analytics>(`/clients/${id}/analytics`),
   graph: (id: string) => get<CrmGraph>(`/clients/${id}/graph`),
