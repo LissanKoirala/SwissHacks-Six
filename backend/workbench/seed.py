@@ -25,7 +25,15 @@ from .ingestion.news import EventRegistrySource, NewsFixtureSource
 from .ingestion.portfolio_xlsx import PortfolioWorkbookSource
 from .ingestion.sec_edgar import SecFilingFixtureSource, SecFilingLiveSource
 from .ingestion.six_mcp import enrich_listing
-from .models import Holding, Mandate, MandateTarget, MeetingLogEntry, Provenance
+from .models import (
+    CashFlow,
+    Holding,
+    Mandate,
+    MandateTarget,
+    MeetingLogEntry,
+    PortfolioTransaction,
+    Provenance,
+)
 
 
 def _load_json(name: str) -> dict:
@@ -79,6 +87,20 @@ def build_world(use_live_news: bool = False) -> World:
                 benchmark=p.get("benchmark"), target_pct=p["target_pct"], target_chf=p["target_chf"],
                 provenance=Provenance(source_type="mandate", source_id=rec.source_id,
                                       excerpt=rec.excerpt),
+            ))
+        elif rec.kind == "transaction":
+            p = rec.payload
+            world.transactions.setdefault(p["portfolio"], []).append(PortfolioTransaction(
+                provenance=Provenance(source_type="portfolio", source_id=rec.source_id,
+                                      excerpt=rec.excerpt, timestamp=p.get("timestamp")),
+                **p,
+            ))
+        elif rec.kind == "cash_flow":
+            p = rec.payload
+            world.cash_flows.setdefault(p["portfolio"], []).append(CashFlow(
+                provenance=Provenance(source_type="portfolio", source_id=rec.source_id,
+                                      excerpt=rec.excerpt, timestamp=p.get("timestamp")),
+                **p,
             ))
 
     _finalise_mandates(world, mandate_targets)

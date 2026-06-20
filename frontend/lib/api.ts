@@ -19,10 +19,17 @@ import type {
   CaptureConfirm,
   CaptureResult,
   CapturePrompts,
+  Opportunity,
+  TransactionsData,
+  RMQueryBody,
+  RMQueryResult,
 } from "./types";
 
+// Default to 127.0.0.1 (not "localhost"): on macOS "localhost" can resolve to IPv6 ::1 first,
+// where a backend bound to IPv4 0.0.0.0/127.0.0.1 isn't listening — the fetch then hangs.
+// Override with NEXT_PUBLIC_API_BASE for non-local backends.
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000";
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -56,6 +63,10 @@ export const api = {
     get<Fundamentals[]>(`/clients/${id}/fundamentals`),
   client: (id: string) => get<ClientDetail>(`/clients/${id}`),
   analytics: (id: string) => get<Analytics>(`/clients/${id}/analytics`),
+  opportunities: (id: string) =>
+    get<Opportunity[]>(`/clients/${id}/opportunities`),
+  transactions: (id: string) =>
+    get<TransactionsData>(`/clients/${id}/transactions`),
   graph: (id: string) => get<CrmGraph>(`/clients/${id}/graph`),
   rendezvous: (id: string) => get<Rendezvous>(`/clients/${id}/rendezvous`),
   decision: (id: string) => get<Decision>(`/clients/${id}/decision`),
@@ -68,5 +79,7 @@ export const api = {
     post<CaptureResult>(`/clients/${id}/capture/confirm`, body),
   capturePrompts: (id: string) =>
     get<CapturePrompts>(`/clients/${id}/capture/prompts`),
+  query: (id: string, body: RMQueryBody) =>
+    post<RMQueryResult>(`/clients/${id}/query`, body),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
 };

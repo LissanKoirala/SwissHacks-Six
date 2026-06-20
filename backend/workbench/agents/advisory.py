@@ -95,9 +95,11 @@ def select_swap_candidate(
     world: World, client_id: str, industry_group: str,
     desired: list[str], avoid: list[str], exclude_isin: Optional[str],
     same_sub_asset_class: Optional[str], target_vol: Optional[float] = None,
+    also_exclude: Optional[set] = None,
 ) -> Optional[CIOStock]:
     held = world.held_isins(client_id)
-    candidates = [c for c in world.cio_by_industry(industry_group, "BUY") if c.isin != exclude_isin]
+    blocked = {exclude_isin} | (also_exclude or set())
+    candidates = [c for c in world.cio_by_industry(industry_group, "BUY") if c.isin not in blocked]
     if not candidates:
         return None
 

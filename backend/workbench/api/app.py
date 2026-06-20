@@ -9,7 +9,7 @@ from ..agents.orchestrator import get_insights
 from ..analytics import build_analytics
 from ..config import settings
 from ..graph.crm_graph import build_crm_graph
-from ..models import CaptureConfirmRequest, CaptureExtractRequest
+from ..models import CaptureConfirmRequest, CaptureExtractRequest, RMQueryRequest
 from ..seed import build_world
 
 
@@ -148,6 +148,31 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "unknown client")
         from ..agents.risk_timeline import build_risk_timeline
         return _dump(build_risk_timeline(world, client_id))
+
+    @app.get("/clients/{client_id}/opportunities")
+    def client_opportunities(client_id: str):
+        """NEW unheld CIO-BUY names aligned to the client's DNA (HI3) — proactive, news-independent."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.opportunities import build_opportunities
+        return build_opportunities(world, client_id)
+
+    @app.get("/clients/{client_id}/transactions")
+    def client_transactions(client_id: str):
+        """Transaction ledger + cash flows: cost basis, unrealised P&L, income yield (HI4)."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..ledger import build_ledger
+        return build_ledger(world, client_id)
+
+    @app.post("/clients/{client_id}/query")
+    def client_query(client_id: str, req: RMQueryRequest):
+        """RM conversational query about a proposal (ST1): context answer or an alternative candidate."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.rm_interface import answer_query
+        return answer_query(world, client_id, match_id=req.match_id,
+                            question=req.question, exclude_isin=req.exclude_isin)
 
     # --- RM Capture (the app's first POSTs — agent proposes, RM confirms) ---
 

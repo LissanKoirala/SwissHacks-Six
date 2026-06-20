@@ -18,11 +18,14 @@ import { DecisionFlow } from "./DecisionFlow";
 import { RendezvousView } from "./RendezvousView";
 import { RiskTimeline } from "./RiskTimeline";
 import { CaptureNote } from "./CaptureNote";
+import { OpportunitiesPanel } from "./OpportunitiesPanel";
+import { TransactionsView } from "./TransactionsView";
 
 type Tab =
   | "advisory"
   | "decision"
   | "portfolio"
+  | "activity"
   | "analytics"
   | "risk"
   | "map"
@@ -122,6 +125,7 @@ export function ClientView({ clientId }: { clientId: string }) {
             ["advisory", `Advisory${client.alert_count ? ` · ${client.alert_count}` : ""}`],
             ["decision", "Decision Flow"],
             ["portfolio", "Portfolio"],
+            ["activity", "Transactions"],
             ["analytics", "Analytics"],
             ["risk", "Risk Timeline"],
             ["map", "Investment Map"],
@@ -163,9 +167,31 @@ export function ClientView({ clientId }: { clientId: string }) {
 
             {/* dual output — the product core */}
             <div className="grid gap-5 lg:grid-cols-2">
-              <StrategyPanel proposal={insights.strategy_proposal} />
+              <StrategyPanel
+                proposal={insights.strategy_proposal}
+                clientId={clientId}
+                matchId={insights.matches[0]?.id ?? null}
+              />
               <DialoguePanel dialogue={insights.dialogue_suggestion} />
             </div>
+
+            {/* additional proposals — other distinct salient matches (e.g. a separate opportunity) */}
+            {insights.additional_proposals &&
+              insights.additional_proposals.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Other flagged proposals · {insights.additional_proposals.length}
+                  </p>
+                  <div className="grid gap-5 lg:grid-cols-2">
+                    {insights.additional_proposals.map((p, i) => (
+                      <StrategyPanel key={`add-${i}`} proposal={p} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            {/* proactive: NEW unheld opportunities aligned to the client's DNA */}
+            <OpportunitiesPanel clientId={clientId} />
           </div>
         )}
 
@@ -174,6 +200,8 @@ export function ClientView({ clientId }: { clientId: string }) {
         {tab === "portfolio" && (
           <PortfolioView clientId={clientId} affectedIsin={affectedIsin} />
         )}
+
+        {tab === "activity" && <TransactionsView clientId={clientId} />}
 
         {tab === "analytics" && <PortfolioCharts clientId={clientId} />}
 

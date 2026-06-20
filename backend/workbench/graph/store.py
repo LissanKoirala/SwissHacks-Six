@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ..models import (
+    CashFlow,
     CIOStock,
     Fundamentals,
     Holding,
@@ -18,6 +19,7 @@ from ..models import (
     Mandate,
     MeetingLogEntry,
     NewsItem,
+    PortfolioTransaction,
     Profile,
 )
 
@@ -39,6 +41,9 @@ class World:
     mandates: dict[str, Mandate] = field(default_factory=dict)         # by strategy
     cio: list[CIOStock] = field(default_factory=list)
     cio_by_isin: dict[str, CIOStock] = field(default_factory=dict)
+    # Transaction ledger + cash flows (HI4), by portfolio/strategy
+    transactions: dict[str, list[PortfolioTransaction]] = field(default_factory=dict)
+    cash_flows: dict[str, list[CashFlow]] = field(default_factory=dict)
 
     # Issuer reference data (fundamentals + dividends + insider), keyed by ISIN — context for
     # the portfolio view + dialogue, never matched (CLAUDE.md §2).
@@ -57,6 +62,12 @@ class World:
 
     def holdings_for_client(self, client_id: str) -> list[Holding]:
         return self.holdings.get(self.portfolio_of(client_id), [])
+
+    def transactions_for_client(self, client_id: str) -> list[PortfolioTransaction]:
+        return self.transactions.get(self.portfolio_of(client_id), [])
+
+    def cashflows_for_client(self, client_id: str) -> list[CashFlow]:
+        return self.cash_flows.get(self.portfolio_of(client_id), [])
 
     def held_isins(self, client_id: str) -> set[str]:
         return {h.isin for h in self.holdings_for_client(client_id)}

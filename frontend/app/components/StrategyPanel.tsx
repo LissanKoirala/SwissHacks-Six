@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import type {
   StrategyProposal,
   Swap,
   SwapAction,
   GoodNewsBriefing,
   SubstitutionMetrics,
+  RMQueryResult,
+  RMQueryBody,
 } from "@/lib/types";
+import { api } from "@/lib/api";
 import { chf, price, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
 import { Expander } from "./ui";
@@ -243,11 +247,125 @@ function GoodNewsBriefingCard({ briefing }: { briefing: GoodNewsBriefing }) {
   );
 }
 
+/** Conversational RM query (ST1): ask for context or request an alternative candidate. */
+function RMQueryBox({
+  clientId,
+  matchId,
+  currentBuyIsin,
+}: {
+  clientId: string;
+  matchId: string;
+  currentBuyIsin?: string | null;
+}) {
+  const [q, setQ] = useState("");
+  const [result, setResult] = useState<RMQueryResult | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const ask = (body: RMQueryBody) => {
+    setLoading(true);
+    setResult(null);
+    api
+      .query(clientId, { match_id: matchId, ...body })
+      .then(setResult)
+      .catch(() =>
+        setResult({
+          kind: "none",
+          question: "",
+          answer: "Could not reach the advisor service.",
+          alternative: null,
+        })
+      )
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        Ask the advisor
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && q.trim() && ask({ question: q })}
+          placeholder="Ask why, or for context…"
+          className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-ink placeholder:text-slate-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+        />
+        <button
+          type="button"
+          onClick={() => q.trim() && ask({ question: q })}
+          className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-ink"
+        >
+          Ask
+        </button>
+        {currentBuyIsin && (
+          <button
+            type="button"
+            onClick={() =>
+              ask({ question: "alternative", exclude_isin: currentBuyIsin })
+            }
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-ink-soft hover:bg-slate-50"
+          >
+            Suggest an alternative
+          </button>
+        )}
+      </div>
+      {loading && <p className="text-xs text-slate-400">Thinking…</p>}
+      {result && (result.answer || result.alternative) && (
+        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+          {result.answer && (
+            <p className="text-sm leading-relaxed text-ink-soft">{result.answer}</p>
+          )}
+          {result.alternative && (
+            <div className="mt-3">
+              <div className="flex items-center gap-2">
+                <IssuerLogo
+                  issuer={result.alternative.buy_issuer}
+                  isin={result.alternative.buy_isin}
+                  size="sm"
+                />
+                <span className="text-sm font-semibold text-ink">
+                  BUY {result.alternative.buy_issuer}
+                </span>
+                <span className="chip bg-accent-soft text-accent-ink ring-1 ring-inset ring-accent/30">
+                  Alternative
+                </span>
+              </div>
+              <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+                {result.alternative.rationale}
+              </p>
+              <SubstitutionTable sub={result.alternative.substitution} />
+              {result.alternative.provenance.length > 0 && (
+                <div className="mt-2">
+                  <Expander
+                    label="View sources"
+                    count={result.alternative.provenance.length}
+                  >
+                    <ProvenanceList items={result.alternative.provenance} />
+                  </Expander>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function StrategyPanel({
   proposal,
+  clientId,
+  matchId,
 }: {
   proposal: StrategyProposal | null;
+  clientId?: string;
+  matchId?: string | null;
 }) {
+  const currentBuyIsin =
+    proposal?.swaps.find((s) => s.buy_isin && s.sell_isin)?.buy_isin ??
+    proposal?.swaps.find((s) => s.buy_isin)?.buy_isin ??
+    null;
   return (
     <section className="card flex flex-col">
       <header className="border-b border-slate-200 px-5 py-4">
@@ -299,7 +417,14 @@ export function StrategyPanel({
       </div>
 
       {proposal && proposal.swaps.length > 0 && (
-        <footer className="border-t border-slate-200 px-5 py-4">
+        <footer className="space-y-4 border-t border-slate-200 px-5 py-4">
+          {clientId && matchId && (
+            <RMQueryBox
+              clientId={clientId}
+              matchId={matchId}
+              currentBuyIsin={currentBuyIsin}
+            />
+          )}
           <ConfirmGate
             action="Propose to client (RM approve)"
             confirmQuestion="Approve this proposal for the client conversation?"

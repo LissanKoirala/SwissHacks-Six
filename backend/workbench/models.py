@@ -222,6 +222,38 @@ class CIOStock(BaseModel):
     provenance: Provenance
 
 
+# --- Transaction ledger + cash flows (HI4: history, cost basis, income) --------------------
+
+class PortfolioTransaction(BaseModel):
+    """One historical trade from the workbook Transactions tabs. Immutable history; never matched."""
+    transaction_id: str
+    timestamp: str                 # ISO yyyy-mm-dd
+    portfolio: str
+    isin: str
+    issuer: str
+    side: Literal["BUY", "SELL"]
+    quantity: Optional[float] = None
+    price_local: Optional[float] = None
+    currency: Optional[str] = None
+    fx_chf: Optional[float] = None
+    price_chf: Optional[float] = None
+    amount_chf: float = 0.0
+    rationale: Optional[str] = None
+    price_source: Optional[str] = None
+    provenance: Provenance
+
+
+class CashFlow(BaseModel):
+    """One cash movement from the workbook Cash Flows tab: COUPON / DEPOSIT / WITHDRAWAL / FEE."""
+    flow_id: str
+    timestamp: str
+    portfolio: str
+    side: str
+    amount_chf: float = 0.0
+    rationale: Optional[str] = None
+    provenance: Provenance
+
+
 # --- Issuer reference data (context for dialogue + portfolio view, NOT matched) -------------
 
 class InsiderTrade(BaseModel):
@@ -353,6 +385,13 @@ class DialogueSuggestion(BaseModel):
 
 # --- API contract (CLAUDE.md §7.4) -----------------------------------------
 
+class RMQueryRequest(BaseModel):
+    """RM conversational query about a proposal (ST1): ask for context, or request an alternative."""
+    match_id: Optional[str] = None
+    question: str = ""
+    exclude_isin: Optional[str] = None
+
+
 class ClientSummary(BaseModel):
     client_id: str
     name: str
@@ -367,5 +406,8 @@ class ClientInsights(BaseModel):
     matches: list[Match] = Field(default_factory=list)
     strategy_proposal: Optional[StrategyProposal] = None
     dialogue_suggestion: Optional[DialogueSuggestion] = None
+    # Proposals for the other DISTINCT salient matches (HI5) — a client with two genuine triggers
+    # (e.g. a conflict on one holding + an opportunity on another) gets a proposal for each.
+    additional_proposals: list[StrategyProposal] = Field(default_factory=list)
     generated_at: str
     llm_used: bool = False

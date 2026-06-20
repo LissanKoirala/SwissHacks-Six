@@ -6,8 +6,21 @@ import { IssuerLogo } from "./IssuerLogo";
 import { PolarityChip, SentimentChip, SourceBadge, Expander } from "./ui";
 import { Provenance } from "./Provenance";
 
+/** Relative freshness of a signal (ST2 — "flagged the moment it breaks"). Runs client-side only. */
+function freshness(iso: string): { label: string; breaking: boolean } | null {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  const days = Math.floor((Date.now() - t) / 86_400_000);
+  if (days < 0) return null;
+  if (days === 0) return { label: "today", breaking: true };
+  if (days <= 7) return { label: `${days}d ago`, breaking: true };
+  if (days <= 31) return { label: `${Math.round(days / 7)}w ago`, breaking: false };
+  return { label: `${Math.round(days / 30)}mo ago`, breaking: false };
+}
+
 export function AlertCard({ match }: { match: Match }) {
   const { news } = match;
+  const fresh = freshness(news.published_at);
   return (
     <article className="card overflow-hidden">
       {/* coloured rail by polarity */}
@@ -55,9 +68,15 @@ export function AlertCard({ match }: { match: Match }) {
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
             <p className="text-sm font-medium text-ink">{news.title}</p>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+              {fresh?.breaking && (
+                <span className="chip bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200">
+                  ● Breaking
+                </span>
+              )}
               <span className="font-medium text-slate-600">{news.source}</span>
               <span>·</span>
               <span>{prettyDate(news.published_at)}</span>
+              {fresh && <span className="text-slate-400">· {fresh.label}</span>}
               <SentimentChip label={news.sentiment.label} />
               <span className="text-slate-400">
                 score {news.sentiment.score.toFixed(2)}
