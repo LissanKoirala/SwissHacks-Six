@@ -40,6 +40,16 @@ CAPTURED_PATH = DATA_DIR / "captured_entries.json"
 _NOTE_MAX = 5000
 _VALID_FACETS = {"professional", "interests", "historical", "personality"}
 
+# RM-set importance is stored as an edge/statement weight; clamp to a sane band.
+_WEIGHT_LO, _WEIGHT_HI, _WEIGHT_DEFAULT = 0.25, 4.0, 1.0
+
+
+def _clamp_weight(raw) -> float:
+    try:
+        return max(_WEIGHT_LO, min(_WEIGHT_HI, float(raw)))
+    except (TypeError, ValueError):
+        return _WEIGHT_DEFAULT
+
 # --- deterministic polarity / facet cue lexicons (§2) -----------------------
 # Matched as lowercase substrings on the normalised note.
 
@@ -245,6 +255,7 @@ def _llm_extract(note: str) -> Optional[dict]:
             "polarity": polarity,
             "rationale": rationale,
             "selected": True,
+            "weight": _WEIGHT_DEFAULT,
         })
 
     proposed_facets: list[dict] = []
@@ -253,7 +264,7 @@ def _llm_extract(note: str) -> Optional[dict]:
         if not text:
             continue
         facet = raw.get("facet") if raw.get("facet") in _VALID_FACETS else "interests"
-        proposed_facets.append({"facet": facet, "text": text, "selected": True})
+        proposed_facets.append({"facet": facet, "text": text, "selected": True, "weight": _WEIGHT_DEFAULT})
 
     signals = [
         {"term": _normalise(s.get("term") or ""), "direction": s.get("direction")}
@@ -289,11 +300,12 @@ def _keyword_extract(note: str) -> dict:
             "polarity": polarity,
             "rationale": _rationale(t["label"], polarity, pol_cue),
             "selected": True,
+            "weight": _WEIGHT_DEFAULT,
         }
         for t in detected_topics
     ]
     proposed_facets = [
-        {"facet": facet, "text": text, "selected": True}
+        {"facet": facet, "text": text, "selected": True, "weight": _WEIGHT_DEFAULT}
         for text in _first_sentences(note)
     ]
     return {
@@ -397,7 +409,7 @@ def _apply_capture(world, client_id: str, payload: dict, persist: bool = False) 
             topic=topic,
             facet=facet,
             polarity=polarity,
-            weight=1.0,
+            weight=_clamp_weight(raw.get("weight", _WEIGHT_DEFAULT)),
             provenance=prov,
         )
         client_edges.append(edge)
@@ -417,7 +429,8 @@ def _apply_capture(world, client_id: str, payload: dict, persist: bool = False) 
             facet = "interests"
         if profile is not None:
             profile.facets.setdefault(facet, []).append(
-                Statement(text=text, provenance=prov)
+                Statement(text=text, provenance=prov,
+                          weight=_clamp_weight(raw.get("weight", _WEIGHT_DEFAULT)))
             )
         applied_facets += 1
 
@@ -453,6 +466,7 @@ def _store_payload(client_id, payload, note, date, modality, contact, rm_name) -
                 "polarity": e.get("polarity", "neutral"),
                 "rationale": e.get("rationale", ""),
                 "selected": e.get("selected", True),
+                "weight": e.get("weight", _WEIGHT_DEFAULT),
             }
             for e in (payload.get("edges", []) or [])
         ],
@@ -461,6 +475,7 @@ def _store_payload(client_id, payload, note, date, modality, contact, rm_name) -
                 "facet": f.get("facet", "interests"),
                 "text": f.get("text", ""),
                 "selected": f.get("selected", True),
+                "weight": f.get("weight", _WEIGHT_DEFAULT),
             }
             for f in (payload.get("facets", []) or [])
         ],

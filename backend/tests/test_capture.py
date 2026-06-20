@@ -294,6 +294,54 @@ def test_llm_risk_signals_flow_into_timeline(_llm_on, fresh_world):
     assert point["direction"] == "down" and point["delta"] < 0
 
 
+# --- importance (per-edge / per-facet weight) -------------------------------
+
+def test_confirm_applies_importance_weight(fresh_world):
+    req = CaptureConfirmRequest(
+        note=SCHNEIDER_NOTE,
+        modality="Lunch",
+        date="2026-06-20",
+        edges=[
+            {"topic": "neuro-research", "topic_label": "Neuro", "facet": "interests",
+             "polarity": "opportunity", "rationale": "x", "selected": True, "weight": 3.0},
+        ],
+        facets=[
+            {"facet": "personality", "text": "Deeply committed to the cause.",
+             "selected": True, "weight": 2.5},
+        ],
+    )
+    res = capture.confirm_capture(fresh_world, "schneider", req)
+
+    edge = next(
+        e for e in fresh_world.interest_by_client["schneider"]
+        if e.topic == "neuro-research" and e.provenance.source_id == res["entry_id"]
+    )
+    assert edge.weight == 3.0
+
+    stmt = next(
+        s for s in fresh_world.profiles["schneider"].facets["personality"]
+        if s.provenance.source_id == res["entry_id"]
+    )
+    assert stmt.weight == 2.5
+
+
+def test_confirm_clamps_out_of_range_weight(fresh_world):
+    req = CaptureConfirmRequest(
+        note=SCHNEIDER_NOTE,
+        modality="File Note",
+        edges=[
+            {"topic": "neuro-research", "topic_label": "Neuro", "facet": "interests",
+             "polarity": "opportunity", "rationale": "x", "selected": True, "weight": 999.0},
+        ],
+    )
+    res = capture.confirm_capture(fresh_world, "schneider", req)
+    edge = next(
+        e for e in fresh_world.interest_by_client["schneider"]
+        if e.provenance.source_id == res["entry_id"]
+    )
+    assert edge.weight == 4.0  # clamped to _WEIGHT_HI
+
+
 # --- conversational follow-ups ----------------------------------------------
 
 def test_followup_walks_guided_quest_offline(fresh_world):

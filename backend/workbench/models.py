@@ -60,9 +60,11 @@ class MeetingLogEntry(BaseModel):
 
 
 class Statement(BaseModel):
-    """One distilled profile point, with a pointer back to the log line that justifies it."""
+    """One distilled profile point, with a pointer back to the log line that justifies it.
+    `weight` is the RM-set importance (1.0 = normal) so the desk can rank what matters."""
     text: str
     provenance: Provenance
+    weight: float = 1.0
 
 
 class InterestEdge(BaseModel):
@@ -118,6 +120,7 @@ class ProposedEdge(BaseModel):
     polarity: str                   # opportunity / conflict / neutral
     rationale: str                  # short why, quotes the cue
     selected: bool = True           # default-on; RM can deselect/edit
+    weight: float = 1.0             # RM-set importance (1.0 = normal)
 
 
 class ProposedFacet(BaseModel):
@@ -125,6 +128,7 @@ class ProposedFacet(BaseModel):
     facet: str
     text: str
     selected: bool = True
+    weight: float = 1.0             # RM-set importance (1.0 = normal)
 
 
 class CaptureConfirmRequest(BaseModel):

@@ -33,10 +33,14 @@ BANDS: list[dict] = [
 
 # --- scoring lexicon (§2) ---------------------------------------------------
 # Matched case-insensitively as word-ish substrings on the note. Each distinct
-# matched term contributes its weight to that entry's delta.
+# matched term contributes its weight to that entry's delta. Terms are tiered:
+# "normal" cues nudge the line; "strong" cues (bullish/bearish, aggressive,
+# panic, all-in …) swing it hard so a clear conviction statement really moves it.
 
-_DE_RISK_WEIGHT = -0.06
-_RISK_ON_WEIGHT = +0.06
+_DE_RISK_WEIGHT = -0.07
+_RISK_ON_WEIGHT = +0.07
+_STRONG_DE_RISK_WEIGHT = -0.16
+_STRONG_RISK_ON_WEIGHT = +0.16
 
 DE_RISK_TERMS: list[str] = [
     "averse", "cautious", "caution", "cautiously", "conservative", "defensive",
@@ -56,18 +60,36 @@ DE_RISK_TERMS: list[str] = [
 RISK_ON_TERMS: list[str] = [
     "aggressive", "growth", "opportunity", "opportunistic", "increase", "add to",
     "overweight", "speculative", "leverage", "ambitious", "conviction", "reinvest",
-    "equity sleeve", "expand", "bullish", "upside", "venture", "double down",
+    "equity sleeve", "expand", "upside", "venture",
     "high-conviction", "appetite for", "comfortable with risk", "buy",
-    "risk-on", "risk appetite", "more equity", "more equities", "growth stocks",
+    "risk appetite", "more equity", "more equities", "growth stocks",
     "more risk", "higher return", "higher returns", "chase returns", "tactical tilt",
-    "tilt toward", "concentrate", "concentrated", "go big", "lean in", "lean into",
+    "tilt toward", "concentrate", "concentrated", "lean in", "lean into",
     "compounding", "momentum", "rally", "buy the dip", "deploy cash", "deploy",
-    "put money to work", "scale in", "build a position", "lever up", "keen to invest",
-    "ambition", "punchy", "high octane", "swing for", "take more risk", "go aggressive",
+    "put money to work", "scale in", "build a position", "keen to invest",
+    "ambition", "punchy", "swing for", "take more risk",
 ]
 
-# Cap on a single entry's swing so one chatty note can't dominate (§2).
-_DELTA_CAP = 0.18
+# Strong cues — roughly double weight. Clear, unambiguous conviction language.
+STRONG_DE_RISK_TERMS: list[str] = [
+    "bearish", "very cautious", "extremely cautious", "deeply worried", "panic",
+    "panicking", "crash", "crashing", "dump", "dump everything", "sell everything",
+    "get out", "capitulate", "risk-off", "flight to safety", "all to cash",
+    "terrified", "scared", "petrified", "no appetite", "slash exposure",
+    "pull everything", "head for the exit", "bail out",
+]
+
+STRONG_RISK_ON_TERMS: list[str] = [
+    "bullish", "very bullish", "extremely bullish", "super bullish", "all-in",
+    "all in", "go all in", "max risk", "maximum risk", "load up", "back up the truck",
+    "aggressively buy", "huge conviction", "bet big", "swing for the fences",
+    "fearless", "euphoric", "high risk", "lots of risk", "double down",
+    "go aggressive", "go big", "lever up", "high octane", "risk-on",
+]
+
+# Cap on a single entry's swing so one chatty note can't dominate, but wide
+# enough that strong conviction language produces a visible jump (§2).
+_DELTA_CAP = 0.35
 _SCORE_LO = 0.05
 _SCORE_HI = 0.95
 _BAND_HALF = 0.12  # mandate band half-width around the baseline
@@ -94,10 +116,30 @@ def _compile(terms: list[str], direction: str, weight: float) -> list[tuple[re.P
     return out
 
 
+# Strong cues are compiled FIRST so a phrase like "very bullish" matches the
+# strong term before the normal "bullish"/"buy" substring would.
 _LEXICON: list[tuple[re.Pattern, str, str, float]] = (
-    _compile(DE_RISK_TERMS, "down", _DE_RISK_WEIGHT)
+    _compile(STRONG_DE_RISK_TERMS, "down", _STRONG_DE_RISK_WEIGHT)
+    + _compile(STRONG_RISK_ON_TERMS, "up", _STRONG_RISK_ON_WEIGHT)
+    + _compile(DE_RISK_TERMS, "down", _DE_RISK_WEIGHT)
     + _compile(RISK_ON_TERMS, "up", _RISK_ON_WEIGHT)
 )
+
+# Substring sets for weighting signals that arrive without a precomputed weight
+# (the LLM / preview path supplies term + direction only).
+_STRONG_DOWN = [t.lower() for t in STRONG_DE_RISK_TERMS]
+_STRONG_UP = [t.lower() for t in STRONG_RISK_ON_TERMS]
+
+
+def signal_weight(term: str, direction: str) -> float:
+    """Weight for a term+direction signal, picking the strong tier when the term
+    carries clear conviction language (bullish/bearish, all-in, panic …)."""
+    low = (term or "").lower()
+    if direction == "up":
+        return _STRONG_RISK_ON_WEIGHT if any(s in low for s in _STRONG_UP) else _RISK_ON_WEIGHT
+    if direction == "down":
+        return _STRONG_DE_RISK_WEIGHT if any(s in low for s in _STRONG_DOWN) else _DE_RISK_WEIGHT
+    return 0.0
 
 
 def _excerpt(note: str) -> str:
@@ -140,11 +182,10 @@ def _entry_signals(entry: MeetingLogEntry) -> list[dict]:
     entries and any note captured without an analysis."""
     stored = getattr(entry, "risk_signals", None) or []
     if stored:
-        out: list[dict] = []
-        for s in stored:
-            weight = _RISK_ON_WEIGHT if s.direction == "up" else _DE_RISK_WEIGHT
-            out.append({"term": s.term, "direction": s.direction, "weight": weight})
-        return out
+        return [
+            {"term": s.term, "direction": s.direction, "weight": signal_weight(s.term, s.direction)}
+            for s in stored
+        ]
     return _signals(entry.note)
 
 
@@ -180,16 +221,12 @@ def preview_from_signals(signals: list[dict]) -> dict:
     weighted: list[dict] = []
     for s in signals or []:
         direction = s.get("direction")
-        if direction == "up":
-            weight = _RISK_ON_WEIGHT
-        elif direction == "down":
-            weight = _DE_RISK_WEIGHT
-        else:
+        if direction not in ("up", "down"):
             continue
         term = (s.get("term") or "").strip()
         if not term:
             continue
-        weighted.append({"term": term, "direction": direction, "weight": weight})
+        weighted.append({"term": term, "direction": direction, "weight": signal_weight(term, direction)})
     delta = _clamp(sum(s["weight"] for s in weighted), -_DELTA_CAP, _DELTA_CAP)
     if delta > 0.001:
         direction = "up"

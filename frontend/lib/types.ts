@@ -858,12 +858,14 @@ export interface ProposedEdge {
   polarity: Polarity;
   rationale: string;
   selected: boolean;
+  weight: number; // RM-set importance (1.0 = normal)
 }
 
 export interface ProposedFacet {
   facet: string;
   text: string;
   selected: boolean;
+  weight: number; // RM-set importance (1.0 = normal)
 }
 
 export interface RiskPreview {
