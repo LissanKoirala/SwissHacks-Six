@@ -1,0 +1,168 @@
+{
+  "clients": [
+    {
+      "client_id": "schneider",
+      "crm_sheet": "CRM Schneider",
+      "name": "Hubertus Schneider",
+      "mandate": "Balanced",
+      "portfolio": "Balanced",
+      "style": "Empathetic and mission-driven. Hubertus is an analytical automotive CEO, but since his daughter Chloe's diagnosis his decisions are driven by purpose. Lead with the human stake, then the facts.",
+      "headline": "Wants core pharma holdings to actively fund Parkinson's research; will divest any name that abandons it.",
+      "interest_edges": [
+        {
+          "topic": "neuro-research",
+          "facet": "personality",
+          "polarity": "opportunity",
+          "weight": 1.0,
+          "date": "2026-01-22",
+          "quote": "Our private wealth is now a weapon to save Chloe. I want our core healthcare and pharma holdings to actively support the entities pushing the boundaries of brain disease research."
+        },
+        {
+          "topic": "neuro-research",
+          "facet": "personality",
+          "polarity": "conflict",
+          "weight": 1.0,
+          "date": "2026-03-05",
+          "quote": "If a company we own ever abandons or defunds Parkinson's research to chase cheap lifestyle profits, it would feel like a personal betrayal of my daughter. Flag them immediately for divestment."
+        }
+      ],
+      "facets": {
+        "professional": [
+          {"date": "2023-04-10", "text": "Active owner and CEO of a major Swiss automotive-supply enterprise; capital-intensive but performing strongly."}
+        ],
+        "interests": [
+          {"date": "2026-01-22", "text": "Established a Venture Philanthropy foundation to fund neurodegenerative research after his daughter Chloe's early-onset Parkinson's diagnosis."}
+        ],
+        "historical": [
+          {"date": "2026-03-24", "text": "Transferred an initial CHF 1M endowment from the portfolio into the family foundation as a grant to a Geneva neuro-genetics lab."}
+        ],
+        "personality": [
+          {"date": "2026-01-09", "text": "Since Chloe's diagnosis he is emotionally driven: 'My automotive business means nothing if I cannot save my daughter. Everything has changed.'"}
+        ]
+      }
+    },
+    {
+      "client_id": "huber",
+      "crm_sheet": "CRM Huber",
+      "name": "Marius Huber",
+      "mandate": "Defensive",
+      "portfolio": "Defensive",
+      "style": "Values-led and proud. Marius funds a reforestation foundation. He explicitly wants to be called to CELEBRATE when a holding does something magnificent for the planet, not only when a stock drops.",
+      "headline": "Rewards genuine anti-deforestation leadership; penalises companies that treat nature as a free resource.",
+      "interest_edges": [
+        {
+          "topic": "esg-deforestation",
+          "facet": "interests",
+          "polarity": "opportunity",
+          "weight": 1.0,
+          "date": "2026-01-15",
+          "quote": "If a company takes a brave, absolute stance against palm oil deforestation and actively puts money into reforestation, that is exactly where my money should be. I want you to call me when a company I own actually does something magnificent for the planet."
+        },
+        {
+          "topic": "esg-deforestation",
+          "facet": "personality",
+          "polarity": "conflict",
+          "weight": 1.0,
+          "date": "2023-05-19",
+          "quote": "I want to actively penalize companies that treat nature as a free resource. Our portfolio must prioritize businesses that proactively protect natural ecosystems."
+        }
+      ],
+      "facets": {
+        "professional": [
+          {"date": "2023-01-16", "text": "Wealth from a successful sustainable-agriculture exit; capital must act as an extension of the family's philanthropic mission."}
+        ],
+        "interests": [
+          {"date": "2023-04-12", "text": "Runs a private foundation with active reforestation projects in Peru and the Atlantic Forest."}
+        ],
+        "historical": [
+          {"date": "2023-07-04", "text": "Raised a USD 250k capital call for an Atlantic Forest land acquisition by trimming low-ESG fixed income."}
+        ],
+        "personality": [
+          {"date": "2023-10-05", "text": "Progressive steward of wealth; positive-screening flag to maximise exposure to biodiversity pioneers over greenwashed metrics."}
+        ]
+      }
+    },
+    {
+      "client_id": "raeber",
+      "crm_sheet": "CRM Raeber",
+      "name": "Eugen Räber",
+      "mandate": "Defensive",
+      "portfolio": "Defensive",
+      "style": "Conservative and reassuring. Eugen wants 'quiet, predictable, and boring'. Avoid hype language. He distrusts abstract software/AI but respects tangible hardware he can understand.",
+      "headline": "Capital preservation; deeply averse to speculative US mega-cap tech/AI, but respects tangible hardware (e.g. ASML).",
+      "interest_edges": [
+        {
+          "topic": "us-tech-ai",
+          "facet": "personality",
+          "polarity": "conflict",
+          "weight": 1.0,
+          "date": "2024-11-06",
+          "quote": "These abstract software and AI firms are valued on pure hype. It feels like the dot-com crash of 2000 all over again."
+        },
+        {
+          "topic": "us-tech-ai",
+          "facet": "interests",
+          "polarity": "conflict",
+          "weight": 0.8,
+          "date": "2023-05-19",
+          "quote": "Thomas, keep our money in established global consumer staples and industrials. I want to sleep at night, not speculate on Silicon Valley cloud bubbles."
+        }
+      ],
+      "facets": {
+        "professional": [
+          {"date": "2023-01-16", "text": "Wealth from selling his precision-engineering firm; values tangible, mature businesses with proven global cash flows."}
+        ],
+        "interests": [
+          {"date": "2026-02-17", "text": "Respects hardware firms like Siemens and ASML because 'they build real, physical machinery and components.'"}
+        ],
+        "historical": [
+          {"date": "2023-10-05", "text": "Requested a strict flag to block any high-beta speculative asset classes, preferring blue-chip defensives and sovereign bonds."}
+        ],
+        "personality": [
+          {"date": "2026-01-15", "text": "Very high psychological barrier to volatile growth equities; expects no aggressive strategy shifts."}
+        ]
+      }
+    },
+    {
+      "client_id": "ammann",
+      "crm_sheet": "CRM Ammann",
+      "name": "Julian Ammann",
+      "mandate": "Growth",
+      "portfolio": "Growth",
+      "style": "Sharp, analytical and data-driven. Julian is the public face of a Swiss retail brand; reputational contamination is his top risk. Frame everything as live operational/reputational risk, not backward-looking ESG scores.",
+      "headline": "Zero tolerance for labour/governance scandals in holdings; dump exposed names before the Swiss press links his name.",
+      "interest_edges": [
+        {
+          "topic": "labour-governance",
+          "facet": "professional",
+          "polarity": "conflict",
+          "weight": 1.0,
+          "date": "2023-06-20",
+          "quote": "My national brand equity is built on clean labor and local integrity. If my name is linked via my portfolio to an international corporate parent caught using sweatshops, illegal exploitation, or wage theft, it creates immediate hypocrisy risk. Screen all consumer discretionary holdings for supply-chain governance liabilities."
+        },
+        {
+          "topic": "labour-governance",
+          "facet": "personality",
+          "polarity": "conflict",
+          "weight": 1.0,
+          "date": "2025-01-16",
+          "quote": "If any international consumer or retail brand we hold gets hit with severe labor exploitation allegations, dump the entire position before the local Swiss press can link my name to it."
+        }
+      ],
+      "facets": {
+        "professional": [
+          {"date": "2023-03-14", "text": "Founder and public face of a prominent Swiss national retail brand; exceptionally analytical, focused on tail risks."}
+        ],
+        "interests": [
+          {"date": "2025-04-02", "text": "Expanding his brand into western Switzerland under heavy media scrutiny and local labour-union observation."}
+        ],
+        "historical": [
+          {"date": "2026-03-12", "text": "Rejects backward-looking ESG scores: wants live media/judicial 'smoke' around labour practices flagged immediately."}
+        ],
+        "personality": [
+          {"date": "2026-05-14", "text": "Keynote speaker on ethical corporate leadership: 'My private portfolio can never hold a company with dirty hands. It would end my career.'"}
+        ]
+      }
+    }
+  ]
+}

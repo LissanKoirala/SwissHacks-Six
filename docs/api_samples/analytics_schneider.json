@@ -1,0 +1,396 @@
+{
+  "client_id": "schneider",
+  "figures": {
+    "total_chf": 10352327.05,
+    "holding_count": 65,
+    "sub_asset_classes": 14,
+    "drift_breaches": 2,
+    "alerts": 1,
+    "weighted_sentiment": 0.358,
+    "regions": 5
+  },
+  "by_asset_class": [
+    {
+      "name": "Equities",
+      "current_chf": 5344452.28,
+      "pct": 51.63
+    },
+    {
+      "name": "Fixed Income",
+      "current_chf": 3307129.02,
+      "pct": 31.95
+    },
+    {
+      "name": "Alternatives",
+      "current_chf": 895746.5,
+      "pct": 8.65
+    },
+    {
+      "name": "Real Estate",
+      "current_chf": 504999.25,
+      "pct": 4.88
+    },
+    {
+      "name": "Liquidity",
+      "current_chf": 300000.0,
+      "pct": 2.9
+    }
+  ],
+  "by_sub_asset_class": [
+    {
+      "name": "Domestic (CHF)",
+      "asset_class": "Equities",
+      "target_pct": 10.0,
+      "current_pct": 9.794,
+      "current_chf": 1013917.09,
+      "drift_pp": -0.206,
+      "breach": false
+    },
+    {
+      "name": "Foreign (Dev. Markets)",
+      "asset_class": "Equities",
+      "target_pct": 34.5,
+      "current_pct": 36.701,
+      "current_chf": 3799445.85,
+      "drift_pp": 2.201,
+      "breach": true
+    },
+    {
+      "name": "Emerging Markets",
+      "asset_class": "Equities",
+      "target_pct": 5.5,
+      "current_pct": 5.13,
+      "current_chf": 531089.34,
+      "drift_pp": -0.37,
+      "breach": false
+    },
+    {
+      "name": "Domestic Bonds (CHF)",
+      "asset_class": "Fixed Income",
+      "target_pct": 11.5,
+      "current_pct": 11.029,
+      "current_chf": 1141788.43,
+      "drift_pp": -0.471,
+      "breach": false
+    },
+    {
+      "name": "Foreign Bonds (G7)",
+      "asset_class": "Fixed Income",
+      "target_pct": 20.0,
+      "current_pct": 19.016,
+      "current_chf": 1968548.06,
+      "drift_pp": -0.984,
+      "breach": false
+    },
+    {
+      "name": "Emerging Market Bonds",
+      "asset_class": "Fixed Income",
+      "target_pct": 2.0,
+      "current_pct": 1.901,
+      "current_chf": 196792.53,
+      "drift_pp": -0.099,
+      "breach": false
+    },
+    {
+      "name": "Swiss Real Estate",
+      "asset_class": "Real Estate",
+      "target_pct": 2.0,
+      "current_pct": 1.952,
+      "current_chf": 202075.78,
+      "drift_pp": -0.048,
+      "breach": false
+    },
+    {
+      "name": "Global Listed REITs",
+      "asset_class": "Real Estate",
+      "target_pct": 3.0,
+      "current_pct": 2.926,
+      "current_chf": 302923.47,
+      "drift_pp": -0.074,
+      "breach": false
+    },
+    {
+      "name": "Cryptocurrencies\t",
+      "asset_class": "Alternatives",
+      "target_pct": 0.0,
+      "current_pct": 0.0,
+      "current_chf": 0.0,
+      "drift_pp": 0.0,
+      "breach": false
+    },
+    {
+      "name": "Private Markets",
+      "asset_class": "Alternatives",
+      "target_pct": 3.5,
+      "current_pct": 3.48,
+      "current_chf": 360259.56,
+      "drift_pp": -0.02,
+      "breach": false
+    },
+    {
+      "name": "Commodities / Gold",
+      "asset_class": "Alternatives",
+      "target_pct": 5.0,
+      "current_pct": 5.173,
+      "current_chf": 535486.94,
+      "drift_pp": 0.173,
+      "breach": false
+    },
+    {
+      "name": "Cash & Money Market",
+      "asset_class": "Liquidity",
+      "target_pct": 3.0,
+      "current_pct": 2.898,
+      "current_chf": 300000.0,
+      "drift_pp": -0.102,
+      "breach": false
+    },
+    {
+      "name": "GLOBAL MANDATE",
+      "asset_class": "TOTAL",
+      "target_pct": 100.0,
+      "current_pct": 0.0,
+      "current_chf": 0.0,
+      "drift_pp": -100.0,
+      "breach": true
+    },
+    {
+      "name": "10000000",
+      "asset_class": "Target amount",
+      "target_pct": 0.0,
+      "current_pct": 0.0,
+      "current_chf": 0.0,
+      "drift_pp": 0.0,
+      "breach": false
+    }
+  ],
+  "by_sector": [
+    {
+      "name": "Government Bonds",
+      "current_chf": 2557200.43,
+      "pct": 24.7
+    },
+    {
+      "name": "Information Technology",
+      "current_chf": 1719255.77,
+      "pct": 16.61
+    },
+    {
+      "name": "Financials",
+      "current_chf": 892954.79,
+      "pct": 8.63
+    },
+    {
+      "name": "Investment Grade",
+      "current_chf": 749928.59,
+      "pct": 7.24
+    },
+    {
+      "name": "Consumer Discretionary",
+      "current_chf": 628349.89,
+      "pct": 6.07
+    },
+    {
+      "name": "Health Care",
+      "current_chf": 581307.02,
+      "pct": 5.62
+    },
+    {
+      "name": "Precious Metals",
+      "current_chf": 535486.94,
+      "pct": 5.17
+    },
+    {
+      "name": "Industrials",
+      "current_chf": 416813.23,
+      "pct": 4.03
+    },
+    {
+      "name": "Materials",
+      "current_chf": 395614.51,
+      "pct": 3.82
+    },
+    {
+      "name": "Communication Services",
+      "current_chf": 394221.01,
+      "pct": 3.81
+    }
+  ],
+  "by_region": [
+    {
+      "region": "USA",
+      "current_chf": 4084333.36,
+      "count": 26,
+      "risks": [
+        {
+          "kind": "conflict",
+          "label": "Neurodegenerative research",
+          "detail": "Biogen Inc. puts a holding in conflict with this client's stance on Neurodegenerative research.",
+          "sentiment": "BEARISH",
+          "issuer": "Biogen Inc.",
+          "provenance": {
+            "source_type": "news",
+            "source_id": "news-biogen-neuro-shutdown",
+            "excerpt": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therape",
+            "url": "https://example.com/biogen-neuro",
+            "timestamp": "2026-06-12"
+          }
+        }
+      ],
+      "pct": 39.45,
+      "lat": 38.0,
+      "lng": -97.0,
+      "risk_level": "high"
+    },
+    {
+      "region": "Schweiz",
+      "current_chf": 2657781.3,
+      "count": 16,
+      "risks": [],
+      "pct": 25.67,
+      "lat": 46.95,
+      "lng": 7.45,
+      "risk_level": "stable"
+    },
+    {
+      "region": "Europa",
+      "current_chf": 1864156.99,
+      "count": 12,
+      "risks": [],
+      "pct": 18.01,
+      "lat": 50.5,
+      "lng": 9.0,
+      "risk_level": "stable"
+    },
+    {
+      "region": "Global",
+      "current_chf": 1018173.53,
+      "count": 3,
+      "risks": [],
+      "pct": 9.84,
+      "lat": 20.0,
+      "lng": 0.0,
+      "risk_level": "stable"
+    },
+    {
+      "region": "Emerging M.",
+      "current_chf": 727881.87,
+      "count": 8,
+      "risks": [],
+      "pct": 7.03,
+      "lat": 10.0,
+      "lng": 95.0,
+      "risk_level": "stable"
+    }
+  ],
+  "top_holdings": [
+    {
+      "issuer": "ZKB Gold ETF",
+      "isin": "CH0047533523",
+      "industry_group": "Precious Metals",
+      "region": "Global",
+      "current_chf": 535486.94,
+      "pct": 5.17,
+      "in_alert": false
+    },
+    {
+      "issuer": "Swiss Confederation",
+      "isin": "CH0224397171",
+      "industry_group": "Government Bonds",
+      "region": "Schweiz",
+      "current_chf": 397238.47,
+      "pct": 3.84,
+      "in_alert": false
+    },
+    {
+      "issuer": "Partners Group Listed Investments - Listed PE",
+      "isin": "LU0196152788",
+      "industry_group": "Private Markets",
+      "region": "Global",
+      "current_chf": 360259.56,
+      "pct": 3.48,
+      "in_alert": false
+    },
+    {
+      "issuer": "Swiss Bank",
+      "isin": "Cash-CHF",
+      "industry_group": "Liquidity",
+      "region": "Schweiz",
+      "current_chf": 300000.0,
+      "pct": 2.9,
+      "in_alert": false
+    },
+    {
+      "issuer": "Swiss Confederation",
+      "isin": "CH0127181193",
+      "industry_group": "Government Bonds",
+      "region": "Schweiz",
+      "current_chf": 297752.1,
+      "pct": 2.88,
+      "in_alert": false
+    },
+    {
+      "issuer": "US Treasury",
+      "isin": "US91282CLS88",
+      "industry_group": "Government Bonds",
+      "region": "USA",
+      "current_chf": 294988.12,
+      "pct": 2.85,
+      "in_alert": false
+    },
+    {
+      "issuer": "iShares USD Treas. ETF",
+      "isin": "IE00BK7Y2R57",
+      "industry_group": "Government Bonds",
+      "region": "USA",
+      "current_chf": 275243.78,
+      "pct": 2.66,
+      "in_alert": false
+    },
+    {
+      "issuer": "US Treasury",
+      "isin": "US91282CLW90",
+      "industry_group": "Government Bonds",
+      "region": "USA",
+      "current_chf": 265507.46,
+      "pct": 2.56,
+      "in_alert": false
+    },
+    {
+      "issuer": "Microsoft Corp.",
+      "isin": "US5949181045",
+      "industry_group": "Information Technology",
+      "region": "USA",
+      "current_chf": 260536.4,
+      "pct": 2.52,
+      "in_alert": false
+    },
+    {
+      "issuer": "Apple Inc.",
+      "isin": "US0378331005",
+      "industry_group": "Information Technology",
+      "region": "USA",
+      "current_chf": 259103.95,
+      "pct": 2.5,
+      "in_alert": false
+    },
+    {
+      "issuer": "Swiss Confederation",
+      "isin": "CH0127181169",
+      "industry_group": "Government Bonds",
+      "region": "Schweiz",
+      "current_chf": 248623.86,
+      "pct": 2.4,
+      "in_alert": false
+    },
+    {
+      "issuer": "NVIDIA Corp.",
+      "isin": "US67066G1040",
+      "industry_group": "Information Technology",
+      "region": "USA",
+      "current_chf": 236082.75,
+      "pct": 2.28,
+      "in_alert": false
+    }
+  ]
+}

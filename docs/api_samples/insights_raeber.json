@@ -1,0 +1,236 @@
+{
+  "client": {
+    "client_id": "raeber",
+    "name": "Eugen Räber",
+    "mandate": "Defensive",
+    "headline": "Capital preservation; deeply averse to speculative US mega-cap tech/AI, but respects tangible hardware (e.g. ASML).",
+    "alert_count": 1
+  },
+  "matches": [
+    {
+      "id": "raeber:news-cio-taa-us-ai",
+      "client_id": "raeber",
+      "polarity": "conflict",
+      "headline": "A market signal conflicts with this client's stance on US mega-cap tech / AI.",
+      "news": {
+        "id": "news-cio-taa-us-ai",
+        "title": "CIO tactical update: rotate from defensive staples & healthcare into mega-cap US AI infrastructure",
+        "body": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap US technology and AI software leaders. The note frames the AI boom as a multi-year secular rally.",
+        "source": "CIO Tactical Desk",
+        "url": "https://example.com/cio-taa-ai",
+        "published_at": "2026-06-10",
+        "topics": [
+          "us-tech-ai"
+        ],
+        "sentiment": {
+          "score": 0.34,
+          "label": "BULLISH"
+        },
+        "issuer_name": null,
+        "issuer_isin": null,
+        "market_digest": false,
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-cio-taa-us-ai",
+          "excerpt": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap U",
+          "url": "https://example.com/cio-taa-ai",
+          "timestamp": "2026-06-10"
+        }
+      },
+      "shared_topics": [
+        {
+          "topic": "us-tech-ai",
+          "client_provenance": {
+            "source_type": "crm_log",
+            "source_id": "raeber#2024-11-06#8",
+            "excerpt": "These abstract software and AI firms are valued on pure hype. It feels like the dot-com crash of 2000 all over again.",
+            "url": null,
+            "timestamp": "2024-11-06"
+          },
+          "news_provenance": {
+            "source_type": "news",
+            "source_id": "news-cio-taa-us-ai",
+            "excerpt": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap U",
+            "url": "https://example.com/cio-taa-ai",
+            "timestamp": "2026-06-10"
+          }
+        }
+      ],
+      "affected_holding": null,
+      "why": [
+        {
+          "source_type": "crm_log",
+          "source_id": "raeber#2024-11-06#8",
+          "excerpt": "These abstract software and AI firms are valued on pure hype. It feels like the dot-com crash of 2000 all over again.",
+          "url": null,
+          "timestamp": "2024-11-06"
+        },
+        {
+          "source_type": "news",
+          "source_id": "news-cio-taa-us-ai",
+          "excerpt": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap U",
+          "url": "https://example.com/cio-taa-ai",
+          "timestamp": "2026-06-10"
+        }
+      ]
+    }
+  ],
+  "strategy_proposal": {
+    "client_id": "raeber",
+    "headline": "A market signal conflicts with this client's stance on US mega-cap tech / AI.",
+    "polarity": "conflict",
+    "swaps": [
+      {
+        "action": "HOLD",
+        "sell_isin": null,
+        "sell_issuer": null,
+        "buy_isin": null,
+        "buy_issuer": null,
+        "industry_group": "Information Technology",
+        "same_sector": true,
+        "amount_chf": 0.0,
+        "rationale": "Do NOT execute the rotation as recommended: it sells down the defensive staples/healthcare the client explicitly values to buy exactly the abstract US tech/AI exposure he has repeatedly rejected. Keep the defensive allocation.",
+        "drift_safe": true,
+        "provenance": [
+          {
+            "source_type": "crm_log",
+            "source_id": "raeber#2024-11-06#8",
+            "excerpt": "These abstract software and AI firms are valued on pure hype. It feels like the dot-com crash of 2000 all over again.",
+            "url": null,
+            "timestamp": "2024-11-06"
+          },
+          {
+            "source_type": "news",
+            "source_id": "news-cio-taa-us-ai",
+            "excerpt": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap U",
+            "url": "https://example.com/cio-taa-ai",
+            "timestamp": "2026-06-10"
+          }
+        ]
+      },
+      {
+        "action": "SWAP",
+        "sell_isin": null,
+        "sell_issuer": null,
+        "buy_isin": "NL0010273215",
+        "buy_issuer": "ASML Holding N.V.",
+        "industry_group": "Information Technology",
+        "same_sector": true,
+        "amount_chf": 0.0,
+        "rationale": "If the mandate forces Information Technology exposure, route it through ASML Holding N.V. (CIO BUY) — the tangible-hardware name the client explicitly respects — rather than abstract US mega-cap software. Labelled: tangible-hardware, ai-infrastructure.",
+        "drift_safe": true,
+        "provenance": [
+          {
+            "source_type": "crm_log",
+            "source_id": "raeber#2024-11-06#8",
+            "excerpt": "These abstract software and AI firms are valued on pure hype. It feels like the dot-com crash of 2000 all over again.",
+            "url": null,
+            "timestamp": "2024-11-06"
+          },
+          {
+            "source_type": "news",
+            "source_id": "news-cio-taa-us-ai",
+            "excerpt": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap U",
+            "url": "https://example.com/cio-taa-ai",
+            "timestamp": "2026-06-10"
+          },
+          {
+            "source_type": "cio_list",
+            "source_id": "NL0010273215",
+            "excerpt": "BUY · ASML Holding N.V. · Lithography monopoly at the heart of the node race",
+            "url": null,
+            "timestamp": null
+          }
+        ]
+      }
+    ],
+    "constraints_checked": [
+      "Universe limited to CIO-approved names (BUY-rated targets only).",
+      "Respects the client's explicit, logged aversion — strategy stays unchanged.",
+      "If sector exposure is mandated: prefer tangible Information Technology (ASML Holding N.V.)."
+    ],
+    "provenance": [
+      {
+        "source_type": "crm_log",
+        "source_id": "raeber#2024-11-06#8",
+        "excerpt": "These abstract software and AI firms are valued on pure hype. It feels like the dot-com crash of 2000 all over again.",
+        "url": null,
+        "timestamp": "2024-11-06"
+      },
+      {
+        "source_type": "news",
+        "source_id": "news-cio-taa-us-ai",
+        "excerpt": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap U",
+        "url": "https://example.com/cio-taa-ai",
+        "timestamp": "2026-06-10"
+      }
+    ]
+  },
+  "dialogue_suggestion": {
+    "client_id": "raeber",
+    "style": "Conservative and reassuring. Eugen wants 'quiet, predictable, and boring'. Avoid hype language. He distrusts abstract software/AI but respects tangible hardware he can understand.",
+    "talking_points": [
+      {
+        "text": "A market signal conflicts with this client's stance on US mega-cap tech / AI.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-cio-taa-us-ai",
+          "excerpt": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap U",
+          "url": "https://example.com/cio-taa-ai",
+          "timestamp": "2026-06-10"
+        }
+      },
+      {
+        "text": "Connects to what Eugen Räber told us about US mega-cap tech / AI.",
+        "provenance": {
+          "source_type": "crm_log",
+          "source_id": "raeber#2024-11-06#8",
+          "excerpt": "These abstract software and AI firms are valued on pure hype. It feels like the dot-com crash of 2000 all over again.",
+          "url": null,
+          "timestamp": "2024-11-06"
+        }
+      }
+    ],
+    "draft_message": "Dear Räber, before we act on the latest CIO tactical update I want to flag that it runs against the defensive, low-volatility approach you have consistently asked us to protect. My recommendation is to hold course; here is my reasoning.",
+    "market_context": [
+      {
+        "text": "Swiss Market Index holds steady as defensive names outperform.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-smi-steady",
+          "excerpt": "The SMI was little changed this week, with consumer-staples and healthcare blue chips outperforming amid broader volatility. Swiss franc strength continued to support domestic defensives.",
+          "url": "https://example.com/smi-steady",
+          "timestamp": "2026-06-16"
+        }
+      },
+      {
+        "text": "Global bond yields ease as central banks signal patience.",
+        "provenance": {
+          "source_type": "news",
+          "source_id": "news-global-rates",
+          "excerpt": "Government bond yields edged lower across G7 markets after central banks signalled a patient stance on rate cuts, supporting high-grade fixed income and dividend-paying defensives.",
+          "url": "https://example.com/global-rates",
+          "timestamp": "2026-06-17"
+        }
+      }
+    ],
+    "provenance": [
+      {
+        "source_type": "news",
+        "source_id": "news-cio-taa-us-ai",
+        "excerpt": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap U",
+        "url": "https://example.com/cio-taa-ai",
+        "timestamp": "2026-06-10"
+      },
+      {
+        "source_type": "crm_log",
+        "source_id": "raeber#2024-11-06#8",
+        "excerpt": "These abstract software and AI firms are valued on pure hype. It feels like the dot-com crash of 2000 all over again.",
+        "url": null,
+        "timestamp": "2024-11-06"
+      }
+    ]
+  },
+  "generated_at": "2026-06-19T22:47:03+00:00",
+  "llm_used": false
+}

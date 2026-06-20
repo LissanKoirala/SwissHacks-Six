@@ -1,0 +1,72 @@
+{
+  "news": [
+    {
+      "id": "news-biogen-neuro-shutdown",
+      "title": "Biogen to wind down neurodegenerative research division, pivot to higher-margin therapeutics",
+      "body": "Biogen Inc. confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage Parkinson's disease and movement-disorder programmes, to redeploy capital toward higher-margin lifestyle and metabolic therapeutics. Hundreds of neuroscience researchers face redundancy. Analysts called the retreat from brain-disease research a defunding of one of the company's historic franchises.",
+      "source": "Reuters Health",
+      "url": "https://example.com/biogen-neuro",
+      "published_at": "2026-06-12",
+      "sentiment": -0.62,
+      "issuer_name": "Biogen Inc.",
+      "issuer_isin": "US09062X1037"
+    },
+    {
+      "id": "news-unilever-palmoil-cutoff",
+      "title": "Unilever cuts off all palm-oil suppliers tied to deforestation, launches rainforest reforestation foundation",
+      "body": "In a historic corporate policy, Unilever announced it is completely cutting off suppliers linked to palm-oil deforestation and has launched a multi-million dollar corporate foundation dedicated explicitly to reforesting the Brazilian rainforest. Conservation groups praised the absolute stance on supply-chain ecology and biodiversity as an industry first.",
+      "source": "Neue Zürcher Zeitung",
+      "url": "https://example.com/unilever-palmoil",
+      "published_at": "2026-06-15",
+      "sentiment": 0.71,
+      "issuer_name": "Unilever PLC",
+      "issuer_isin": "GB00B10RZP78"
+    },
+    {
+      "id": "news-pdd-labour-scandal",
+      "title": "PDD Holdings (Temu) hit with forced-labour allegations across supplier network",
+      "body": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense media scrutiny. Labour-rights groups described conditions in several subcontractor facilities as modern slavery.",
+      "source": "Bloomberg",
+      "url": "https://example.com/pdd-labour",
+      "published_at": "2026-06-14",
+      "sentiment": -0.68,
+      "issuer_name": "PDD Holdings Inc.",
+      "issuer_isin": "US7223041028"
+    },
+    {
+      "id": "news-cio-taa-us-ai",
+      "title": "CIO tactical update: rotate from defensive staples & healthcare into mega-cap US AI infrastructure",
+      "body": "Citing rapid structural growth in artificial intelligence infrastructure, the bank's CIO issued a tactical asset-allocation update recommending a reduction in defensive value (consumer staples and healthcare) to fund positions in mega-cap US technology and AI software leaders. The note frames the AI boom as a multi-year secular rally.",
+      "source": "CIO Tactical Desk",
+      "url": "https://example.com/cio-taa-ai",
+      "published_at": "2026-06-10",
+      "sentiment": 0.34,
+      "issuer_name": null,
+      "issuer_isin": null
+    },
+    {
+      "id": "news-smi-steady",
+      "title": "Swiss Market Index holds steady as defensive names outperform",
+      "body": "The SMI was little changed this week, with consumer-staples and healthcare blue chips outperforming amid broader volatility. Swiss franc strength continued to support domestic defensives.",
+      "source": "Reuters",
+      "url": "https://example.com/smi-steady",
+      "published_at": "2026-06-16",
+      "sentiment": 0.12,
+      "issuer_name": null,
+      "issuer_isin": null,
+      "market_digest": true
+    },
+    {
+      "id": "news-global-rates",
+      "title": "Global bond yields ease as central banks signal patience",
+      "body": "Government bond yields edged lower across G7 markets after central banks signalled a patient stance on rate cuts, supporting high-grade fixed income and dividend-paying defensives.",
+      "source": "Financial Times",
+      "url": "https://example.com/global-rates",
+      "published_at": "2026-06-17",
+      "sentiment": 0.18,
+      "issuer_name": null,
+      "issuer_isin": null,
+      "market_digest": true
+    }
+  ]
+}

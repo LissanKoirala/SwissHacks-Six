@@ -1,0 +1,23 @@
+{
+  "use_live": false,
+  "probes": [
+    {
+      "name": "Phoeniqs LLM",
+      "configured": false,
+      "live": false,
+      "mode": "deterministic fallback"
+    },
+    {
+      "name": "SIX MCP",
+      "configured": false,
+      "live": false,
+      "mode": "workbook seed valuation"
+    },
+    {
+      "name": "Event Registry",
+      "configured": false,
+      "live": false,
+      "mode": "seed news fixtures"
+    }
+  ]
+}

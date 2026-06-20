@@ -1,3 +1,24 @@
 .DS_Store
 ~$*
 *.tmp
+
+# secrets
+.env
+backend/.env
+frontend/.env.local
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# node
+node_modules/
+.next/
+frontend/out/
+
+# caches
+/cache/
+backend/.cache/

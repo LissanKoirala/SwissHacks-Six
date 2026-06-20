@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-ink antialiased;
+  font-feature-settings: "tnum" 1, "cv05" 1;
+}
+
+/* Thin, unobtrusive scrollbars for the panels. */
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #cbd2db;
+  border-radius: 8px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-card;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent-ink;
+  }
+  .btn-ghost {
+    @apply btn border border-slate-300 bg-white text-ink-soft hover:bg-slate-50;
+  }
+}

@@ -1,0 +1,396 @@
+{
+  "client_id": "ammann",
+  "figures": {
+    "total_chf": 11031641.03,
+    "holding_count": 69,
+    "sub_asset_classes": 14,
+    "drift_breaches": 2,
+    "alerts": 1,
+    "weighted_sentiment": 0.422,
+    "regions": 5
+  },
+  "by_asset_class": [
+    {
+      "name": "Equities",
+      "current_chf": 8493874.06,
+      "pct": 77.0
+    },
+    {
+      "name": "Fixed Income",
+      "current_chf": 936530.92,
+      "pct": 8.49
+    },
+    {
+      "name": "Alternatives",
+      "current_chf": 896567.34,
+      "pct": 8.13
+    },
+    {
+      "name": "Real Estate",
+      "current_chf": 504668.71,
+      "pct": 4.57
+    },
+    {
+      "name": "Liquidity",
+      "current_chf": 200000.0,
+      "pct": 1.81
+    }
+  ],
+  "by_sub_asset_class": [
+    {
+      "name": "Domestic (CHF)",
+      "asset_class": "Equities",
+      "target_pct": 12.0,
+      "current_pct": 11.198,
+      "current_chf": 1235276.3,
+      "drift_pp": -0.802,
+      "breach": false
+    },
+    {
+      "name": "Foreign (Dev. Markets)",
+      "asset_class": "Equities",
+      "target_pct": 57.5,
+      "current_pct": 60.979,
+      "current_chf": 6726942.7,
+      "drift_pp": 3.479,
+      "breach": true
+    },
+    {
+      "name": "Emerging Markets",
+      "asset_class": "Equities",
+      "target_pct": 5.5,
+      "current_pct": 4.819,
+      "current_chf": 531655.06,
+      "drift_pp": -0.681,
+      "breach": false
+    },
+    {
+      "name": "Domestic Bonds (CHF)",
+      "asset_class": "Fixed Income",
+      "target_pct": 3.0,
+      "current_pct": 2.697,
+      "current_chf": 297477.0,
+      "drift_pp": -0.303,
+      "breach": false
+    },
+    {
+      "name": "Foreign Bonds (G7)",
+      "asset_class": "Fixed Income",
+      "target_pct": 6.0,
+      "current_pct": 5.347,
+      "current_chf": 589855.79,
+      "drift_pp": -0.653,
+      "breach": false
+    },
+    {
+      "name": "Emerging Market Bonds",
+      "asset_class": "Fixed Income",
+      "target_pct": 0.5,
+      "current_pct": 0.446,
+      "current_chf": 49198.13,
+      "drift_pp": -0.054,
+      "breach": false
+    },
+    {
+      "name": "Swiss Real Estate",
+      "asset_class": "Real Estate",
+      "target_pct": 1.0,
+      "current_pct": 0.916,
+      "current_chf": 101037.89,
+      "drift_pp": -0.084,
+      "breach": false
+    },
+    {
+      "name": "Global Listed REITs",
+      "asset_class": "Real Estate",
+      "target_pct": 4.0,
+      "current_pct": 3.659,
+      "current_chf": 403630.82,
+      "drift_pp": -0.341,
+      "breach": false
+    },
+    {
+      "name": "Cryptocurrencies\t",
+      "asset_class": "Alternatives",
+      "target_pct": 1.5,
+      "current_pct": 0.0,
+      "current_chf": 0.0,
+      "drift_pp": -1.5,
+      "breach": false
+    },
+    {
+      "name": "Private Markets",
+      "asset_class": "Alternatives",
+      "target_pct": 5.5,
+      "current_pct": 5.158,
+      "current_chf": 568979.81,
+      "drift_pp": -0.342,
+      "breach": false
+    },
+    {
+      "name": "Commodities / Gold",
+      "asset_class": "Alternatives",
+      "target_pct": 1.5,
+      "current_pct": 1.456,
+      "current_chf": 160646.08,
+      "drift_pp": -0.044,
+      "breach": false
+    },
+    {
+      "name": "Cash & Money Market",
+      "asset_class": "Liquidity",
+      "target_pct": 2.0,
+      "current_pct": 1.813,
+      "current_chf": 200000.0,
+      "drift_pp": -0.187,
+      "breach": false
+    },
+    {
+      "name": "GLOBAL MANDATE",
+      "asset_class": "TOTAL",
+      "target_pct": 100.0,
+      "current_pct": 0.0,
+      "current_chf": 0.0,
+      "drift_pp": -100.0,
+      "breach": true
+    },
+    {
+      "name": "10000000",
+      "asset_class": "Target amount",
+      "target_pct": 0.0,
+      "current_pct": 0.0,
+      "current_chf": 0.0,
+      "drift_pp": 0.0,
+      "breach": false
+    }
+  ],
+  "by_sector": [
+    {
+      "name": "Information Technology",
+      "current_chf": 4500554.47,
+      "pct": 40.8
+    },
+    {
+      "name": "Consumer Discretionary",
+      "current_chf": 1205826.7,
+      "pct": 10.93
+    },
+    {
+      "name": "Government Bonds",
+      "current_chf": 936530.92,
+      "pct": 8.49
+    },
+    {
+      "name": "Communication Services",
+      "current_chf": 811869.39,
+      "pct": 7.36
+    },
+    {
+      "name": "Health Care",
+      "current_chf": 672739.69,
+      "pct": 6.1
+    },
+    {
+      "name": "Private Markets",
+      "current_chf": 568979.81,
+      "pct": 5.16
+    },
+    {
+      "name": "Financials",
+      "current_chf": 450185.94,
+      "pct": 4.08
+    },
+    {
+      "name": "Real Estate (REIT)",
+      "current_chf": 403630.82,
+      "pct": 3.66
+    },
+    {
+      "name": "Industrials",
+      "current_chf": 393839.66,
+      "pct": 3.57
+    },
+    {
+      "name": "Materials",
+      "current_chf": 306791.0,
+      "pct": 2.78
+    }
+  ],
+  "by_region": [
+    {
+      "region": "USA",
+      "current_chf": 5801858.02,
+      "count": 32,
+      "risks": [],
+      "pct": 52.59,
+      "lat": 38.0,
+      "lng": -97.0,
+      "risk_level": "stable"
+    },
+    {
+      "region": "Schweiz",
+      "current_chf": 1733791.19,
+      "count": 12,
+      "risks": [],
+      "pct": 15.72,
+      "lat": 46.95,
+      "lng": 7.45,
+      "risk_level": "stable"
+    },
+    {
+      "region": "Europa",
+      "current_chf": 1559819.08,
+      "count": 9,
+      "risks": [],
+      "pct": 14.14,
+      "lat": 50.5,
+      "lng": 9.0,
+      "risk_level": "stable"
+    },
+    {
+      "region": "Global",
+      "current_chf": 1355319.55,
+      "count": 8,
+      "risks": [],
+      "pct": 12.29,
+      "lat": 20.0,
+      "lng": 0.0,
+      "risk_level": "stable"
+    },
+    {
+      "region": "Emerging M.",
+      "current_chf": 580853.19,
+      "count": 8,
+      "risks": [
+        {
+          "kind": "conflict",
+          "label": "Labour & supply-chain governance",
+          "detail": "PDD Holdings Inc. puts a holding in conflict with this client's stance on Labour & supply-chain governance.",
+          "sentiment": "BEARISH",
+          "issuer": "PDD Holdings Inc.",
+          "provenance": {
+            "source_type": "news",
+            "source_id": "news-pdd-labour-scandal",
+            "excerpt": "PDD Holdings, parent of Temu, faces escalating allegations of labour exploitation, forced labour and wage theft across its third-party supplier network. Regulators in two jurisdictions opened supply-chain governance probes amid intense medi",
+            "url": "https://example.com/pdd-labour",
+            "timestamp": "2026-06-14"
+          }
+        }
+      ],
+      "pct": 5.27,
+      "lat": 10.0,
+      "lng": 95.0,
+      "risk_level": "high"
+    }
+  ],
+  "top_holdings": [
+    {
+      "issuer": "Partners Group Listed Investments - Listed PE",
+      "isin": "LU0196152788",
+      "industry_group": "Private Markets",
+      "region": "Global",
+      "current_chf": 360259.56,
+      "pct": 3.27,
+      "in_alert": false
+    },
+    {
+      "issuer": "NVIDIA Corp.",
+      "isin": "US67066G1040",
+      "industry_group": "Information Technology",
+      "region": "USA",
+      "current_chf": 347911.42,
+      "pct": 3.15,
+      "in_alert": false
+    },
+    {
+      "issuer": "Palantir Technologies",
+      "isin": "US69608A1088",
+      "industry_group": "Information Technology",
+      "region": "USA",
+      "current_chf": 308533.35,
+      "pct": 2.8,
+      "in_alert": false
+    },
+    {
+      "issuer": "SAP SE",
+      "isin": "DE0007164600",
+      "industry_group": "Information Technology",
+      "region": "Europa",
+      "current_chf": 274280.79,
+      "pct": 2.49,
+      "in_alert": false
+    },
+    {
+      "issuer": "Microsoft Corp.",
+      "isin": "US5949181045",
+      "industry_group": "Information Technology",
+      "region": "USA",
+      "current_chf": 272942.89,
+      "pct": 2.47,
+      "in_alert": false
+    },
+    {
+      "issuer": "Apple Inc.",
+      "isin": "US0378331005",
+      "industry_group": "Information Technology",
+      "region": "USA",
+      "current_chf": 271442.23,
+      "pct": 2.46,
+      "in_alert": false
+    },
+    {
+      "issuer": "ASML Holding N.V.",
+      "isin": "NL0010273215",
+      "industry_group": "Information Technology",
+      "region": "Europa",
+      "current_chf": 271326.42,
+      "pct": 2.46,
+      "in_alert": false
+    },
+    {
+      "issuer": "Equinix Inc.",
+      "isin": "US29444U7000",
+      "industry_group": "Real Estate (REIT)",
+      "region": "USA",
+      "current_chf": 251775.71,
+      "pct": 2.28,
+      "in_alert": false
+    },
+    {
+      "issuer": "Alphabet Inc.",
+      "isin": "US02079K3059",
+      "industry_group": "Communication Services",
+      "region": "USA",
+      "current_chf": 245916.75,
+      "pct": 2.23,
+      "in_alert": false
+    },
+    {
+      "issuer": "Amazon.com Inc.",
+      "isin": "US0231351067",
+      "industry_group": "Consumer Discretionary",
+      "region": "USA",
+      "current_chf": 238996.35,
+      "pct": 2.17,
+      "in_alert": false
+    },
+    {
+      "issuer": "Broadcom Inc.",
+      "isin": "US11135F1012",
+      "industry_group": "Information Technology",
+      "region": "USA",
+      "current_chf": 226008.68,
+      "pct": 2.05,
+      "in_alert": false
+    },
+    {
+      "issuer": "Eli Lilly & Co.",
+      "isin": "US5324571083",
+      "industry_group": "Health Care",
+      "region": "USA",
+      "current_chf": 225085.49,
+      "pct": 2.04,
+      "in_alert": false
+    }
+  ]
+}
