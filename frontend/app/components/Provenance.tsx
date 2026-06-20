@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Provenance as Prov } from "@/lib/types";
 import { prettyDate } from "@/lib/format";
 import { SourceBadge } from "./ui";
@@ -72,9 +73,48 @@ export function ProvenanceTag({
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  // Render the popover in a portal at fixed coordinates so it escapes the
+  // overflow/scroll containers of dense tables (where it used to get clipped),
+  // and dismiss it on Escape, outside-click, scroll or resize. Provenance is
+  // 25% of the score — it must never be cut off.
+  useEffect(() => {
+    if (!open) return;
+    const PANEL_W = 320;
+    const place = () => {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - PANEL_W - 8));
+      setPos({ top: r.bottom + 6, left });
+    };
+    place();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const onPointer = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointer);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointer);
+    };
+  }, [open]);
+
   return (
-    <span className="relative inline-block align-baseline">
+    <>
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="citation ml-1 font-mono text-[11px] ring-1 ring-inset ring-primary/20 transition-colors hover:bg-primary/15"
@@ -82,11 +122,20 @@ export function ProvenanceTag({
       >
         {label}
       </button>
-      {open && (
-        <span className="absolute left-0 top-full z-20 mt-1 block w-80 max-w-[80vw] rounded-lg border border-border bg-popover p-1 shadow-pop">
-          <Provenance prov={prov} />
-        </span>
-      )}
-    </span>
+      {open &&
+        pos &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={popRef}
+            role="dialog"
+            className="fixed z-50 w-80 max-w-[calc(100vw-1rem)] rounded-lg border border-border bg-popover p-1 shadow-pop dark:shadow-none"
+            style={{ top: pos.top, left: pos.left }}
+          >
+            <Provenance prov={prov} />
+          </div>,
+          document.body
+        )}
+    </>
   );
 }

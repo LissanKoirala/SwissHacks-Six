@@ -64,7 +64,9 @@ const config: Config = {
         pop: "0 12px 32px -8px rgba(10,10,10,0.12), 0 4px 12px -4px rgba(10,10,10,0.06)",
       },
       transitionTimingFunction: {
-        standard: "cubic-bezier(0.2,0,0,1)",
+        // Single source of truth: the expo-out curve defined in globals.css.
+        standard: "var(--ease-standard)",
+        in: "var(--ease-in)",
       },
       keyframes: {
         "accordion-down": { from: { height: "0" }, to: { height: "var(--radix-accordion-content-height)" } },

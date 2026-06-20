@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Home, LayoutGrid, ShieldCheck } from "lucide-react";
 import type { ClientSummary, IntegrationHealth } from "@/lib/types";
 import { ClientAvatar } from "./ClientAvatar";
@@ -29,6 +30,14 @@ export function Sidebar({
   tasksActive: boolean;
 }) {
   const totalAlerts = clients.reduce((s, c) => s + (c.alert_count || 0), 0);
+  // Triage-ordered book: the most urgent client floats to the top.
+  const sorted = useMemo(
+    () =>
+      [...clients].sort(
+        (a, b) => b.alert_count - a.alert_count || a.name.localeCompare(b.name)
+      ),
+    [clients]
+  );
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       {/* workspace header */}
@@ -55,10 +64,11 @@ export function Sidebar({
         <button
           type="button"
           onClick={onHome}
+          aria-current={overviewActive ? "page" : undefined}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors",
             overviewActive
-              ? "bg-accent text-foreground"
+              ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:bg-accent hover:text-foreground"
           )}
         >
@@ -76,10 +86,11 @@ export function Sidebar({
         <button
           type="button"
           onClick={onShowTasks}
+          aria-current={tasksActive ? "page" : undefined}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors",
             tasksActive
-              ? "bg-accent text-foreground"
+              ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:bg-accent hover:text-foreground"
           )}
         >
@@ -96,16 +107,19 @@ export function Sidebar({
       </div>
 
       <nav className="scroll-thin flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">
-        {clients.map((c) => {
+        {sorted.map((c) => {
           const active = c.client_id === selectedId;
           return (
             <button
               key={c.client_id}
               type="button"
               onClick={() => onSelect(c.client_id)}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "w-full rounded-md px-2.5 py-2 text-left transition-colors",
-                active ? "bg-accent" : "hover:bg-accent"
+                active
+                  ? "bg-primary/10 ring-1 ring-inset ring-primary/20"
+                  : "hover:bg-accent"
               )}
             >
               <div className="flex items-start gap-2.5">
@@ -115,7 +129,7 @@ export function Sidebar({
                     <span
                       className={cn(
                         "truncate text-sm font-medium",
-                        active ? "text-foreground" : "text-foreground/90"
+                        active ? "text-primary" : "text-foreground/90"
                       )}
                     >
                       {c.name}

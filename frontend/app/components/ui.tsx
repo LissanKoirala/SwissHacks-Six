@@ -103,11 +103,15 @@ export function SourceBadge({ type }: { type: SourceType }) {
 export function Expander({
   label,
   count,
+  summary,
   children,
   defaultOpen = false,
 }: {
   label: string;
   count?: number;
+  /** Optional one-line peek shown after the label while collapsed, so the RM
+   *  knows what is inside before opening (e.g. "CRM, News, CIO"). */
+  summary?: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;
 }) {
@@ -117,20 +121,80 @@ export function Expander({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+        // Neutral by default; blue only on hover/open so the "one thing to click"
+        // signal isn't diluted across every disclosure on a dense screen.
+        className={cn(
+          "flex max-w-full items-center gap-2 text-sm font-medium transition-colors",
+          open ? "text-primary" : "text-muted-foreground hover:text-primary"
+        )}
         aria-expanded={open}
       >
         <ChevronRight
-          className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-90")}
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 transition-transform",
+            open && "rotate-90"
+          )}
         />
-        {label}
+        <span className="shrink-0">{label}</span>
         {typeof count === "number" && (
-          <span className="rounded-full bg-muted px-1.5 text-xs text-muted-foreground">
+          <span className="shrink-0 rounded-full bg-muted px-1.5 text-xs text-muted-foreground">
             {count}
+          </span>
+        )}
+        {summary != null && !open && (
+          <span className="truncate text-xs font-normal text-muted-foreground">
+            · {summary}
           </span>
         )}
       </button>
       {open && <div className="mt-3">{children}</div>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- figure tile --- */
+
+/**
+ * A compact KPI tile — the workbench's glance primitive. Label-first stacking,
+ * a flat surface step and a hairline ring. `tone` carries finance meaning only
+ * (amber = needs attention, red = loss, green = gain); default is neutral ink.
+ * Shared by the Analytics KPI strip, the client header band, and the Home book band.
+ */
+export function FigureCard({
+  label,
+  value,
+  tone = "ink",
+  hint,
+}: {
+  label: string;
+  value: ReactNode;
+  tone?: "ink" | "amber" | "green" | "red";
+  hint?: ReactNode;
+}) {
+  const toneCls =
+    tone === "amber"
+      ? "text-warning"
+      : tone === "green"
+      ? "text-positive"
+      : tone === "red"
+      ? "text-negative"
+      : "text-foreground";
+  return (
+    <div className="rounded-md bg-surface-2 px-3.5 py-3 ring-1 ring-inset ring-border/70">
+      <p className="truncate text-[11px] font-medium tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-1 text-2xl font-semibold leading-none tabular-nums",
+          toneCls
+        )}
+      >
+        {value}
+      </p>
+      {hint != null && (
+        <p className="mt-1 truncate text-[11px] text-muted-foreground">{hint}</p>
+      )}
     </div>
   );
 }
