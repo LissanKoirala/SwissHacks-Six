@@ -39,7 +39,9 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Advisory Workbench", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
-        # any localhost port in dev — Next.js may fall back to 3001/3002 if 3000 is taken
+        # Prod origins from CORS_ORIGINS (comma-separated, e.g. https://billionaire.lissan.dev);
+        # any localhost port still allowed in dev via the regex. A request matches either rule.
+        allow_origins=settings.cors_origins_list,
         allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
         allow_credentials=True,  # session cookie travels with /auth + /briefing calls
         allow_methods=["*"], allow_headers=["*"],
