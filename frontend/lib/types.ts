@@ -125,6 +125,27 @@ export interface Match {
   why: Provenance[];
 }
 
+export interface SubstitutionMetrics {
+  sell_issuer?: string | null;
+  buy_issuer?: string | null;
+  vol_sell?: number | null;
+  vol_buy?: number | null;
+  vol_delta?: number | null;
+  beta_sell?: number | null;
+  beta_buy?: number | null;
+  pe_sell?: number | null;
+  pe_buy?: number | null;
+  sentiment_sell?: number | null;
+  sentiment_buy?: number | null;
+  sentiment_delta?: number | null;
+  sector_match: boolean;
+  sub_asset_class_match: boolean;
+  drift_pp_after?: number | null;
+  value_tags_sell: string[];
+  value_tags_buy: string[];
+  risk_source?: string | null;
+}
+
 export interface Swap {
   action: SwapAction;
   sell_isin?: string | null;
@@ -139,6 +160,7 @@ export interface Swap {
   buy_live_price?: number | null;
   buy_live_ccy?: string | null;
   buy_live_ts?: string | null;
+  substitution?: SubstitutionMetrics | null;
   provenance: Provenance[];
 }
 

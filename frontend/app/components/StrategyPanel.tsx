@@ -5,6 +5,7 @@ import type {
   Swap,
   SwapAction,
   GoodNewsBriefing,
+  SubstitutionMetrics,
 } from "@/lib/types";
 import { chf, price, prettyDate } from "@/lib/format";
 import { IssuerLogo } from "./IssuerLogo";
@@ -26,6 +27,115 @@ function ActionChip({ action }: { action: SwapAction }) {
     <span className={`chip ring-1 ring-inset ${cls} font-semibold`}>
       {action}
     </span>
+  );
+}
+
+const asPct = (v?: number | null, dp = 1) =>
+  v == null ? "—" : `${(v * 100).toFixed(dp)}%`;
+const asNum = (v?: number | null, dp = 2) =>
+  v == null ? "—" : v.toFixed(dp);
+
+/** Sold-vs-replacement comparison (Ammann 'substitution metrics'). */
+function SubstitutionTable({ sub }: { sub: SubstitutionMetrics }) {
+  const rows: { label: string; sell: string; buy: string; flag?: boolean }[] = [
+    {
+      label: "Volatility (30d)",
+      sell: asPct(sub.vol_sell),
+      buy: asPct(sub.vol_buy),
+      flag: sub.vol_delta != null && Math.abs(sub.vol_delta) > 0.05,
+    },
+    { label: "Beta", sell: asNum(sub.beta_sell), buy: asNum(sub.beta_buy) },
+    { label: "P/E", sell: asNum(sub.pe_sell, 1), buy: asNum(sub.pe_buy, 1) },
+    {
+      label: "Sentiment",
+      sell: asNum(sub.sentiment_sell),
+      buy: asNum(sub.sentiment_buy),
+    },
+  ];
+  return (
+    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          Substitution metrics
+        </span>
+        {sub.sector_match && (
+          <span className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
+            ✓ Same sector
+          </span>
+        )}
+        {sub.vol_delta != null && (
+          <span
+            className={`chip ring-1 ring-inset ${
+              Math.abs(sub.vol_delta) <= 0.05
+                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                : "bg-amber-50 text-amber-700 ring-amber-200"
+            }`}
+          >
+            Risk Δ {sub.vol_delta >= 0 ? "+" : ""}
+            {(sub.vol_delta * 100).toFixed(1)}pp
+          </span>
+        )}
+        {sub.risk_source && (
+          <span className="ml-auto text-[10px] text-slate-400">
+            risk: {sub.risk_source}
+          </span>
+        )}
+      </div>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400">
+            <th className="py-1 font-medium">Metric</th>
+            <th className="py-1 text-right font-medium">
+              {sub.sell_issuer ?? "Sold"}
+            </th>
+            <th className="py-1 text-right font-medium">
+              {sub.buy_issuer ?? "Replacement"}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label} className="border-t border-slate-100">
+              <td className="py-1 text-slate-500">{r.label}</td>
+              <td className="py-1 text-right tabular-nums text-ink-soft">
+                {r.sell}
+              </td>
+              <td
+                className={`py-1 text-right tabular-nums ${
+                  r.flag ? "text-amber-700" : "text-ink"
+                }`}
+              >
+                {r.buy}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {(sub.value_tags_sell.length > 0 || sub.value_tags_buy.length > 0) && (
+        <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+          <div className="flex flex-wrap gap-1">
+            {sub.value_tags_sell.map((t) => (
+              <span
+                key={t}
+                className="chip bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-end gap-1">
+            {sub.value_tags_buy.map((t) => (
+              <span
+                key={t}
+                className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -95,6 +205,8 @@ function SwapRow({ swap }: { swap: Swap }) {
       <p className="mt-3 text-sm leading-relaxed text-ink-soft">
         {swap.rationale}
       </p>
+
+      {swap.substitution && <SubstitutionTable sub={swap.substitution} />}
 
       {swap.provenance.length > 0 && (
         <div className="mt-3">
