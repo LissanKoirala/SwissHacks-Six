@@ -1,0 +1,75 @@
+{
+  "_comment": "Seed inbox for the Front Door. Offline-safe demo mail. Each message is routed to a client and mined for tasks. Live IMAP (when configured) emits the same shape — see ingestion/email.py.",
+  "emails": [
+    {
+      "id": "email-schneider-pharma-question",
+      "from_name": "Hubertus Schneider",
+      "from_email": "h.schneider@schneider-automotive.example",
+      "to_email": "rm@advisory-workbench.example",
+      "subject": "Saw the Biogen news — what does it mean for my portfolio?",
+      "body": "Dear Anna,\n\nI read this morning that Biogen is winding down its neurodegenerative research division. As you know, the foundation's whole purpose is funding Parkinson's research, and I hold Biogen in my portfolio. I can't be invested in a company that walks away from exactly the research we fund. Can you look at whether we should move out of it, and into something in the same space that is still committed? I'd want to understand the risk trade-off before I decide.\n\nBest,\nHubertus",
+      "received_at": "2026-06-19T08:12:00",
+      "client_id": "schneider"
+    },
+    {
+      "id": "email-huber-palmoil-increase",
+      "from_name": "Marius Huber",
+      "from_email": "marius@huber-reforest.example",
+      "to_email": "rm@advisory-workbench.example",
+      "subject": "Unilever palm-oil decision — can we back them more?",
+      "body": "Hi,\n\nDelighted to see Unilever cut off the palm-oil suppliers linked to deforestation. This is exactly the kind of company I want to support with my capital. Is there room to increase my position in them within my mandate? I don't want to take on more risk than I already have — just lean into the names that are doing the right thing.\n\nThanks,\nMarius",
+      "received_at": "2026-06-19T09:40:00",
+      "client_id": "huber"
+    },
+    {
+      "id": "email-raeber-reassurance",
+      "from_name": "Eugen Räber",
+      "from_email": "e.raeber@bluewin.example",
+      "to_email": "rm@advisory-workbench.example",
+      "subject": "Markets feel jittery — please keep me out of the AI hype",
+      "body": "Good morning,\n\nI keep reading about everyone piling into US AI stocks. I'd like to stay quiet, predictable and boring, as ever. Please don't move me into anything speculative. Could you send me a short note reassuring me where my portfolio stands and confirming we're not chasing the tech rally? No need to do anything drastic.\n\nKind regards,\nEugen",
+      "received_at": "2026-06-19T07:05:00",
+      "client_id": "raeber"
+    },
+    {
+      "id": "email-ammann-labour-analysis",
+      "from_name": "Julian Ammann",
+      "from_email": "j.ammann@ammann-retail.example",
+      "to_email": "rm@advisory-workbench.example",
+      "subject": "PDD / Temu forced-labour story — I need the numbers",
+      "body": "Hi,\n\nThe forced-labour allegations against PDD (Temu) are a reputational problem I won't carry, especially given my public profile. I want a proper analysis: exit PDD and find a same-sector replacement with comparable risk and a clean governance profile. Give me the substitution metrics — volatility, beta, sentiment — side by side. Let's discuss once you've got the data.\n\nJulian",
+      "received_at": "2026-06-18T16:22:00",
+      "client_id": "ammann"
+    },
+    {
+      "id": "email-schneider-meeting",
+      "from_name": "Hubertus Schneider",
+      "from_email": "h.schneider@schneider-automotive.example",
+      "to_email": "rm@advisory-workbench.example",
+      "subject": "Quarterly review — can we book a call?",
+      "body": "Anna,\n\nCould we schedule our quarterly review for the week of 7 July? Afternoons work best for me. Please also send the latest portfolio statement ahead of the call so I can read it on the train.\n\nThanks,\nHubertus",
+      "received_at": "2026-06-17T11:30:00",
+      "client_id": "schneider"
+    },
+    {
+      "id": "email-ammann-tech-research",
+      "from_name": "Julian Ammann",
+      "from_email": "j.ammann@ammann-retail.example",
+      "to_email": "rm@advisory-workbench.example",
+      "subject": "Deep-dive: my whole tech & discretionary exposure vs peers",
+      "body": "One more — separate from the PDD question. I'd like a full research deep-dive on my entire technology and consumer-discretionary exposure: concentration, how it screens against peers, where the hidden ESG/governance risks are across all the names, and a ranked list of CIO-approved alternatives. This is a big piece of work, take your time and get it right.\n\nJulian",
+      "received_at": "2026-06-18T16:35:00",
+      "client_id": "ammann"
+    },
+    {
+      "id": "email-prospect-intro",
+      "from_name": "Claudia Vogel",
+      "from_email": "claudia.vogel@example.com",
+      "to_email": "rm@advisory-workbench.example",
+      "subject": "Referral from a friend — exploring wealth advisory",
+      "body": "Hello,\n\nA friend recommended your practice. I'd be interested in an introductory conversation about your sustainable investing approach. Could someone get back to me?\n\nBest wishes,\nClaudia Vogel",
+      "received_at": "2026-06-19T13:10:00",
+      "client_id": null
+    }
+  ]
+}
