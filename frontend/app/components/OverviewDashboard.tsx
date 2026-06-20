@@ -178,7 +178,7 @@ function TaskCard({
             <button
               type="button"
               onClick={() => onOpen(task.client_id)}
-              className="text-sm font-semibold text-ink hover:text-accent-ink hover:underline"
+              className="text-sm font-semibold text-ink hover:text-primary hover:underline"
             >
               {task.client_name}
             </button>
@@ -226,16 +226,16 @@ function MeetingRow({
     : ["", ""];
   return (
     <div className="flex items-start gap-3 rounded-lg border border-slate-200 p-3">
-      <div className="grid w-12 shrink-0 place-items-center rounded-lg bg-accent-soft py-1.5 text-center">
-        <span className="text-base font-bold leading-none text-accent-ink">{d}</span>
-        <span className="text-[10px] uppercase text-accent-ink/70">{mon}</span>
+      <div className="grid w-12 shrink-0 place-items-center rounded-lg bg-primary-subtle py-1.5 text-center">
+        <span className="text-base font-bold leading-none text-primary">{d}</span>
+        <span className="text-[10px] uppercase text-primary/70">{mon}</span>
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => onOpen(m.client_id)}
-            className="text-sm font-semibold text-ink hover:text-accent-ink hover:underline"
+            className="text-sm font-semibold text-ink hover:text-primary hover:underline"
           >
             {m.client_name}
           </button>
@@ -348,7 +348,7 @@ function ClientPolarityChip({
       type="button"
       onClick={() => onOpen(ref_.client_id)}
       title={`${ref_.polarity} · open ${ref_.client_name}`}
-      className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+      className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-0.5 text-[11px] text-slate-600 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
     >
       <span className={`h-1.5 w-1.5 rounded-full ${dot[ref_.polarity]}`} />
       {firstName(ref_.client_name)}
@@ -462,8 +462,8 @@ export function OverviewDashboard({
               {o.use_live ? "live data" : "seed data"}
             </span>
           </div>
-          <div className="mt-2 flex items-start gap-2 rounded-lg bg-accent-soft px-4 py-2.5 text-sm text-accent-ink ring-1 ring-inset ring-accent/20">
-            <span className="shrink-0 rounded bg-white/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+          <div className="mt-2 flex items-start gap-2 rounded-lg bg-primary-subtle px-4 py-2.5 text-sm text-primary ring-1 ring-inset ring-primary/20">
+            <span className="shrink-0 rounded bg-card/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
               Briefing
             </span>
             <span className="leading-relaxed">{o.briefing}</span>

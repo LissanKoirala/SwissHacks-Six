@@ -2,14 +2,14 @@
 Renders the orchestrator's output; nothing here makes decisions."""
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..agents.orchestrator import get_insights
 from ..analytics import build_analytics
 from ..config import settings
 from ..graph.crm_graph import build_crm_graph
-from ..models import CaptureConfirmRequest, CaptureExtractRequest
+from ..models import CaptureConfirmRequest, CaptureExtractRequest, RMQueryRequest
 from ..seed import build_world
 
 
@@ -38,8 +38,25 @@ def create_app() -> FastAPI:
              "live": settings.six_enabled, "mode": "live" if settings.six_enabled else "workbook seed valuation"},
             {"name": "Event Registry", "configured": bool(settings.news_key),
              "live": settings.news_enabled, "mode": "live" if settings.news_enabled else "seed news fixtures"},
+            {"name": f"STT ({settings.stt_provider})", "configured": settings.stt_enabled,
+             "live": settings.stt_enabled,
+             "mode": "live" if settings.stt_enabled else "browser Web Speech fallback"},
+            {"name": f"OCR ({settings.ocr_provider})", "configured": settings.ocr_enabled,
+             "live": settings.ocr_enabled,
+             "mode": "live" if settings.ocr_enabled else "unavailable"},
+            {"name": "SEC EDGAR", "configured": bool(settings.sec_user_agent),
+             "live": settings.sec_enabled, "mode": "live (no key)" if settings.sec_enabled else "seed filing fixtures"},
+            {"name": "FMP (ESG/earnings/analyst/fundamentals)", "configured": bool(settings.fmp_key),
+             "live": settings.fmp_enabled, "mode": "live" if settings.fmp_enabled else "seed signal fixtures"},
+            {"name": "Macro/FX (Frankfurter/ECB)", "configured": True,
+             "live": settings.macro_enabled, "mode": "live (no key)" if settings.macro_enabled else "seed macro fixtures"},
         ]
-        return {"use_live": settings.use_live, "probes": probes}
+        return {"use_live": settings.use_live, "probes": probes, "stt": {
+            "provider": settings.stt_provider, "enabled": settings.stt_enabled,
+        }, "ocr": {
+            "provider": settings.ocr_provider, "enabled": settings.ocr_enabled,
+            "model": settings.phoeniqs_ocr_model if settings.ocr_provider == "phoeniqs" else "",
+        }}
 
     @app.get("/clients")
     def list_clients():
@@ -79,6 +96,14 @@ def create_app() -> FastAPI:
             "mandate": mandate.model_dump() if mandate else None,
             "holdings": [h.model_dump() for h in holdings],
         }
+
+    @app.get("/clients/{client_id}/fundamentals")
+    def client_fundamentals(client_id: str):
+        """Fundamentals + dividends + insider activity for the issuers this client holds.
+        Reference/context data (never an alert) — feeds the portfolio view + dialogue."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        return [f.model_dump() for f in world.fundamentals_for_client(client_id)]
 
     @app.get("/clients/{client_id}/log")
     def client_log(client_id: str):
@@ -141,6 +166,31 @@ def create_app() -> FastAPI:
         from ..agents.risk_timeline import build_risk_timeline
         return _dump(build_risk_timeline(world, client_id))
 
+    @app.get("/clients/{client_id}/opportunities")
+    def client_opportunities(client_id: str):
+        """NEW unheld CIO-BUY names aligned to the client's DNA (HI3) — proactive, news-independent."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.opportunities import build_opportunities
+        return build_opportunities(world, client_id)
+
+    @app.get("/clients/{client_id}/transactions")
+    def client_transactions(client_id: str):
+        """Transaction ledger + cash flows: cost basis, unrealised P&L, income yield (HI4)."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..ledger import build_ledger
+        return build_ledger(world, client_id)
+
+    @app.post("/clients/{client_id}/query")
+    def client_query(client_id: str, req: RMQueryRequest):
+        """RM conversational query about a proposal (ST1): context answer or an alternative candidate."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.rm_interface import answer_query
+        return answer_query(world, client_id, match_id=req.match_id,
+                            question=req.question, exclude_isin=req.exclude_isin)
+
     # --- RM Capture (the app's first POSTs — agent proposes, RM confirms) ---
 
     @app.post("/clients/{client_id}/capture/extract")
@@ -156,6 +206,36 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "unknown client")
         from ..agents.capture import confirm_capture
         return _dump(confirm_capture(world, client_id, req))
+
+    @app.post("/api/ocr")
+    async def ocr_image(file: UploadFile = File(...)):
+        from ..agents.ocr import OcrError, get_ocr
+        if not settings.ocr_enabled:
+            raise HTTPException(503, f"OCR not configured (provider={settings.ocr_provider})")
+        image = await file.read()
+        if not image:
+            raise HTTPException(400, "empty image upload")
+        try:
+            text = get_ocr().read(image, file.content_type or "image/png")
+        except OcrError as e:
+            raise HTTPException(502, str(e))
+        return {"text": text, "provider": settings.ocr_provider, "model": settings.phoeniqs_ocr_model}
+
+    @app.post("/api/transcribe")
+    async def transcribe_audio(file: UploadFile = File(...), language: str | None = Form(default=None)):
+        # The frontend records via MediaRecorder and POSTs the blob. Provider is
+        # swappable in agents/transcribe.py — route stays identical.
+        from ..agents.transcribe import TranscribeError, get_transcriber
+        if not settings.stt_enabled:
+            raise HTTPException(503, f"STT not configured (provider={settings.stt_provider})")
+        audio = await file.read()
+        if not audio:
+            raise HTTPException(400, "empty audio upload")
+        try:
+            text = get_transcriber().transcribe(audio, file.content_type or "audio/webm", file.filename or "audio.webm")
+        except TranscribeError as e:
+            raise HTTPException(502, str(e))
+        return {"text": text, "provider": settings.stt_provider}
 
     @app.get("/clients/{client_id}/capture/prompts")
     def capture_prompts(client_id: str):

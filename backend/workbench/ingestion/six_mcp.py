@@ -180,17 +180,125 @@ def live_quote(valor: Optional[str], mic: Optional[str]) -> dict:
     return out
 
 
+# Field-name candidates for the most-liquid venue. SIX flags the best venue as
+# MOST_LIQUID_MARKET (docs §1 / §2: "listings on XNAS (MOST_LIQUID_MARKET), …") and the tip
+# mentions BEST_VOLUME_OVERALL / HIGHEST_NUMBER_OF_TICKS. Since `describe` field shapes vary
+# and we can't probe live here, we try a spread of plausible column names per row.
+_MIC_KEYS = ("mic", "marketIdentifierCode", "marketMic", "listingMic")
+_LIQUID_KEYS = ("mostLiquidMarket", "isMostLiquidMarket", "mostLiquid",
+                "bestVolumeOverall", "highestNumberOfTicks")
+# Truthy markers the flag column may carry (boolean-ish OR the enum literal echoed back).
+_LIQUID_FLAGS = {"true", "1", "yes", "y", "most_liquid_market",
+                 "best_volume_overall", "highest_number_of_ticks"}
+
+
+def resolve_listing(valor: Optional[str], isin: Optional[str] = None) -> Optional[tuple[str, str]]:
+    """Resolve the most-liquid venue for an instrument → (valor, mic), cached.
+
+    Swiss/Euro core holdings (Nestlé, Swisscom, Lindt) come keyed to XSWX, which the token
+    doesn't price; but the same instrument usually also lists on a priced venue. `instrument_markets`
+    enumerates every venue and flags the most-liquid one — we pick that (or the first row with a
+    MIC) so callers can re-aim pricing. Returns None when off/unavailable; never raises."""
+    if not settings.six_enabled or not valor:
+        return None
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache = CACHE_DIR / f"six_resolve_{valor}.json"
+    if cache.exists():
+        try:
+            data = json.loads(cache.read_text())
+            mic = data.get("mic") if isinstance(data, dict) else None
+            return (valor, mic) if mic else None
+        except Exception:
+            pass
+    try:
+        res = call_tool("instrument_markets", {
+            "mode": "execute",
+            "valors": [valor],
+            # Over-specify: the server echoes the valid field list if a name is wrong, and we
+            # only read whatever columns actually come back (see _MIC_KEYS / _LIQUID_KEYS).
+            "fields": ["mic", "marketIdentifierCode", "mostLiquidMarket",
+                       "bestVolumeOverall", "highestNumberOfTicks", "listingId"],
+        })
+        rows = _rows(res) if res else []
+        chosen = ""
+        # Prefer a row explicitly flagged most-liquid; else the first row carrying any MIC.
+        for row in rows:
+            flag = _first(row, *_LIQUID_KEYS).strip().lower()
+            if flag in _LIQUID_FLAGS:
+                chosen = _first(row, *_MIC_KEYS)
+                if chosen:
+                    break
+        if not chosen:
+            for row in rows:
+                chosen = _first(row, *_MIC_KEYS)
+                if chosen:
+                    break
+        if not chosen:
+            return None
+        cache.write_text(json.dumps({"mic": chosen}))
+        return (valor, chosen)
+    except Exception:
+        return None
+
+
+def entity_lei(valor: Optional[str]) -> dict:
+    """Best-effort LEI / domicile for the issuer behind a Valor, cached. {} when off/unavailable.
+
+    `entity_base` carries the legal entity (docs §2). Field naming varies (lei/LEI,
+    domicile vs entityCountry, name vs entityLongName), so we try a spread. Never raises."""
+    if not settings.six_enabled or not valor:
+        return {}
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache = CACHE_DIR / f"six_entity_{valor}.json"
+    if cache.exists():
+        try:
+            return json.loads(cache.read_text())
+        except Exception:
+            pass
+    out: dict = {}
+    try:
+        res = call_tool("entity_base", {
+            "mode": "execute",
+            "valors": [valor],
+            "fields": ["lei", "domicile", "name", "entityLongName", "entityCountry"],
+        })
+        rows = _rows(res) if res else []
+        if rows:
+            lei = _first(rows[0], "lei", "LEI")
+            dom = _first(rows[0], "domicile", "entityCountry", "country")
+            if lei:
+                out["lei"] = lei
+            if dom:
+                out["domicile"] = dom
+    except Exception:
+        return {}
+    cache.write_text(json.dumps(out))
+    return out
+
+
 def enrich_listing(valor: Optional[str], mic: Optional[str]) -> dict:
     """One-shot enrichment for a holding/candidate, flattened into model-ready kwargs (A+C).
 
     Surfaces the live SIX EOD price and the SIX-resolved exchange ticker from listing_base.
-    NB: the hackathon token does NOT populate Bloomberg/CUSIP/SEDOL symbology, and
-    instrument_markets coverage is patchy, so the exchange ticker is the one reliable
-    SIX-sourced identifier we can show. Returns {} when off/unavailable."""
+    When the holding's own venue isn't priced (e.g. Swiss core on XSWX), we resolve the
+    instrument's most-liquid venue and, if THAT is a priced one, quote there instead — surfacing
+    the venue actually used as `six_venue` plus best-effort LEI/domicile. Strictly additive: the
+    existing US-venue price path is untouched, and everything still returns {} instantly when off.
+    NB: the hackathon token does NOT populate Bloomberg/CUSIP/SEDOL symbology, so the exchange
+    ticker is the one reliable SIX-sourced identifier we can show. Returns {} when off/unavailable."""
     if not settings.six_enabled:
         return {}
     out: dict = {}
-    q = live_quote(valor, mic)
+    use_mic = mic
+    # If the given venue isn't priced, try the instrument's most-liquid venue instead. Only
+    # switch when resolution lands on a venue we can actually price — otherwise leave mic as-is
+    # so the original (correctly-empty) path stands and nothing existing changes.
+    if mic not in PRICED_MICS:
+        resolved = resolve_listing(valor, None)
+        if resolved and resolved[1] in PRICED_MICS:
+            use_mic = resolved[1]
+            out["six_venue"] = use_mic
+    q = live_quote(valor, use_mic)
     if q.get("price") is not None:
         out["live_price"] = q["price"]
         out["live_ccy"] = q.get("currency")
@@ -199,4 +307,10 @@ def enrich_listing(valor: Optional[str], mic: Optional[str]) -> dict:
         out["price_source"] = q.get("source")
     if q.get("ticker"):
         out["six_ticker"] = q["ticker"]
+    # Best-effort issuer LEI/domicile — additive, never blocks the price path.
+    ent = entity_lei(valor)
+    if ent.get("lei"):
+        out["six_lei"] = ent["lei"]
+    if ent.get("domicile"):
+        out["six_domicile"] = ent["domicile"]
     return out

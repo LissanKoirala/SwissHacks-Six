@@ -73,6 +73,7 @@ def build_globe(world: World, client_id: str) -> dict:
             "city": city,
             "verdict": verdict,
             "weight": round(h.current_chf / max_chf, 4),
+            "provenance": h.provenance.model_dump() if h.provenance else None,
         })
         holding_pos[hid] = (lat, lng)
 
@@ -116,6 +117,7 @@ def build_globe(world: World, client_id: str) -> dict:
             "linked_holding_ids": linked,
             "kind": "alert",
             "sentiment": round(news.sentiment.score, 2),
+            "provenance": news.provenance.model_dump(),
         })
 
         color = _ARC_COLOR.get(severity, _ARC_COLOR["low"])
@@ -171,6 +173,7 @@ def build_globe(world: World, client_id: str) -> dict:
             "linked_holding_ids": linked,
             "kind": "ambient",
             "sentiment": round(score, 2),
+            "provenance": n.provenance.model_dump(),
         })
 
     violations = sum(1 for h in globe_holdings if h["verdict"] == "VIOLATION")

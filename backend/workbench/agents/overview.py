@@ -382,6 +382,8 @@ def _build_news_wire(world: World, insights_by_client: dict) -> list[NewsWireIte
     for n in world.news:
         if n.market_digest:
             continue  # macro digests live in market_moves
+        if getattr(n, "signal_type", "news") not in (None, "news"):
+            continue  # sec filings / earnings / esg / analyst signals surface in the portfolio + fundamentals views
         out.append(NewsWireItem(
             id=f"wire:{n.id}",
             title=n.title, source=n.source, published_at=n.published_at,

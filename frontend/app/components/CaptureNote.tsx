@@ -1,11 +1,18 @@
 "use client";
 
 // RM Capture — multimodal interaction note (CLAUDE.md §8.B, CAPTURE_CONTRACT §3).
-// Type / dictate (Web Speech) / photo (tesseract.js OCR, in-browser) fill ONE
-// note textarea → Extract (read-only draft) → staged review → RM Confirm gate
-// (the only mutation). Light theme only; reuses card/chip/accent/ink tokens.
+// Type / dictate (server STT or browser fallback) / photo (server OCR via
+// Phoeniqs deepseek-ocr) fill ONE note textarea → Extract (read-only draft) →
+// staged review → RM Confirm gate (the only mutation). Light + dark via
+// semantic tokens + shadcn primitives.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Camera,
+  Check,
+  Mic,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   CaptureDraft,
   CapturePrompt,
@@ -14,6 +21,18 @@ import type {
   ProposedFacet,
 } from "@/lib/types";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StagedPanel, extractErrorMessage } from "./CaptureStaged";
 import { GuidedPrompts } from "./CaptureGuided";
 
@@ -31,10 +50,8 @@ const MODALITIES = [
 
 const NOTE_MAX = 5000; // mirror the backend cap (CAPTURE_CONTRACT §1).
 
-// Shared field styling — keep the long Tailwind strings in one place.
-const FIELD =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-ink outline-none placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/20";
-const LABEL = "mb-1 block text-xs font-medium text-slate-500";
+// Shared label styling — keep the long Tailwind strings in one place.
+const LABEL = "mb-1 block text-xs font-medium text-muted-foreground";
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -93,7 +110,7 @@ function appendToNote(prev: string, chunk: string): string {
 // A neutral slate chip — the recurring metadata pill in the success summary.
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="chip bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">
+    <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
       {children}
     </span>
   );
@@ -118,13 +135,34 @@ export function CaptureNote({
   // --- guided capture prompts (client-aware quest list) ---
   const [prompts, setPrompts] = useState<CapturePrompt[]>([]);
 
-  // --- dictation (Web Speech) ---
+  // --- dictation ---
+  // Primary path: server-side STT (ElevenLabs now, Phoeniqs planned) via
+  // MediaRecorder upload — works in every browser. Fallback path: in-browser
+  // Web Speech when backend STT isn't configured (Chrome/Edge only).
   const [listening, setListening] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const finalBaseRef = useRef(""); // note text captured when dictation started
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const [serverSttEnabled, setServerSttEnabled] = useState<boolean | null>(null);
+  const [sttProvider, setSttProvider] = useState<string>("");
   const speechSupported = useMemo(() => getSpeechRecognitionCtor() !== null, []);
+  const mediaSupported = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      typeof navigator !== "undefined" &&
+      !!navigator.mediaDevices?.getUserMedia &&
+      typeof window.MediaRecorder !== "undefined",
+    [],
+  );
+  // Effective support: server STT (if backend says yes and browser can record)
+  // OR browser Web Speech as a fallback.
+  const dictationSupported =
+    (serverSttEnabled && mediaSupported) || speechSupported;
 
-  // --- OCR (tesseract.js) ---
+  // --- OCR (server: Phoeniqs deepseek-ocr) ---
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrMsg, setOcrMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -146,6 +184,28 @@ export function CaptureNote({
       } catch {
         /* noop */
       }
+      try {
+        mediaRecorderRef.current?.stop();
+      } catch {
+        /* noop */
+      }
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  // Probe the backend once to decide which dictation path to use.
+  useEffect(() => {
+    let alive = true;
+    api
+      .integrations()
+      .then((d) => {
+        if (!alive) return;
+        setServerSttEnabled(!!d.stt?.enabled);
+        setSttProvider(d.stt?.provider ?? "");
+      })
+      .catch(() => alive && setServerSttEnabled(false));
+    return () => {
+      alive = false;
     };
   }, []);
 
@@ -163,7 +223,11 @@ export function CaptureNote({
     setError(null);
     setOcrMsg(null);
     setOcrBusy(false);
-    if (listening) stopDictation();
+    if (listening) {
+      if (serverSttEnabled && mediaSupported) stopServerRecording();
+      else stopWebSpeech();
+    }
+    setTranscribing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
@@ -190,7 +254,8 @@ export function CaptureNote({
 
   /* ----------------------------------------------------- dictation --- */
 
-  function stopDictation() {
+  // --- Web Speech fallback path (no server STT configured) ---
+  function stopWebSpeech() {
     try {
       recognitionRef.current?.stop();
     } catch {
@@ -199,7 +264,7 @@ export function CaptureNote({
     setListening(false);
   }
 
-  function startDictation() {
+  function startWebSpeech() {
     const Ctor = getSpeechRecognitionCtor();
     if (!Ctor) return;
     const rec = new Ctor();
@@ -220,7 +285,6 @@ export function CaptureNote({
       if (finalChunk) {
         finalBaseRef.current = appendToNote(finalBaseRef.current, finalChunk);
       }
-      // Live preview = committed base + the in-flight interim words.
       setNote(appendToNote(finalBaseRef.current, interim));
     };
     rec.onerror = (ev: { error?: string }) => {
@@ -245,11 +309,73 @@ export function CaptureNote({
     }
   }
 
+  // --- Server STT path (record → upload → transcript). ElevenLabs is request/
+  // response, so there's no interim text — show "Transcribing…" while we wait.
+  async function startServerRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      // Let the browser pick a supported MIME (Safari prefers mp4; Chrome webm/opus).
+      const rec = new MediaRecorder(stream);
+      mediaRecorderRef.current = rec;
+      audioChunksRef.current = [];
+      rec.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      rec.onstop = async () => {
+        mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+        mediaStreamRef.current = null;
+        const mime = rec.mimeType || "audio/webm";
+        const blob = new Blob(audioChunksRef.current, { type: mime });
+        audioChunksRef.current = [];
+        if (blob.size === 0) {
+          setTranscribing(false);
+          return;
+        }
+        setTranscribing(true);
+        try {
+          const ext = mime.includes("mp4") ? "mp4" : mime.includes("ogg") ? "ogg" : "webm";
+          const { text } = await api.transcribe(blob, `dictation.${ext}`);
+          if (text) setNote((prev) => appendToNote(prev, text));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(`Transcription failed: ${msg}. You can keep typing.`);
+        } finally {
+          setTranscribing(false);
+        }
+      };
+      rec.start();
+      setListening(true);
+      setError(null);
+    } catch (err) {
+      setListening(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Microphone unavailable: ${msg}`);
+    }
+  }
+
+  function stopServerRecording() {
+    try {
+      mediaRecorderRef.current?.stop();
+    } catch {
+      /* noop */
+    }
+    setListening(false);
+  }
+
   const toggleDictation = useCallback(() => {
-    if (listening) stopDictation();
-    else startDictation();
+    // Prefer server STT when the backend has it configured; otherwise fall back
+    // to in-browser Web Speech so offline demos still work.
+    const useServer = serverSttEnabled && mediaSupported;
+    if (listening) {
+      if (useServer) stopServerRecording();
+      else stopWebSpeech();
+      return;
+    }
+    if (useServer) startServerRecording();
+    else if (speechSupported) startWebSpeech();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listening, note]);
+  }, [listening, note, serverSttEnabled, mediaSupported, speechSupported]);
 
   /* ----------------------------------------------------------- OCR --- */
 
@@ -263,28 +389,19 @@ export function CaptureNote({
     setOcrMsg("Reading the photo…");
     setError(null);
     try {
-      // Dynamic import inside the handler — keeps the WASM/worker out of SSR
-      // and the main bundle until the RM actually snaps a photo.
-      const { default: Tesseract } = await import("tesseract.js");
-      const { data } = await Tesseract.recognize(file, "eng", {
-        logger: (m: { status?: string; progress?: number }) => {
-          if (m.status === "recognizing text" && typeof m.progress === "number") {
-            setOcrMsg(`Reading the photo… ${Math.round(m.progress * 100)}%`);
-          }
-        },
-      });
-      const text = (data?.text ?? "").trim();
-      if (text) {
-        setNote((prev) => appendToNote(prev, text));
+      // Server-side OCR via Phoeniqs (deepseek-ocr) — handles cursive that
+      // tesseract.js couldn't. See backend/workbench/agents/ocr.py.
+      const { text } = await api.ocr(file, file.name || "note.png");
+      const trimmed = (text ?? "").trim();
+      if (trimmed) {
+        setNote((prev) => appendToNote(prev, trimmed));
         setOcrMsg("Photo read — text added to the note.");
       } else {
         setOcrMsg("No text found in that image. You can type the note instead.");
       }
-    } catch {
-      // OCR failure must never block capture — friendly nudge, RM types on.
-      setOcrMsg(
-        "Could not read that image. You can type the note instead.",
-      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setOcrMsg(`Could not read that image: ${msg}`);
     } finally {
       setOcrBusy(false);
     }
@@ -298,7 +415,10 @@ export function CaptureNote({
       setError("Add a note first — type it, dictate it, or read it from a photo.");
       return;
     }
-    if (listening) stopDictation();
+    if (listening) {
+      if (serverSttEnabled && mediaSupported) stopServerRecording();
+      else stopWebSpeech();
+    }
     setExtracting(true);
     setError(null);
     setResult(null);
@@ -386,45 +506,40 @@ export function CaptureNote({
       <section className="card p-6">
         <div className="flex items-start gap-3">
           <span
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-inset ring-primary/20"
             aria-hidden
           >
-            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.3 3.29 6.8-6.8a1 1 0 0 1 1.4 0Z"
-                clipRule="evenodd"
-              />
-            </svg>
+            <Check className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-ink">
+            <h3 className="text-base font-semibold tracking-tight text-foreground">
               Note appended to the meeting log
             </h3>
-            <p className="mt-1 text-sm text-ink-soft">
+            <p className="mt-1 text-sm text-muted-foreground">
               The entry is now immutable and flows into the profile, CRM network
               and risk timeline.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="chip bg-indigo-50 font-mono text-[11px] text-indigo-700 ring-1 ring-inset ring-indigo-200">
+              <span className="citation font-mono text-[11px]">
                 {result.entry_id}
               </span>
-              <span className="chip bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                applied {result.applied.edges} edge
-                {result.applied.edges === 1 ? "" : "s"} / {result.applied.facets}{" "}
-                facet{result.applied.facets === 1 ? "" : "s"}
-              </span>
               <MetaChip>
-                {result.log_count} log entr
+                <span className="tabular-nums">{result.applied.edges}</span> edge
+                {result.applied.edges === 1 ? "" : "s"} ·{" "}
+                <span className="tabular-nums">{result.applied.facets}</span> facet
+                {result.applied.facets === 1 ? "" : "s"} applied
+              </MetaChip>
+              <MetaChip>
+                <span className="tabular-nums">{result.log_count}</span> log entr
                 {result.log_count === 1 ? "y" : "ies"} total
               </MetaChip>
             </div>
           </div>
         </div>
         <div className="mt-5 flex gap-2">
-          <button type="button" className="btn-primary" onClick={resetAll}>
+          <Button type="button" onClick={resetAll}>
             Capture another
-          </button>
+          </Button>
         </div>
       </section>
     );
@@ -437,13 +552,13 @@ export function CaptureNote({
       {/* ---------------------------------------------------- input card --- */}
       <section className="card p-5">
         <header className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-            New interaction note
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">
+            New Interaction Note
           </p>
-          <h2 className="mt-1 text-base font-semibold text-ink">
+          <h2 className="mt-1 font-display text-4xl font-light tracking-tight text-foreground">
             Capture by text, voice or photo
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Everything below is a draft. Nothing touches the live profile until
             you review and confirm.
           </p>
@@ -453,60 +568,71 @@ export function CaptureNote({
         <GuidedPrompts
           prompts={prompts}
           listening={listening}
-          speechSupported={speechSupported}
+          // `speechSupported` is the prop name, but it now reflects whichever
+          // dictation path is active (server STT or browser Web Speech).
+          speechSupported={!!dictationSupported}
           onToggleDictation={toggleDictation}
           onInsert={insertPromptLead}
         />
 
         {/* mode buttons */}
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Add via
+          <span className="text-xs font-medium tracking-wide text-muted-foreground">
+            Add Via
           </span>
 
           {/* Dictate */}
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={toggleDictation}
-            disabled={!speechSupported}
+            disabled={!dictationSupported || transcribing}
             aria-pressed={listening}
             title={
-              speechSupported
-                ? listening
-                  ? "Stop dictation"
-                  : "Dictate the note (Chrome/Edge)"
-                : "Dictation needs Chrome or Edge"
-            }
-            className={`btn ring-1 ring-inset transition-colors ${
-              !speechSupported
-                ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 ring-slate-200"
+              !dictationSupported
+                ? "Dictation unavailable — server STT not configured and Web Speech missing"
                 : listening
-                ? "border-rose-300 bg-rose-50 text-rose-700 ring-rose-200"
-                : "border-slate-300 bg-white text-ink-soft ring-transparent hover:bg-slate-50"
-            }`}
+                ? "Stop dictation"
+                : serverSttEnabled
+                ? `Dictate the note (${sttProvider || "server"} STT)`
+                : "Dictate the note (Chrome/Edge Web Speech)"
+            }
+            className={cn(
+              listening &&
+                "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive"
+            )}
           >
-            <span aria-hidden>🎙</span>
-            {listening ? (
+            <Mic className="h-4 w-4" />
+            {transcribing ? (
               <span className="flex items-center gap-1.5">
-                Listening
+                Transcribing
+                <span
+                  className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-border border-t-primary"
+                  aria-hidden
+                />
+              </span>
+            ) : listening ? (
+              <span className="flex items-center gap-1.5">
+                {serverSttEnabled ? "Recording" : "Listening"}
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
                 </span>
               </span>
             ) : (
               "Dictate"
             )}
-          </button>
+          </Button>
 
           {/* Photo / OCR */}
           <label
-            className={`btn border border-slate-300 bg-white text-ink-soft ring-1 ring-inset ring-transparent hover:bg-slate-50 ${
+            className={cn(
+              buttonVariants({ variant: "outline" }),
               ocrBusy ? "cursor-wait opacity-70" : "cursor-pointer"
-            }`}
-            title="Read a printed/handwritten note via in-browser OCR"
+            )}
+            title="Read a printed/handwritten note via Phoeniqs OCR"
           >
-            <span aria-hidden>📷</span>
+            <Camera className="h-4 w-4" />
             {ocrBusy ? "Reading…" : "Photo"}
             <input
               ref={fileInputRef}
@@ -520,10 +646,10 @@ export function CaptureNote({
           </label>
 
           {ocrMsg && (
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               {ocrBusy && (
                 <span
-                  className="mr-1.5 inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-accent align-middle"
+                  className="mr-1.5 inline-block h-3 w-3 animate-spin rounded-full border-2 border-border border-t-primary align-middle"
                   aria-hidden
                 />
               )}
@@ -533,17 +659,19 @@ export function CaptureNote({
         </div>
 
         {/* the single note textarea (Type mode is default) */}
-        <textarea
+        <Textarea
           value={note}
           onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
           rows={6}
           maxLength={NOTE_MAX}
           placeholder="Type the interaction here — or dictate / snap a photo above. e.g. “Lunch at Kronenhalle. Hubertus wants to fund Parkinson's research and is proud of the foundation's work.”"
-          className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-ink shadow-sm outline-none placeholder:text-slate-400 focus:border-accent focus:ring-2 focus:ring-accent/20"
+          className="resize-y text-sm leading-relaxed"
         />
-        <div className="mt-1 flex justify-between text-[11px] text-slate-400">
+        <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
           <span>
-            Dictation needs Chrome/Edge · OCR runs locally in your browser
+            {serverSttEnabled
+              ? `Dictation via ${sttProvider || "server"} STT · OCR via Phoeniqs`
+              : "Dictation needs Chrome/Edge (Web Speech) · OCR via Phoeniqs"}
           </span>
           <span className="tabular-nums">
             {note.length} / {NOTE_MAX}
@@ -552,65 +680,65 @@ export function CaptureNote({
 
         {/* metadata row */}
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="block">
-            <span className={LABEL}>Modality</span>
-            <select
-              value={modality}
-              onChange={(e) => setModality(e.target.value)}
-              className={FIELD}
-            >
-              {MODALITIES.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="block">
+            <Label className={LABEL}>Modality</Label>
+            <Select value={modality} onValueChange={setModality}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MODALITIES.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <label className="block">
             <span className={LABEL}>Contact</span>
-            <input
+            <Input
               type="text"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               placeholder="Who you spoke with"
-              className={FIELD}
             />
           </label>
           <label className="block">
             <span className={LABEL}>Date</span>
-            <input
+            <Input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className={FIELD}
             />
           </label>
           <label className="block">
             <span className={LABEL}>
-              RM <span className="font-normal text-slate-400">(optional)</span>
+              RM{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
             </span>
-            <input
+            <Input
               type="text"
               value={rmName}
               onChange={(e) => setRmName(e.target.value)}
               placeholder="Your name"
-              className={FIELD}
             />
           </label>
         </div>
 
         {/* extract action */}
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button
+          <Button
             type="button"
-            className="btn-primary"
             onClick={handleExtract}
             disabled={extracting || !note.trim()}
           >
             {extracting ? (
               <>
                 <span
-                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground"
                   aria-hidden
                 />
                 Extracting…
@@ -620,19 +748,19 @@ export function CaptureNote({
             ) : (
               "Extract signals"
             )}
-          </button>
+          </Button>
           {draft && (
-            <button type="button" className="btn-ghost" onClick={resetAll}>
+            <Button type="button" variant="ghost" onClick={resetAll}>
               Clear
-            </button>
+            </Button>
           )}
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-muted-foreground">
             Read-only — proposes topics &amp; signals for your review.
           </span>
         </div>
 
         {error && !draft && (
-          <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <p className="mt-3 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}

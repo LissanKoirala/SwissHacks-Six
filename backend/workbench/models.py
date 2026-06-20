@@ -11,7 +11,11 @@ from pydantic import BaseModel, Field
 
 # --- vocabulary types -------------------------------------------------------
 
-SourceType = Literal["crm_log", "news", "cio_list", "portfolio", "mandate", "market_digest"]
+SourceType = Literal[
+    "crm_log", "news", "cio_list", "portfolio", "mandate", "market_digest",
+    # additional free data sources (CLAUDE.md §6) — each event signal cites its true origin
+    "sec_filing", "esg", "earnings", "analyst", "macro", "fundamentals", "insider",
+]
 Polarity = Literal["conflict", "opportunity", "neutral"]
 Rating = Literal["BUY", "HOLD", "SELL"]
 SentimentLabel = Literal["BEARISH", "NEUTRAL", "BULLISH"]
@@ -130,6 +134,9 @@ class NewsItem(BaseModel):
     issuer_name: Optional[str] = None
     issuer_isin: Optional[str] = None
     market_digest: bool = False  # general market info -> DIALOGUE only, never strategy (§2)
+    # Which feed this signal came from: "news" | "sec_filing" | "esg" | "earnings" | "analyst" |
+    # "macro". Lets the dashboard badge the origin; matching/advisory treat them all as news.
+    signal_type: str = "news"
     provenance: Provenance
 
 
@@ -157,6 +164,17 @@ class Holding(BaseModel):
     live_change_pct: Optional[float] = None  # close vs open, same session
     price_source: Optional[str] = None       # e.g. "SIX EOD"
     six_ticker: Optional[str] = None         # SIX-resolved exchange ticker (listing_base)
+    # --- CIO deviation status (Portfolio Agent: "flag assets no longer on the CIO list") ---
+    cio_rating: Optional[str] = None         # BUY / HOLD / SELL from the CIO list, or None if off-list
+    cio_status: Optional[str] = None         # "BUY" | "HOLD" | "SELL" | "OFF_LIST" | "CASH"
+    provenance: Optional["Provenance"] = None  # pointer to the Sample Portfolio workbook row
+    # --- Risk metrics (HI1): live SIX histVol30d when available, else the sector model ---
+    hist_vol_30d: Optional[float] = None     # annualised 30-day historical volatility (decimal)
+    beta: Optional[float] = None             # market beta
+    pe_ratio: Optional[float] = None
+    dividend_yield: Optional[float] = None
+    market_cap: Optional[float] = None
+    risk_source: Optional[str] = None        # "SIX EOD" | "sector model"
 
 
 class MandateTarget(BaseModel):
@@ -169,6 +187,7 @@ class MandateTarget(BaseModel):
     current_pct: float = 0.0
     drift_pp: float = 0.0          # current_pct - target_pct
     breach: bool = False           # |drift| > 2.0pp
+    provenance: Optional["Provenance"] = None  # pointer to the Portfolio Strategies workbook row
 
 
 class Mandate(BaseModel):
@@ -193,6 +212,77 @@ class CIOStock(BaseModel):
     yahoo: Optional[str] = None
     sentiment: Optional[Sentiment] = None
     value_tags: list[str] = Field(default_factory=list)  # ethics/value labels, e.g. "clean-governance"
+    # --- Risk metrics (HI1): for risk-matched substitution (live SIX else the sector model) ---
+    hist_vol_30d: Optional[float] = None     # annualised 30-day historical volatility (decimal)
+    beta: Optional[float] = None             # market beta
+    pe_ratio: Optional[float] = None
+    dividend_yield: Optional[float] = None
+    market_cap: Optional[float] = None
+    risk_source: Optional[str] = None        # "SIX EOD" | "sector model"
+    provenance: Provenance
+
+
+# --- Transaction ledger + cash flows (HI4: history, cost basis, income) --------------------
+
+class PortfolioTransaction(BaseModel):
+    """One historical trade from the workbook Transactions tabs. Immutable history; never matched."""
+    transaction_id: str
+    timestamp: str                 # ISO yyyy-mm-dd
+    portfolio: str
+    isin: str
+    issuer: str
+    side: Literal["BUY", "SELL"]
+    quantity: Optional[float] = None
+    price_local: Optional[float] = None
+    currency: Optional[str] = None
+    fx_chf: Optional[float] = None
+    price_chf: Optional[float] = None
+    amount_chf: float = 0.0
+    rationale: Optional[str] = None
+    price_source: Optional[str] = None
+    provenance: Provenance
+
+
+class CashFlow(BaseModel):
+    """One cash movement from the workbook Cash Flows tab: COUPON / DEPOSIT / WITHDRAWAL / FEE."""
+    flow_id: str
+    timestamp: str
+    portfolio: str
+    side: str
+    amount_chf: float = 0.0
+    rationale: Optional[str] = None
+    provenance: Provenance
+
+
+# --- Issuer reference data (context for dialogue + portfolio view, NOT matched) -------------
+
+class InsiderTrade(BaseModel):
+    """One Form 4 insider transaction (SEC). Context only — never drives a strategy match."""
+    insider: str
+    role: Optional[str] = None
+    transaction: Literal["BUY", "SELL"]
+    shares: Optional[float] = None
+    value_usd: Optional[float] = None
+    date: str
+    provenance: Provenance
+
+
+class Fundamentals(BaseModel):
+    """Per-issuer fundamentals + dividend schedule + insider summary, keyed by ISIN.
+    Enriches the portfolio view and seeds dialogue; it is reference data, not an event signal,
+    so it never enters the match pipeline (CLAUDE.md §2: general info feeds dialogue, not strategy)."""
+    isin: str
+    issuer: str
+    as_of: Optional[str] = None
+    currency: Optional[str] = None
+    pe_ratio: Optional[float] = None
+    dividend_yield: Optional[float] = None       # percent, e.g. 3.6
+    next_ex_dividend: Optional[str] = None        # ISO date of the next ex-dividend
+    market_cap: Optional[float] = None            # in `currency`
+    week52_high: Optional[float] = None
+    week52_low: Optional[float] = None
+    insider_summary: Optional[str] = None         # e.g. "Net insider selling over the last 90 days"
+    insider_trades: list[InsiderTrade] = Field(default_factory=list)
     provenance: Provenance
 
 
@@ -218,6 +308,29 @@ class Match(BaseModel):
 
 # --- Advisory outputs (CLAUDE.md §1: two things) ----------------------------
 
+class SubstitutionMetrics(BaseModel):
+    """Side-by-side sold-vs-replacement comparison for a swap — the 'substitution metrics' the
+    Ammann persona's professional briefing needs to evidence a 'similar risk' replacement."""
+    sell_issuer: Optional[str] = None
+    buy_issuer: Optional[str] = None
+    vol_sell: Optional[float] = None        # annualised 30d historical volatility (decimal)
+    vol_buy: Optional[float] = None
+    vol_delta: Optional[float] = None       # vol_buy - vol_sell (≈0 ⇒ similar risk)
+    beta_sell: Optional[float] = None
+    beta_buy: Optional[float] = None
+    pe_sell: Optional[float] = None
+    pe_buy: Optional[float] = None
+    sentiment_sell: Optional[float] = None
+    sentiment_buy: Optional[float] = None
+    sentiment_delta: Optional[float] = None
+    sector_match: bool = False
+    sub_asset_class_match: bool = False
+    drift_pp_after: Optional[float] = None  # buy sleeve drift after the swap
+    value_tags_sell: list[str] = Field(default_factory=list)
+    value_tags_buy: list[str] = Field(default_factory=list)
+    risk_source: Optional[str] = None       # "SIX EOD" | "sector model"
+
+
 class SwapProposal(BaseModel):
     action: Literal["SWAP", "REDUCE", "INCREASE", "DIVEST", "HOLD"]
     sell_isin: Optional[str] = None
@@ -233,6 +346,17 @@ class SwapProposal(BaseModel):
     buy_live_price: Optional[float] = None
     buy_live_ccy: Optional[str] = None
     buy_live_ts: Optional[str] = None
+    substitution: Optional[SubstitutionMetrics] = None  # sold-vs-replacement metrics (HI2)
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
+class GoodNewsBriefing(BaseModel):
+    """A positive, values-aligned 'good news' framing for the RM to share (Huber persona:
+    'Generate a Good News Briefing and flag the stock as a buy recommendation'). Surfaced on
+    opportunity matches alongside (or instead of) a trade."""
+    headline: str
+    why_authentic: str            # why it genuinely matches this client's documented values
+    action_summary: str           # the recommended overweight/hold, in plain words
     provenance: list[Provenance] = Field(default_factory=list)
 
 
@@ -244,6 +368,7 @@ class StrategyProposal(BaseModel):
     polarity: Polarity
     swaps: list[SwapProposal] = Field(default_factory=list)
     constraints_checked: list[str] = Field(default_factory=list)
+    good_news_briefing: Optional[GoodNewsBriefing] = None  # positive framing on opportunity matches
     provenance: list[Provenance] = Field(default_factory=list)
 
 
@@ -260,6 +385,13 @@ class DialogueSuggestion(BaseModel):
 
 # --- API contract (CLAUDE.md §7.4) -----------------------------------------
 
+class RMQueryRequest(BaseModel):
+    """RM conversational query about a proposal (ST1): ask for context, or request an alternative."""
+    match_id: Optional[str] = None
+    question: str = ""
+    exclude_isin: Optional[str] = None
+
+
 class ClientSummary(BaseModel):
     client_id: str
     name: str
@@ -274,5 +406,8 @@ class ClientInsights(BaseModel):
     matches: list[Match] = Field(default_factory=list)
     strategy_proposal: Optional[StrategyProposal] = None
     dialogue_suggestion: Optional[DialogueSuggestion] = None
+    # Proposals for the other DISTINCT salient matches (HI5) — a client with two genuine triggers
+    # (e.g. a conflict on one holding + an opportunity on another) gets a proposal for each.
+    additional_proposals: list[StrategyProposal] = Field(default_factory=list)
     generated_at: str
     llm_used: bool = False

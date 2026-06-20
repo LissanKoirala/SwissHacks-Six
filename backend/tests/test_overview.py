@@ -87,7 +87,8 @@ def test_market_moves_are_macro_digests():
     o = _overview()
     for mv in o["market_moves"]:
         assert mv["direction"] in {"up", "down", "flat"}
-        assert mv["provenance"]["source_type"] in {"news", "market_digest"}
+        # digests can originate from the news feed or the macro feed (external-data-sources)
+        assert mv["provenance"]["source_type"] in {"news", "market_digest", "macro"}
 
 
 def test_portfolio_events_cite_real_holdings():

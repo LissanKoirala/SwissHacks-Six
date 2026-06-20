@@ -6,7 +6,15 @@ export type SourceType =
   | "cio_list"
   | "portfolio"
   | "mandate"
-  | "market_digest";
+  | "market_digest"
+  // additional free data sources (CLAUDE.md §6)
+  | "sec_filing"
+  | "esg"
+  | "earnings"
+  | "analyst"
+  | "macro"
+  | "fundamentals"
+  | "insider";
 
 export type Polarity = "conflict" | "opportunity" | "neutral";
 
@@ -41,6 +49,35 @@ export interface NewsItem {
   sentiment: Sentiment;
   issuer_name?: string | null;
   issuer_isin?: string | null;
+  market_digest?: boolean;
+  // origin feed: "news" | "sec_filing" | "esg" | "earnings" | "analyst" | "macro"
+  signal_type?: string;
+  provenance: Provenance;
+}
+
+export interface InsiderTrade {
+  insider: string;
+  role?: string | null;
+  transaction: "BUY" | "SELL";
+  shares?: number | null;
+  value_usd?: number | null;
+  date: string;
+  provenance: Provenance;
+}
+
+export interface Fundamentals {
+  isin: string;
+  issuer: string;
+  as_of?: string | null;
+  currency?: string | null;
+  pe_ratio?: number | null;
+  dividend_yield?: number | null;
+  next_ex_dividend?: string | null;
+  market_cap?: number | null;
+  week52_high?: number | null;
+  week52_low?: number | null;
+  insider_summary?: string | null;
+  insider_trades: InsiderTrade[];
   provenance: Provenance;
 }
 
@@ -71,6 +108,10 @@ export interface Holding {
   live_change_pct?: number | null;
   price_source?: string | null;
   six_ticker?: string | null;
+  // CIO deviation status (Portfolio Agent: "assets no longer on the CIO list").
+  cio_rating?: string | null; // BUY / HOLD / SELL, or null if off-list
+  cio_status?: string | null; // "BUY" | "HOLD" | "SELL" | "OFF_LIST" | "CASH"
+  provenance?: Provenance | null; // pointer to the Sample Portfolio workbook row
 }
 
 export interface Match {
@@ -82,6 +123,27 @@ export interface Match {
   shared_topics: SharedTopic[];
   affected_holding?: Holding | null;
   why: Provenance[];
+}
+
+export interface SubstitutionMetrics {
+  sell_issuer?: string | null;
+  buy_issuer?: string | null;
+  vol_sell?: number | null;
+  vol_buy?: number | null;
+  vol_delta?: number | null;
+  beta_sell?: number | null;
+  beta_buy?: number | null;
+  pe_sell?: number | null;
+  pe_buy?: number | null;
+  sentiment_sell?: number | null;
+  sentiment_buy?: number | null;
+  sentiment_delta?: number | null;
+  sector_match: boolean;
+  sub_asset_class_match: boolean;
+  drift_pp_after?: number | null;
+  value_tags_sell: string[];
+  value_tags_buy: string[];
+  risk_source?: string | null;
 }
 
 export interface Swap {
@@ -98,6 +160,14 @@ export interface Swap {
   buy_live_price?: number | null;
   buy_live_ccy?: string | null;
   buy_live_ts?: string | null;
+  substitution?: SubstitutionMetrics | null;
+  provenance: Provenance[];
+}
+
+export interface GoodNewsBriefing {
+  headline: string;
+  why_authentic: string;
+  action_summary: string;
   provenance: Provenance[];
 }
 
@@ -107,7 +177,32 @@ export interface StrategyProposal {
   polarity: Polarity;
   swaps: Swap[];
   constraints_checked: string[];
+  good_news_briefing?: GoodNewsBriefing | null;
   provenance: Provenance[];
+}
+
+export interface QueryAlternative {
+  buy_isin: string;
+  buy_issuer: string;
+  industry_group: string | null;
+  rationale: string;
+  substitution: SubstitutionMetrics;
+  provenance: Provenance[];
+}
+
+export interface RMQueryResult {
+  kind: "alternative" | "context" | "none";
+  question: string;
+  answer: string | null;
+  alternative: QueryAlternative | null;
+  llm_used?: boolean;
+  provenance?: Provenance[];
+}
+
+export interface RMQueryBody {
+  match_id?: string | null;
+  question?: string;
+  exclude_isin?: string | null;
 }
 
 export interface TalkingPoint {
@@ -142,6 +237,7 @@ export interface Insights {
   matches: Match[];
   strategy_proposal: StrategyProposal | null;
   dialogue_suggestion: DialogueSuggestion | null;
+  additional_proposals?: StrategyProposal[];
   generated_at: string;
   llm_used: boolean;
 }
@@ -156,6 +252,7 @@ export interface MandateTarget {
   current_pct: number;
   drift_pp: number;
   breach: boolean;
+  provenance?: Provenance | null; // pointer to the Portfolio Strategies workbook row
 }
 
 export interface Mandate {
@@ -199,6 +296,87 @@ export interface IntegrationProbe {
 export interface IntegrationHealth {
   use_live: boolean;
   probes: IntegrationProbe[];
+  stt?: { provider: string; enabled: boolean };
+  ocr?: { provider: string; enabled: boolean; model?: string };
+}
+
+// --- NEW opportunities (HI3: unheld CIO-BUY names aligned to client DNA) ---
+
+export interface Opportunity {
+  isin: string;
+  issuer: string;
+  industry_group: string | null;
+  sub_asset_class: string | null;
+  region: string | null;
+  rating: string;
+  value_tags: string[];
+  sentiment: number | null;
+  hist_vol_30d: number | null;
+  risk_source: string | null;
+  alignment_topics: string[];
+  alignment_reason: string;
+  score: number;
+  provenance: Provenance[];
+}
+
+// --- transaction ledger + cash flows (HI4) ---
+
+export interface LedgerTxn {
+  transaction_id: string;
+  timestamp: string;
+  isin: string;
+  issuer: string;
+  side: "BUY" | "SELL";
+  quantity: number | null;
+  price_local: number | null;
+  currency: string | null;
+  fx_chf: number | null;
+  price_chf: number | null;
+  amount_chf: number;
+  rationale: string | null;
+  price_source: string | null;
+  provenance: Provenance | null;
+}
+
+export interface LedgerPosition {
+  isin: string;
+  issuer: string;
+  units: number | null;
+  cost_basis_chf: number;
+  current_chf: number;
+  unrealised_pnl_chf: number;
+  unrealised_pnl_pct: number | null;
+  first_buy: string | null;
+  holding_period_days: number | null;
+  provenance: Provenance | null;
+}
+
+export interface LedgerCashFlow {
+  flow_id: string;
+  timestamp: string;
+  side: string;
+  amount_chf: number;
+  rationale: string | null;
+  provenance: Provenance | null;
+}
+
+export interface TransactionsData {
+  portfolio: string;
+  summary: {
+    cost_basis_chf: number;
+    current_chf: number;
+    unrealised_pnl_chf: number;
+    unrealised_pnl_pct: number | null;
+    income_yield_pct: number | null;
+    annual_income_chf: number | null;
+    net_flows_chf: number;
+    txn_count: number;
+    buy_count: number;
+    sell_count: number;
+  };
+  transactions: LedgerTxn[];
+  positions: LedgerPosition[];
+  cashflows: LedgerCashFlow[];
 }
 
 // --- analytics (charts + 3D investment globe) ---
@@ -211,6 +389,21 @@ export interface AnalyticsFigures {
   alerts: number;
   weighted_sentiment: number;
   regions: number;
+  off_list_count?: number;
+  sell_rated_count?: number;
+}
+
+export interface CioDeviation {
+  isin: string;
+  issuer: string;
+  industry_group: string | null;
+  sub_asset_class: string;
+  current_chf: number;
+  pct: number;
+  status: "OFF_LIST" | "SELL" | string;
+  cio_rating: string | null;
+  provenance?: Provenance | null;
+  cio_provenance?: Provenance | null;
 }
 
 export interface AllocationSlice {
@@ -267,6 +460,7 @@ export interface Analytics {
   by_sector: AllocationSlice[];
   by_region: RegionExposure[];
   top_holdings: TopHolding[];
+  cio_deviations: CioDeviation[];
 }
 
 // --- CRM knowledge graph (Network view) ---
@@ -404,6 +598,7 @@ export interface GlobeHolding {
   city: string;
   verdict: "VIOLATION" | "WATCH" | "OK";
   weight: number;
+  provenance?: Provenance | null;
 }
 
 export interface GlobeEvent {
@@ -419,6 +614,7 @@ export interface GlobeEvent {
   linked_holding_ids: string[];
   kind?: "alert" | "ambient";
   sentiment?: number;
+  provenance?: Provenance | null;
 }
 
 export interface GlobeArc {

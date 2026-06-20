@@ -13,11 +13,13 @@ from ..graph.store import World
 from ..models import (
     CIOStock,
     DialogueSuggestion,
+    GoodNewsBriefing,
     Holding,
     Match,
     Provenance,
     Statement,
     StrategyProposal,
+    SubstitutionMetrics,
     SwapProposal,
 )
 from ..topics import topic_label
@@ -92,10 +94,12 @@ def _drift_after_swap(world: World, client_id: str, sell_sac: Optional[str],
 def select_swap_candidate(
     world: World, client_id: str, industry_group: str,
     desired: list[str], avoid: list[str], exclude_isin: Optional[str],
-    same_sub_asset_class: Optional[str],
+    same_sub_asset_class: Optional[str], target_vol: Optional[float] = None,
+    also_exclude: Optional[set] = None,
 ) -> Optional[CIOStock]:
     held = world.held_isins(client_id)
-    candidates = [c for c in world.cio_by_industry(industry_group, "BUY") if c.isin != exclude_isin]
+    blocked = {exclude_isin} | (also_exclude or set())
+    candidates = [c for c in world.cio_by_industry(industry_group, "BUY") if c.isin not in blocked]
     if not candidates:
         return None
 
@@ -108,6 +112,10 @@ def select_swap_candidate(
             s += 1.5
         if c.sentiment:
             s += c.sentiment.score
+        # Risk-matched substitution (HI2 / Ammann 'at similar risk'): prefer the BUY name whose
+        # volatility is closest to the name being sold, so the swap keeps the risk profile.
+        if target_vol is not None and c.hist_vol_30d is not None:
+            s -= 2.0 * abs(c.hist_vol_30d - target_vol)
         if c.isin in held:
             s += 0.25
         return s
@@ -117,6 +125,46 @@ def select_swap_candidate(
     if set(best.value_tags) & set(avoid):  # never swap into a disqualified name
         return None
     return best
+
+
+def _buy_sleeve_drift_after(world: World, client_id: str, sell_sac: Optional[str],
+                            buy_sac: Optional[str], amount: float) -> Optional[float]:
+    """Post-swap drift (pp) of the BUY sleeve — 0-delta when the swap is within the same sleeve."""
+    mand = world.mandates.get(world.portfolio_of(client_id))
+    if not mand or not buy_sac:
+        return None
+    total = mand.total_chf or 1.0
+    t = next((x for x in mand.targets if x.sub_asset_class == buy_sac), None)
+    if not t:
+        return None
+    delta = amount if sell_sac != buy_sac else 0.0
+    return round((t.current_chf + delta) / total * 100 - t.target_pct, 3)
+
+
+def _substitution_metrics(world: World, client_id: str, sold: Holding, cand: CIOStock,
+                          amount: float) -> SubstitutionMetrics:
+    """Build the side-by-side sold-vs-replacement comparison (HI2)."""
+    sell_cio = world.cio_by_isin.get(sold.isin)
+    sent_sell = sell_cio.sentiment.score if (sell_cio and sell_cio.sentiment) else None
+    sent_buy = cand.sentiment.score if cand.sentiment else None
+    vol_sell, vol_buy = sold.hist_vol_30d, cand.hist_vol_30d
+    return SubstitutionMetrics(
+        sell_issuer=sold.issuer, buy_issuer=cand.issuer,
+        vol_sell=vol_sell, vol_buy=vol_buy,
+        vol_delta=(round(vol_buy - vol_sell, 4) if vol_sell is not None and vol_buy is not None else None),
+        beta_sell=sold.beta, beta_buy=cand.beta,
+        pe_sell=sold.pe_ratio, pe_buy=cand.pe_ratio,
+        sentiment_sell=sent_sell, sentiment_buy=sent_buy,
+        sentiment_delta=(round(sent_buy - sent_sell, 3)
+                         if sent_sell is not None and sent_buy is not None else None),
+        sector_match=bool(sold.industry_group) and cand.industry_group == sold.industry_group,
+        sub_asset_class_match=(sold.sub_asset_class == cand.sub_asset_class),
+        drift_pp_after=_buy_sleeve_drift_after(world, client_id, sold.sub_asset_class,
+                                               cand.sub_asset_class, amount),
+        value_tags_sell=list(sell_cio.value_tags) if sell_cio else [],
+        value_tags_buy=list(cand.value_tags),
+        risk_source=cand.risk_source or sold.risk_source,
+    )
 
 
 def _find_laggard(world: World, client_id: str, industry_group: Optional[str],
@@ -141,6 +189,30 @@ def _find_laggard(world: World, client_id: str, industry_group: Optional[str],
     return best
 
 
+def _size_overweight(world: World, client_id: str, buy_sac: Optional[str],
+                     position_chf: float) -> "tuple[float, Optional[str]]":
+    """Largest drift-safe overweight of `buy_sac` fundable by deploying idle cash, capped to a
+    modest step (≤25% of the position). Returns (amount_chf, funding_sub_asset_class). This is the
+    Huber path: an additive BUY/overweight — NOT a swap — that keeps the ±2.0pp mandate band.
+    Returns (0.0, None) when no drift-safe headroom exists (caller falls back to HOLD)."""
+    mand = world.mandates.get(world.portfolio_of(client_id))
+    if not mand or position_chf <= 0:
+        return 0.0, None
+    total = mand.total_chf or 1.0
+    by_sac = {t.sub_asset_class: t for t in mand.targets}
+    buy_t = by_sac.get(buy_sac)
+    cash_t = next((t for t in mand.targets
+                   if "cash" in (t.sub_asset_class or "").lower()
+                   or "money market" in (t.sub_asset_class or "").lower()), None)
+    # Room in the buy sleeve before a +2.0pp breach; cash deployable before cash breaches -2.0pp.
+    buy_room = ((2.0 - buy_t.drift_pp) / 100 * total) if buy_t else position_chf
+    cash_room = ((cash_t.drift_pp + 2.0) / 100 * total) if cash_t else 0.0
+    amount = min(position_chf * 0.25, max(0.0, buy_room), max(0.0, cash_room))
+    if amount <= 0:
+        return 0.0, None
+    return round(amount, 2), (cash_t.sub_asset_class if cash_t else None)
+
+
 def build_strategy(world: World, client_id: str, match: Match) -> StrategyProposal:
     desired, avoid, fallback_sector = _prefs_for_match(match)
     affected = match.affected_holding
@@ -151,16 +223,22 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
     if match.polarity == "conflict" and affected is not None:
         sector = affected.industry_group or fallback_sector or ""
         cand = select_swap_candidate(world, client_id, sector, desired, avoid,
-                                     affected.isin, affected.sub_asset_class)
+                                     affected.isin, affected.sub_asset_class,
+                                     target_vol=affected.hist_vol_30d)
         cio_row = world.cio_by_isin.get(affected.isin)
         sell_view = f" (CIO: {cio_row.rating})" if cio_row else ""
         if cand:
             same_sector = bool(affected.industry_group) and cand.industry_group == affected.industry_group
+            amount = round(affected.current_chf, 2)
             drift_safe, drift_notes = _drift_after_swap(
-                world, client_id, affected.sub_asset_class, cand.sub_asset_class,
-                round(affected.current_chf, 2))
+                world, client_id, affected.sub_asset_class, cand.sub_asset_class, amount)
+            sub = _substitution_metrics(world, client_id, affected, cand, amount)
             constraints.append(f"Same sector: {sector}." if same_sector
                                else f"Sector check: sell {affected.industry_group} → buy {cand.industry_group}.")
+            if sub.vol_delta is not None:
+                constraints.append(
+                    f"Risk-matched: sold vol {sub.vol_sell:.0%} → buy vol {sub.vol_buy:.0%} "
+                    f"({sub.vol_delta:+.1%} delta, {sub.risk_source}).")
             constraints += drift_notes
             swaps.append(SwapProposal(
                 action="SWAP",
@@ -168,15 +246,16 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
                 buy_isin=cand.isin, buy_issuer=cand.issuer,
                 industry_group=cand.industry_group,
                 same_sector=same_sector,
-                amount_chf=round(affected.current_chf, 2),
+                amount_chf=amount,
                 drift_safe=drift_safe,
+                substitution=sub,
                 **_buy_quote(cand.valor, cand.mic),
                 rationale=(
                     f"Divest {affected.issuer}{sell_view}: the trigger directly violates the client's "
                     f"documented stance on {_topic_labels(match)}. Reinvest CHF {affected.current_chf:,.0f} "
                     f"into {cand.issuer} (CIO BUY), a same-sector name labelled "
                     f"{', '.join(cand.value_tags) or 'sentiment-positive'} — keeps the sector weight, upgrades "
-                    f"the values fit."
+                    f"the values fit at comparable risk."
                 ),
                 provenance=prov + [cand.provenance],
             ))
@@ -193,40 +272,40 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
     elif match.polarity == "opportunity" and affected is not None:
         cio_row = world.cio_by_isin.get(affected.isin)
         rating = cio_row.rating if cio_row else "—"
-        laggard = _find_laggard(world, client_id, affected.industry_group,
-                                affected.sub_asset_class, affected.isin)
-        headroom = max(0.0, affected.target_chf - affected.current_chf)
-        if laggard is not None:
-            amount = round(min(laggard.current_chf, max(headroom, affected.current_chf * 0.25)), 2)
-            same_sector = laggard.industry_group == affected.industry_group
+        # Spec (Huber): flag the values-aligned name as a BUY / overweight — explicitly NOT a swap.
+        # Deploy idle cash into the leader, sized to stay within the ±2.0pp mandate band.
+        amount, fund_sac = _size_overweight(world, client_id, affected.sub_asset_class,
+                                            affected.current_chf)
+        if amount > 0:
             drift_safe, drift_notes = _drift_after_swap(
-                world, client_id, laggard.sub_asset_class, affected.sub_asset_class, amount)
-            constraints.append(f"Same sector ({affected.industry_group}); funded by trimming a non-aligned "
-                               f"laggard in the same sleeve, so the sleeve total is unchanged.")
+                world, client_id, fund_sac, affected.sub_asset_class, amount)
+            constraints.append(
+                f"Overweight funded by deploying idle {fund_sac or 'cash'} — no holding is sold, so this is an "
+                f"additive BUY (not a swap) that keeps the same strategy and sleeve within mandate."
+            )
             constraints += drift_notes
             swaps.append(SwapProposal(
-                action="SWAP",
-                sell_isin=laggard.isin, sell_issuer=laggard.issuer,
+                action="INCREASE",
                 buy_isin=affected.isin, buy_issuer=affected.issuer,
-                industry_group=affected.industry_group, same_sector=same_sector,
+                industry_group=affected.industry_group, same_sector=True,
                 amount_chf=amount, drift_safe=drift_safe,
                 **_buy_quote(affected.valor, affected.mic),
                 rationale=(
                     f"{affected.issuer} (CIO: {rating}) just demonstrated exactly the leadership this client "
-                    f"rewards on {_topic_labels(match)}. Rotate CHF {amount:,.0f} from {laggard.issuer} "
-                    f"(no comparable leadership signal) into {affected.issuer} — same sector, same sleeve, "
-                    f"drift-neutral."
+                    f"rewards on {_topic_labels(match)}. Overweight by CHF {amount:,.0f} from idle cash — a "
+                    f"values-aligned BUY recommendation that keeps the strategy and sleeve within mandate."
                 ),
                 provenance=prov + ([cio_row.provenance] if cio_row else []),
             ))
         else:
-            constraints.append("No same-sleeve laggard to fund an increase; surface as a values win to discuss.")
+            constraints.append("Already at the sleeve target with no drift-safe headroom; surface as a values "
+                               "win to discuss and hold.")
             swaps.append(SwapProposal(
                 action="HOLD", buy_isin=affected.isin, buy_issuer=affected.issuer,
                 industry_group=affected.industry_group, same_sector=True,
                 amount_chf=0.0, drift_safe=True,
                 rationale=(f"{affected.issuer} (CIO: {rating}) acted on {_topic_labels(match)} — exactly what "
-                           f"this client rewards. Hold and celebrate; no drift-safe increase is available now."),
+                           f"this client rewards. Hold and celebrate; no drift-safe overweight is available now."),
                 provenance=prov + ([cio_row.provenance] if cio_row else []),
             ))
 
@@ -261,12 +340,29 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
     else:  # neutral / informational — route to dialogue, propose no trade
         constraints.append("Informational only — surfaced for the conversation, no portfolio action proposed.")
 
+    # A 'Good News Briefing' on opportunity matches (Huber): the positive, values-aligned framing
+    # the RM phones the client with, distinct from a market-dip alert.
+    good_news = None
+    if match.polarity == "opportunity":
+        good_news = GoodNewsBriefing(
+            headline=match.headline,
+            why_authentic=(
+                f"An authentic, documented match: this client has told us they want to hear when names they "
+                f"hold show real leadership on {_topic_labels(match)} — not just when markets fall."
+            ),
+            action_summary=(swaps[0].rationale if swaps
+                            else "Hold and celebrate; no drift-safe overweight is available right now."),
+            provenance=prov + ([match.affected_holding.provenance]
+                               if match.affected_holding and match.affected_holding.provenance else []),
+        )
+
     return StrategyProposal(
         client_id=client_id,
         headline=match.headline,
         polarity=match.polarity,
         swaps=swaps,
         constraints_checked=constraints,
+        good_news_briefing=good_news,
         provenance=prov,
     )
 
@@ -303,6 +399,23 @@ def build_dialogue(world: World, client_id: str, match: Match) -> "tuple[Dialogu
             provenance=Provenance(source_type="portfolio", source_id=f"{h.portfolio}:{h.isin}",
                                   excerpt=f"{h.issuer} held in the {h.portfolio} mandate."),
         ))
+        # Reference context (fundamentals/dividends/insider) — cited, never a trade signal.
+        f = world.fundamentals_by_isin.get(h.isin)
+        if f:
+            bits: list[str] = []
+            if f.pe_ratio is not None:
+                bits.append(f"P/E {f.pe_ratio:.1f}")
+            if f.dividend_yield:
+                bits.append(f"{f.dividend_yield:.1f}% dividend yield")
+            if f.next_ex_dividend:
+                bits.append(f"next ex-dividend {f.next_ex_dividend}")
+            if f.insider_summary:
+                bits.append(f.insider_summary.rstrip(".").lower())
+            if bits:
+                points.append(Statement(
+                    text=f"Context on {h.issuer}: {'; '.join(bits)}.",
+                    provenance=f.provenance,
+                ))
 
     market_context = _market_context(world)
     title_lead = (match.news.title.split(",")[0].lower() if match.news.title else "made a notable move")

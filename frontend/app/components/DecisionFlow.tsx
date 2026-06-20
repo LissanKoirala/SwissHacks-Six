@@ -1,6 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowRight,
+  Check,
+  Dna,
+  FileText,
+  Network,
+  Radio,
+  Repeat,
+  Wallet,
+  Workflow,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   Decision,
   DecisionEdge,
@@ -25,72 +38,78 @@ const NODE_H = 98; // node card height
 const CARD_W = 192; // preferred node card width (shrinks to fit a crowded band)
 const CARD_MIN = 138; // floor for card width
 
-// Per-layer accent — band tint + label pill. Light theme only. Class strings
-// are literal so Tailwind's JIT picks them up.
+// Per-layer rail pill: a neutral muted band differentiated by its Lucide glyph,
+// not by a decorative colour. Only the final `action` band carries the evergreen
+// accent (it is the proposal). Finance hues stay reserved for meaning.
 const LAYER_TINT: Record<
   DecisionLayerId,
   { header: string; headerText: string; band: string }
 > = {
   notes: {
-    header: "bg-indigo-50",
-    headerText: "text-indigo-700",
-    band: "bg-indigo-50/40",
+    header: "bg-muted",
+    headerText: "text-muted-foreground",
+    band: "bg-muted/40",
   },
   dna: {
-    header: "bg-violet-50",
-    headerText: "text-violet-700",
-    band: "bg-violet-50/40",
+    header: "bg-muted",
+    headerText: "text-muted-foreground",
+    band: "bg-muted/40",
   },
   signal: {
-    header: "bg-sky-50",
-    headerText: "text-sky-700",
-    band: "bg-sky-50/40",
+    header: "bg-muted",
+    headerText: "text-muted-foreground",
+    band: "bg-muted/40",
   },
   holding: {
-    header: "bg-teal-50",
-    headerText: "text-teal-700",
-    band: "bg-teal-50/40",
+    header: "bg-muted",
+    headerText: "text-muted-foreground",
+    band: "bg-muted/40",
   },
   candidate: {
-    header: "bg-emerald-50",
-    headerText: "text-emerald-700",
-    band: "bg-emerald-50/40",
+    header: "bg-muted",
+    headerText: "text-muted-foreground",
+    band: "bg-muted/40",
   },
   action: {
-    header: "bg-accent-soft",
-    headerText: "text-accent-ink",
-    band: "bg-accent-soft/50",
+    header: "bg-primary/10",
+    headerText: "text-primary",
+    band: "bg-primary/[0.07]",
   },
 };
 
-// Node card colouring by polarity (falls back to neutral slate).
-function nodeTone(polarity?: Polarity | null): {
-  border: string;
-  ring: string;
-} {
-  if (polarity === "conflict")
-    return { border: "border-amber-200", ring: "hover:ring-amber-300" };
-  if (polarity === "opportunity")
-    return { border: "border-emerald-200", ring: "hover:ring-emerald-300" };
-  return { border: "border-slate-200", ring: "hover:ring-slate-300" };
+// Per-layer Lucide glyph for the left-rail pill (semantic, replaces colour).
+const LAYER_ICON: Record<DecisionLayerId, LucideIcon> = {
+  notes: FileText,
+  dna: Dna,
+  signal: Radio,
+  holding: Wallet,
+  candidate: Repeat,
+  action: Workflow,
+};
+
+// Node card colouring by polarity. Finance-semantic hues only: warning for a
+// mandate/ethics conflict, positive for an opportunity. Otherwise neutral.
+function nodeTone(polarity?: Polarity | null): { border: string } {
+  if (polarity === "conflict") return { border: "border-warning/40" };
+  if (polarity === "opportunity") return { border: "border-positive/40" };
+  return { border: "border-border" };
 }
 
-// Connector colour by edge kind — slate by default, warm for flags/triggers.
+// Connector colour by edge kind. Neutral by default; warning for a flagged
+// conflict, positive for a swap/opportunity, evergreen for the proposal itself.
 function edgeColour(kind: DecisionEdge["kind"]): string {
   switch (kind) {
     case "flags":
-      return "#d97706"; // amber-600
-    case "triggers":
-      return "#0284c7"; // sky-600
+      return "hsl(var(--warning))";
     case "replaces":
-      return "#0d9488"; // teal-600
+      return "hsl(var(--positive))";
     case "proposes":
-      return "#1f5fa6"; // accent
+      return "hsl(var(--primary))";
+    case "triggers":
     case "honors":
-      return "#7c3aed"; // violet-600
     case "supports":
     default:
-      return "#94a3b8"; // slate-400
+      return "hsl(var(--muted-foreground))";
   }
 }
 
@@ -182,8 +201,10 @@ function FlowNode({
     <button
       type="button"
       onClick={() => onSelect(node.id)}
-      className={`absolute flex flex-col rounded-xl border bg-white p-2.5 text-left shadow-card ring-2 ring-transparent transition-all ${tone.border} ${tone.ring} ${
-        selected ? "ring-accent shadow-pop" : ""
+      className={`absolute flex flex-col rounded-md border bg-card p-2.5 text-left transition-colors ${tone.border} ${
+        selected
+          ? "border-primary ring-1 ring-primary"
+          : "hover:border-muted-foreground/40"
       }`}
       style={{
         left: placed.left,
@@ -193,25 +214,17 @@ function FlowNode({
       }}
       aria-pressed={selected}
     >
-      <span className="line-clamp-2 text-sm font-semibold leading-snug text-ink">
+      <span className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
         {node.title}
       </span>
       {node.subtitle && (
-        <span className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+        <span className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
           {node.subtitle}
         </span>
       )}
-      <span className="mt-auto flex items-center gap-1 pt-1 text-[10px] font-medium text-accent">
-        <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden>
-          <path
-            d="M2 6h7M6 3l3 3-3 3"
-            stroke="currentColor"
-            strokeWidth="1.3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        {node.provenance.length} source
+      <span className="mt-auto flex items-center gap-1 pt-1 text-[10px] font-medium text-primary">
+        <ArrowRight className="h-3 w-3" aria-hidden />
+        <span className="tabular-nums">{node.provenance.length}</span> source
         {node.provenance.length === 1 ? "" : "s"}
       </span>
     </button>
@@ -255,11 +268,12 @@ function FlowCanvas({
         {/* tinted layer bands + left-rail label pills */}
         {decision.layers.map((l, i) => {
           const tint = LAYER_TINT[l.id];
+          const Icon = LAYER_ICON[l.id] ?? Network;
           const bandTop = TOP_PAD + i * BAND_H;
           return (
             <div key={l.id}>
               <div
-                className={`absolute rounded-xl ${tint.band}`}
+                className={`absolute rounded-md ${tint.band}`}
                 style={{
                   left: 0,
                   top: bandTop - 6,
@@ -268,13 +282,14 @@ function FlowCanvas({
                 }}
               />
               <div
-                className={`absolute flex items-center justify-center rounded-lg px-2 py-1 text-center text-[10px] font-semibold uppercase leading-tight tracking-wide ${tint.header} ${tint.headerText}`}
+                className={`absolute flex flex-col items-center justify-center gap-1 rounded-md px-2 py-1.5 text-center text-[10px] font-medium leading-tight tracking-wide ${tint.header} ${tint.headerText}`}
                 style={{
                   left: 4,
-                  top: bandTop + NODE_H / 2 - 14,
+                  top: bandTop + NODE_H / 2 - 18,
                   width: GUTTER - 16,
                 }}
               >
+                <Icon className="h-3.5 w-3.5" aria-hidden />
                 {l.label}
               </div>
             </div>
@@ -348,8 +363,8 @@ function FlowCanvas({
                 >
                   <div className="flex h-full items-center justify-center">
                     <span
-                      className="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-medium leading-none ring-1 ring-inset"
-                      style={{ color: c, boxShadow: "0 0 0 1px rgba(255,255,255,0.9)" }}
+                      className="rounded-md bg-card px-1.5 py-0.5 text-[9px] font-medium leading-none ring-1 ring-inset ring-border"
+                      style={{ color: c }}
                     >
                       {e.label}
                     </span>
@@ -392,10 +407,10 @@ function RecommendationBar({ decision }: { decision: Decision }) {
   const r = decision.recommendation;
   const actionCls =
     decision.polarity === "conflict"
-      ? "bg-amber-100 text-amber-800 ring-amber-200"
+      ? "bg-warning/10 text-warning ring-warning/20"
       : decision.polarity === "opportunity"
-      ? "bg-emerald-100 text-emerald-800 ring-emerald-200"
-      : "bg-slate-100 text-slate-700 ring-slate-200";
+      ? "bg-positive/10 text-positive ring-positive/20"
+      : "bg-muted text-muted-foreground ring-border";
   const move =
     r.sell && r.buy
       ? `Sell ${r.sell} → Buy ${r.buy}`
@@ -405,7 +420,7 @@ function RecommendationBar({ decision }: { decision: Decision }) {
       ? `Review ${r.sell}`
       : null;
   return (
-    <div className="card border-l-4 border-l-accent p-4">
+    <div className="card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={`chip ring-1 ring-inset ${actionCls} font-semibold`}
@@ -413,13 +428,13 @@ function RecommendationBar({ decision }: { decision: Decision }) {
           {r.action}
         </span>
         {move && (
-          <span className="text-sm font-semibold text-ink">{move}</span>
+          <span className="hl text-sm font-semibold">{move}</span>
         )}
         <span className="ml-auto">
           <PolarityChip polarity={decision.polarity} />
         </span>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         {r.rationale}
       </p>
       {r.constraints_checked.length > 0 && (
@@ -427,22 +442,12 @@ function RecommendationBar({ decision }: { decision: Decision }) {
           {r.constraints_checked.map((c, i) => (
             <li
               key={i}
-              className="flex items-start gap-2 text-xs text-slate-500"
+              className="flex items-start gap-2 text-xs text-muted-foreground"
             >
-              <svg
-                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500"
-                viewBox="0 0 14 14"
-                fill="none"
+              <Check
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary"
                 aria-hidden
-              >
-                <path
-                  d="M2.5 7.5 6 11l5.5-7"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              />
               {c}
             </li>
           ))}
@@ -464,60 +469,43 @@ function ProvenancePanel({
   if (!node) {
     return (
       <div className="card flex h-full flex-col items-center justify-center p-6 text-center">
-        <div className="mb-2 rounded-full bg-slate-100 p-3">
-          <svg
-            className="h-5 w-5 text-slate-400"
-            viewBox="0 0 20 20"
-            fill="none"
-            aria-hidden
-          >
-            <path
-              d="M4 6h12M4 10h12M4 14h7"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
+        <div className="mb-2 rounded-md bg-muted p-3">
+          <Network className="h-5 w-5 text-muted-foreground" aria-hidden />
         </div>
-        <p className="text-sm font-medium text-ink">Trace the call</p>
-        <p className="mt-1 text-xs text-slate-500">
-          Select any node in the flow to see the source it is grounded in.
+        <p className="text-sm font-medium text-foreground">Trace the call</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Select any node in the flow to read the source it is grounded in.
         </p>
       </div>
     );
   }
+  const LayerIcon = LAYER_ICON[node.layer] ?? Network;
   return (
     <div className="card flex h-full flex-col p-4">
-      <div className="mb-3 flex items-start gap-2 border-b border-slate-200 pb-3">
+      <div className="mb-3 flex items-start gap-2 border-b border-border pb-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {node.layer}
+          <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+            <LayerIcon className="h-3.5 w-3.5" aria-hidden />
+            <span className="capitalize">{node.layer}</span>
           </p>
-          <p className="mt-0.5 text-sm font-semibold leading-snug text-ink">
+          <p className="mt-0.5 text-sm font-semibold leading-snug text-foreground">
             {node.title}
           </p>
           {node.subtitle && (
-            <p className="mt-0.5 text-xs text-slate-500">{node.subtitle}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{node.subtitle}</p>
           )}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="ml-auto shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          className="ml-auto shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           aria-label="Close"
         >
-          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <path
-              d="M4 4l8 8M12 4l-8 8"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
+          <X className="h-4 w-4" aria-hidden />
         </button>
       </div>
       {node.detail && (
-        <p className="mb-3 text-sm leading-relaxed text-ink-soft">
+        <p className="mb-3 text-sm leading-relaxed text-muted-foreground">
           {node.detail}
         </p>
       )}
@@ -525,7 +513,7 @@ function ProvenancePanel({
         {node.provenance.length > 0 ? (
           <ProvenanceList items={node.provenance} />
         ) : (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground">
             No direct citation on this node.
           </p>
         )}
@@ -568,13 +556,15 @@ export function DecisionFlow({ clientId }: { clientId: string }) {
 
   if (loading) {
     return (
-      <p className="p-5 text-sm text-slate-500">Loading decision flow…</p>
+      <p className="p-5 text-sm text-muted-foreground">
+        Tracing the decision path…
+      </p>
     );
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600">
-        Could not load decision flow: {error}
+      <p className="p-5 text-sm text-destructive">
+        Could not load the decision flow: {error}
       </p>
     );
   }
@@ -587,10 +577,10 @@ export function DecisionFlow({ clientId }: { clientId: string }) {
       {/* headline */}
       <div className="flex flex-wrap items-start gap-2">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Why this call
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">
+            Why This Call
           </p>
-          <h3 className="mt-0.5 text-base font-semibold leading-snug text-ink">
+          <h3 className="mt-0.5 text-base font-semibold leading-snug text-foreground">
             {data.headline}
           </h3>
         </div>
@@ -601,32 +591,15 @@ export function DecisionFlow({ clientId }: { clientId: string }) {
 
       {isEmpty ? (
         <div className="card flex flex-col items-center justify-center p-10 text-center">
-          <div className="mb-3 rounded-full bg-slate-100 p-3">
-            <svg
-              className="h-6 w-6 text-slate-400"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M5 12h14M12 5v14"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                opacity="0.4"
-              />
-              <circle
-                cx="12"
-                cy="12"
-                r="9"
-                stroke="currentColor"
-                strokeWidth="1.4"
-              />
-            </svg>
+          <div className="mb-3 rounded-md bg-muted p-3">
+            <Workflow className="h-6 w-6 text-muted-foreground" aria-hidden />
           </div>
-          <p className="text-sm font-medium text-ink">No active decision</p>
-          <p className="mt-1 max-w-md text-sm text-slate-500">
-            {data.recommendation.rationale}
+          <p className="text-sm font-medium text-foreground">
+            No action proposed
+          </p>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+            {data.recommendation.rationale ||
+              "No signal currently breaches the mandate or matches the client profile. The flow appears once a match is found."}
           </p>
         </div>
       ) : (

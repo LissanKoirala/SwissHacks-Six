@@ -2,47 +2,150 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 214 100% 44%;
+    --primary-foreground: 0 0% 100%;
+    --primary-strong: 214 100% 33%;
+    --primary-subtle: 214 100% 95%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 25%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 357 100% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 153 91% 30%;
+    --warning: 34 94% 50%;
+    --info: 215 87% 51%;
+    --negative: 357 100% 45%;
+    --border: 0 0% 93%;
+    --input: 0 0% 90%;
+    --ring: 214 100% 44%;
+    --radius: 0.625rem;
+    --sidebar: 0 0% 98%;
+    --sidebar-foreground: 0 0% 25%;
+    --sidebar-border: 218 17% 91%;
+    --surface-1: 0 0% 100%;
+    --surface-2: 0 0% 98%;
+    --surface-3: 216 24% 96%;
+    --accent-teal: 174 100% 29%;
+    --accent-purple: 272 100% 49%;
+    --accent-amber: 20 100% 45%;
+    --hl-blue: 214 100% 95%;
+    --hl-teal: 165 75% 97%;
+    --hl-purple: 269 100% 95%;
+    --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  }
+  .dark {
+    --background: 240 8% 5%;
+    --foreground: 0 0% 93%;
+    --card: 240 5% 8%;
+    --card-foreground: 0 0% 93%;
+    --popover: 240 4% 9%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 215 79% 54%;
+    --primary-foreground: 0 0% 100%;
+    --primary-strong: 215 68% 45%;
+    --primary-subtle: 218 48% 16%;
+    --secondary: 240 5% 11%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 240 5% 11%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 240 6% 14%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 240 8% 5%;
+    --success: 160 84% 39%;
+    --warning: 38 92% 50%;
+    --info: 216 86% 63%;
+    --negative: 0 84% 60%;
+    --border: 240 5% 16%;
+    --input: 240 5% 18%;
+    --ring: 215 79% 54%;
+    --radius: 0.625rem;
+    --sidebar: 240 7% 6%;
+    --sidebar-foreground: 240 4% 79%;
+    --sidebar-border: 240 6% 14%;
+    --surface-1: 240 5% 8%;
+    --surface-2: 240 5% 11%;
+    --surface-3: 240 6% 14%;
+    --accent-teal: 174 100% 29%;
+    --accent-purple: 272 100% 49%;
+    --accent-amber: 20 100% 45%;
+    --hl-blue: 218 48% 16%;
+    --hl-teal: 174 56% 11%;
+    --hl-purple: 268 49% 15%;
+  }
 }
 
-html,
-body {
-  height: 100%;
+@layer base {
+  * { @apply border-border; }
+  html, body { height: 100%; }
+  body { @apply bg-background text-foreground antialiased; font-feature-settings: "tnum" 1; }
+
+  /* Signature Wordsmith treatments — blue selection & focus */
+  ::selection { background: hsl(var(--primary)); color: #fff; }
+  :focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
 }
 
-body {
-  @apply bg-slate-50 text-ink antialiased;
-  font-feature-settings: "tnum" 1, "cv05" 1;
-}
-
-/* Thin, unobtrusive scrollbars for the panels. */
-.scroll-thin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.scroll-thin::-webkit-scrollbar-thumb {
-  background: #cbd2db;
-  border-radius: 8px;
-}
-.scroll-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Blue scrollbar — thin, transparent track */
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: hsl(var(--primary)); border-radius: 8px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--primary)); }
 
 @layer components {
-  .card {
-    @apply rounded-xl border border-slate-200 bg-white shadow-card;
+  .card { @apply rounded-lg border border-border bg-card text-card-foreground shadow-card dark:shadow-none; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50; }
+  .btn-primary { @apply btn bg-primary text-primary-foreground hover:bg-primary-strong; }
+  .btn-ghost { @apply btn border border-border bg-transparent text-foreground/80 hover:bg-accent hover:text-accent-foreground; }
+
+  /* Highlighter bands — pale tinted band behind key words (the brand headline highlight) */
+  .hl {
+    background: hsl(var(--primary-subtle));
+    color: hsl(var(--primary));
+    border-radius: 4px;
+    padding: 0 0.28em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
-  .chip {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  .hl-teal {
+    background: hsl(var(--hl-teal));
+    color: hsl(var(--accent-teal));
+    border-radius: 4px;
+    padding: 0 0.28em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50;
+  .hl-purple {
+    background: hsl(var(--hl-purple));
+    color: hsl(var(--accent-purple));
+    border-radius: 4px;
+    padding: 0 0.28em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
-  .btn-primary {
-    @apply btn bg-accent text-white hover:bg-accent-ink;
+
+  /* Citation marker — trust primitive for provenance source ids */
+  .citation {
+    background: hsl(var(--primary-subtle));
+    color: hsl(var(--primary));
+    border-radius: 4px;
+    padding: 0 0.35em;
+    font-weight: 500;
   }
-  .btn-ghost {
-    @apply btn border border-slate-300 bg-white text-ink-soft hover:bg-slate-50;
-  }
+}
+
+@layer utilities {
+  .focus-ring { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
 }
