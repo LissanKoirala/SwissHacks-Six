@@ -34,7 +34,13 @@ def build_opportunities(world: World, client_id: str, limit: int = 5) -> list[di
     #    Keep, per opportunity topic, the edge that justifies it (for provenance + alignment labels).
     desired_tags: set[str] = set()
     avoid_tags: set[str] = set()
+    # opp_topic_edge: topics the client actively wants more of (opportunity edges).
+    # comp_topic_edge: topics the client is averse to, but whose *acceptable substitute* tags
+    #   they've documented respect for — e.g. Räber rejects abstract US-tech/AI yet respects
+    #   tangible hardware (ASML). Crediting these as alignment lets the proactive pass propose the
+    #   compromise the persona explicitly asks for, instead of staying silent. (DeepDive persona 3.)
     opp_topic_edge: dict[str, InterestEdge] = {}
+    comp_topic_edge: dict[str, InterestEdge] = {}
     for e in edges:
         prefs = TOPIC_PREFERENCES.get(e.topic)
         if not prefs:
@@ -45,6 +51,13 @@ def build_opportunities(world: World, client_id: str, limit: int = 5) -> list[di
             opp_topic_edge.setdefault(e.topic, e)  # first edge per topic carries the citation
         elif e.polarity == "conflict":
             avoid_tags.update(avoid)
+            comp_topic_edge.setdefault(e.topic, e)
+    # An acceptable-substitute tag only counts as alignment if the client hasn't *also* flagged it
+    # as something to avoid (avoid always wins).
+    compromise_tags: set[str] = set()
+    for topic in comp_topic_edge:
+        want, _avoid, _sec = TOPIC_PREFERENCES.get(topic, ([], [], None))
+        compromise_tags.update(t for t in want if t not in avoid_tags)
 
     seed_name = world.clients.get(client_id, {}).get("name", client_id)
 
@@ -61,7 +74,9 @@ def build_opportunities(world: World, client_id: str, limit: int = 5) -> list[di
         tags = set(c.value_tags)
         if tags & avoid_tags:  # the client has told us to avoid this — drop, don't rank
             continue
-        score = 2.0 * len(tags & desired_tags) - 5.0 * len(tags & avoid_tags)
+        # Desired tags score full; acceptable-substitute (compromise) tags score a notch lower so a
+        # name the client actively wants outranks a tolerated alternative.
+        score = 2.0 * len(tags & desired_tags) + 1.5 * len(tags & compromise_tags)
         if c.sentiment:
             score += c.sentiment.score
         if score <= 0:  # only surface a positive, defensible fit
@@ -79,14 +94,26 @@ def build_opportunities(world: World, client_id: str, limit: int = 5) -> list[di
         #    + the edge provenance that earns the citation).
         alignment_topics: list[str] = []
         edge_provs: list[Provenance] = []
+        compromise = False
         for topic, edge in opp_topic_edge.items():
             want, _avoid, _sec = TOPIC_PREFERENCES.get(topic, ([], [], None))
             if tags & set(want):
                 alignment_topics.append(topic_label(topic))
                 edge_provs.append(edge.provenance)
+        # Acceptable-substitute alignment: a tolerated alternative within an averse topic.
+        for topic, edge in comp_topic_edge.items():
+            want, _avoid, _sec = TOPIC_PREFERENCES.get(topic, ([], [], None))
+            if (tags & set(want) & compromise_tags) and topic_label(topic) not in alignment_topics:
+                alignment_topics.append(topic_label(topic))
+                edge_provs.append(edge.provenance)
+                compromise = True
 
         tag_str = ", ".join(c.value_tags) if c.value_tags else "sentiment-positive"
-        if alignment_topics:
+        if alignment_topics and compromise:
+            reason = (f"{c.issuer} is a CIO BUY labelled {tag_str} — the kind of acceptable substitute "
+                      f"{seed_name} respects within {', '.join(alignment_topics)}, rather than the exposure "
+                      f"they've asked us to avoid.")
+        elif alignment_topics:
             reason = (f"{c.issuer} is a CIO BUY labelled {tag_str} — aligned with {seed_name}'s "
                       f"documented interest in {', '.join(alignment_topics)}.")
         else:
@@ -105,6 +132,8 @@ def build_opportunities(world: World, client_id: str, limit: int = 5) -> list[di
             "sub_asset_class": c.sub_asset_class,
             "region": c.region,
             "rating": c.rating,
+            "valor": c.valor,
+            "mic": c.mic,
             "value_tags": list(c.value_tags),
             "sentiment": (c.sentiment.score if c.sentiment else None),
             "hist_vol_30d": c.hist_vol_30d,

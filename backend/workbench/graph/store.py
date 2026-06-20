@@ -57,6 +57,10 @@ class World:
     # per-world insights cache (lazy, §9) — keyed by client_id, bound to THIS world
     insights_cache: dict = field(default_factory=dict)
 
+    # 24/7 news watch (the News Agent's live tick): a bounded buffer of breaking alerts the poller
+    # has surfaced since boot, newest first, so the dashboard can show real-time activity.
+    breaking: list = field(default_factory=list)
+
     # --- The Front Door: inbound email + the agentic kanban board (bound to THIS world) ---
     inbox: list[EmailMessage] = field(default_factory=list)   # triaged inbound emails
     tasks: list[Task] = field(default_factory=list)           # the kanban tasks, persisted

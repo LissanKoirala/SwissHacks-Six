@@ -411,6 +411,7 @@ def _apply_capture(world, client_id: str, payload: dict, persist: bool = False) 
             polarity=polarity,
             weight=_clamp_weight(raw.get("weight", _WEIGHT_DEFAULT)),
             provenance=prov,
+            origin="capture",
         )
         client_edges.append(edge)
         if mirror_to_profile:
@@ -429,7 +430,7 @@ def _apply_capture(world, client_id: str, payload: dict, persist: bool = False) 
             facet = "interests"
         if profile is not None:
             profile.facets.setdefault(facet, []).append(
-                Statement(text=text, provenance=prov,
+                Statement(text=text, provenance=prov, origin="capture",
                           weight=_clamp_weight(raw.get("weight", _WEIGHT_DEFAULT)))
             )
         applied_facets += 1

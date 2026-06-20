@@ -7,8 +7,9 @@ from typing import Optional
 
 from ..graph.store import World
 from ..models import ClientInsights, ClientSummary
-from .advisory import build_dialogue, build_strategy
+from .advisory import build_dialogue, build_opportunity_proposal, build_strategy
 from .matcher import match_client
+from .opportunities import build_opportunities
 
 
 def _now() -> str:
@@ -60,6 +61,21 @@ def get_insights(world: World, client_id: str, *, refresh: bool = False) -> Clie
             sp = build_strategy(world, client_id, m)
             if sp.swaps:
                 additional.append(sp)
+
+    # Proactive (news-independent) opportunity: surface the single best-fitting unheld CIO BUY as a
+    # sized, drift-checked, RM-approvable proposal — the mission's "personal asset selection 24/7",
+    # not just a reaction to a trigger (DeepDive p.4). Deduped against names already proposed above.
+    proposed_isins = {sw.buy_isin for sp in ([strategy] + additional) if sp for sw in sp.swaps}
+    for opp in build_opportunities(world, client_id, limit=5):
+        # Only a GENUINE positive fit (a desired value tag the client documented) earns a proactive
+        # buy — never a name that merely *clears* the avoid screen, or we'd pitch US-tech AI to the
+        # environmentalist. Skip names already involved in a match-driven proposal above.
+        if not opp.get("alignment_topics") or opp.get("isin") in proposed_isins:
+            continue
+        op = build_opportunity_proposal(world, client_id, opp)
+        if op and any(sw.action == "INCREASE" for sw in op.swaps):
+            additional.append(op)
+            break
 
     insights = ClientInsights(
         client=ClientSummary(

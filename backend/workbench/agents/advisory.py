@@ -95,8 +95,10 @@ def select_swap_candidate(
     world: World, client_id: str, industry_group: str,
     desired: list[str], avoid: list[str], exclude_isin: Optional[str],
     same_sub_asset_class: Optional[str], target_vol: Optional[float] = None,
-    also_exclude: Optional[set] = None,
+    also_exclude: Optional[set] = None, target_mcap: Optional[float] = None,
 ) -> Optional[CIOStock]:
+    import math
+
     held = world.held_isins(client_id)
     blocked = {exclude_isin} | (also_exclude or set())
     candidates = [c for c in world.cio_by_industry(industry_group, "BUY") if c.isin not in blocked]
@@ -116,6 +118,12 @@ def select_swap_candidate(
         # volatility is closest to the name being sold, so the swap keeps the risk profile.
         if target_vol is not None and c.hist_vol_30d is not None:
             s -= 2.0 * abs(c.hist_vol_30d - target_vol)
+        # Sub-sector/scale proximity tie-breaker: when the sold name's size is known, gently prefer
+        # a replacement of comparable market cap so the swap reads as a like-for-like peer (a
+        # mid-cap goes to a mid-cap), not a jump across the sector. Small weight — breaks ties,
+        # never overrides the values/risk fit above.
+        if target_mcap and c.market_cap:
+            s -= 0.4 * abs(math.log10(c.market_cap) - math.log10(target_mcap))
         if c.isin in held:
             s += 0.25
         return s
@@ -148,6 +156,18 @@ def _substitution_metrics(world: World, client_id: str, sold: Holding, cand: CIO
     sent_sell = sell_cio.sentiment.score if (sell_cio and sell_cio.sentiment) else None
     sent_buy = cand.sentiment.score if cand.sentiment else None
     vol_sell, vol_buy = sold.hist_vol_30d, cand.hist_vol_30d
+    # Cite every side of the comparison: the sold name's portfolio row, the bought name's CIO row,
+    # and the risk source — so each metric in the side-by-side is clickable (Trust, §2/§7.5).
+    sub_prov: list[Provenance] = []
+    if sold.provenance:
+        sub_prov.append(sold.provenance)
+    sub_prov.append(cand.provenance)
+    rsrc = cand.risk_source or sold.risk_source
+    if rsrc:
+        sub_prov.append(Provenance(
+            source_type="fundamentals", source_id=f"risk:{cand.isin}",
+            excerpt=f"Volatility/beta for the substitution comparison sourced from {rsrc}.",
+        ))
     return SubstitutionMetrics(
         sell_issuer=sold.issuer, buy_issuer=cand.issuer,
         vol_sell=vol_sell, vol_buy=vol_buy,
@@ -163,7 +183,8 @@ def _substitution_metrics(world: World, client_id: str, sold: Holding, cand: CIO
                                                cand.sub_asset_class, amount),
         value_tags_sell=list(sell_cio.value_tags) if sell_cio else [],
         value_tags_buy=list(cand.value_tags),
-        risk_source=cand.risk_source or sold.risk_source,
+        risk_source=rsrc,
+        provenance=sub_prov,
     )
 
 
@@ -213,6 +234,81 @@ def _size_overweight(world: World, client_id: str, buy_sac: Optional[str],
     return round(amount, 2), (cash_t.sub_asset_class if cash_t else None)
 
 
+def _size_new_buy(world: World, client_id: str,
+                  buy_sac: Optional[str]) -> "tuple[float, Optional[str]]":
+    """Largest drift-safe opening position in an *unheld* name, fundable from idle cash and VERIFIED
+    against the mandate's ±2.0pp band by the same drift engine the swaps use. Bisects the amount
+    down until both the buy sleeve and the cash sleeve stay inside the band, so the figure is safe
+    by construction — never a breach. (0.0, None) ⇒ no drift-safe room (caller skips the buy)."""
+    mand = world.mandates.get(world.portfolio_of(client_id))
+    by_sac = {t.sub_asset_class: t for t in (mand.targets if mand else [])}
+    if not mand or buy_sac not in by_sac:
+        return 0.0, None  # can't drift-check an unknown sleeve → don't fabricate a buy
+    total = mand.total_chf or 1.0
+    cash_t = next((t for t in mand.targets
+                   if "cash" in (t.sub_asset_class or "").lower()
+                   or "money market" in (t.sub_asset_class or "").lower()), None)
+    if cash_t is None:
+        return 0.0, None  # no idle-cash sleeve to fund an additive buy
+    fund_sac = cash_t.sub_asset_class
+    # Candidate ceiling: a modest 1.5%-of-mandate "toe in the water". Then step it down until the
+    # authoritative drift check passes, so the math can never disagree with what we display.
+    amount = total * 0.015
+    for _ in range(8):
+        if amount < total * 0.001:  # below ~0.1% of mandate isn't worth surfacing
+            return 0.0, None
+        safe, _notes = _drift_after_swap(world, client_id, fund_sac, buy_sac, round(amount, 2))
+        if safe:
+            return round(amount, 2), fund_sac
+        amount *= 0.6
+    return 0.0, None
+
+
+def build_opportunity_proposal(world: World, client_id: str, opp: dict) -> Optional[StrategyProposal]:
+    """Turn a surfaced *unheld* DNA-aligned CIO BUY (from opportunities.build_opportunities) into a
+    first-class, RM-approvable BUY proposal — sized to stay inside the ±2.0pp mandate band — rather
+    than a passive list item. Proactive (news-independent) personalisation at the asset level, which
+    is exactly the mission (DeepDive p.4). Returns None when there's no drift-safe room to open it,
+    so a noisy or un-fundable idea never reaches the RM as a fake action."""
+    buy_sac = opp.get("sub_asset_class")
+    amount, fund_sac = _size_new_buy(world, client_id, buy_sac)
+    if amount <= 0:
+        return None
+    drift_safe, drift_notes = _drift_after_swap(world, client_id, fund_sac, buy_sac, amount)
+    if not drift_safe:  # belt-and-braces: never surface a drift-unsafe additive buy
+        return None
+
+    prov = [Provenance(**p) for p in opp.get("provenance", [])]
+    issuer = opp.get("issuer", "this name")
+    tag_str = ", ".join(opp.get("value_tags") or []) or "sentiment-positive"
+    # The opportunity pass already wrote a persona-correct one-liner (handling the "acceptable
+    # substitute" nuance for an averse client) — reuse it so the headline never misreads.
+    fit = opp.get("alignment_reason") or f"{issuer} fits the client's documented values."
+
+    swap = SwapProposal(
+        action="INCREASE", buy_isin=opp.get("isin"), buy_issuer=issuer,
+        industry_group=opp.get("industry_group"), same_sector=True,
+        amount_chf=amount, drift_safe=True,
+        **_buy_quote(opp.get("valor"), opp.get("mic")),
+        rationale=(f"Open a CHF {amount:,.0f} position in {issuer} by deploying idle {fund_sac} — a "
+                   f"proactive buy the client does not yet hold, kept within the ±2.0pp mandate band. "
+                   f"{fit}"),
+        provenance=prov,
+    )
+    return StrategyProposal(
+        client_id=client_id,
+        headline=f"New opportunity: {issuer} ({tag_str}).",
+        polarity="opportunity",
+        swaps=[swap],
+        constraints_checked=[
+            "Universe limited to CIO-approved names (BUY-rated).",
+            f"Proactive opportunity (news-independent), funded from idle {fund_sac} — additive BUY, "
+            f"no holding sold.", *drift_notes,
+        ],
+        provenance=prov,
+    )
+
+
 def build_strategy(world: World, client_id: str, match: Match) -> StrategyProposal:
     desired, avoid, fallback_sector = _prefs_for_match(match)
     affected = match.affected_holding
@@ -224,7 +320,8 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
         sector = affected.industry_group or fallback_sector or ""
         cand = select_swap_candidate(world, client_id, sector, desired, avoid,
                                      affected.isin, affected.sub_asset_class,
-                                     target_vol=affected.hist_vol_30d)
+                                     target_vol=affected.hist_vol_30d,
+                                     target_mcap=affected.market_cap)
         cio_row = world.cio_by_isin.get(affected.isin)
         sell_view = f" (CIO: {cio_row.rating})" if cio_row else ""
         if cand:
@@ -367,6 +464,89 @@ def build_strategy(world: World, client_id: str, match: Match) -> StrategyPropos
     )
 
 
+# --- style-aware deterministic drafting (so personalisation survives offline, USE_LIVE=0) -----
+# Each persona's documented style maps to a tone; the tone shapes the opener even when the LLM is
+# off. Keyword-detected from the style string so it degrades gracefully for any future client.
+
+def _tone(style: str) -> str:
+    s = (style or "").lower()
+    if any(k in s for k in ("empath", "mission", "human stake", "purpose")):
+        return "empathetic"
+    if any(k in s for k in ("values-led", "proud", "celebrate", "magnificent")):
+        return "values"
+    if any(k in s for k in ("conservative", "reassur", "boring", "quiet", "calm")):
+        return "conservative"
+    if any(k in s for k in ("analytical", "data-driven", "sharp", "risk")):
+        return "analytical"
+    return "professional"
+
+
+def _styled_opener(tone: str, polarity: str, *, surname: str, news, affected,
+                   topic_labels: str) -> str:
+    """A deterministic opener in the client's voice. (tone, polarity) → a tailored lead, so the
+    fallback draft is genuinely personalised — not one generic template for everyone."""
+    issuer = (news.issuer_name or "a company you hold")
+    title = news.title
+    lead = (title.split(",")[0].lower() if title else "made a notable move")
+
+    if polarity == "opportunity":
+        by_tone = {
+            "values": (f"Dear {surname}, I'm calling with the kind of news you asked me never to keep "
+                       f"to a quarterly review: {issuer} has just {lead}. This is real leadership on "
+                       f"{topic_labels} — exactly the impact your capital is meant to back, and worth "
+                       f"celebrating together."),
+            "empathetic": (f"Dear {surname}, a hopeful development I wanted you to hear from me first: "
+                           f"{issuer} has just {lead}. It speaks directly to the cause closest to you, "
+                           f"and to why we hold this name."),
+            "analytical": (f"Dear {surname}, a positive, on-thesis development: {issuer} has just {lead}. "
+                           f"It strengthens the {topic_labels} case for a name you already hold — the "
+                           f"numbers and the next step are below."),
+            "conservative": (f"Dear {surname}, a quietly encouraging update — nothing to action in haste: "
+                             f"{issuer} has just {lead}, which reinforces {topic_labels} for a holding you "
+                             f"already own."),
+        }
+        return by_tone.get(tone,
+            f"Dear {surname}, good news on a name you hold: {issuer} has just {lead} — aligned with "
+            f"your interest in {topic_labels}.")
+
+    if polarity == "conflict" and affected is not None:
+        by_tone = {
+            "empathetic": (f"Dear {surname}, I owe you an early call on something that touches what matters "
+                           f"most to you: {title}. Because it affects a holding of yours, I've already lined "
+                           f"up a same-sector, CIO-approved option so your strategy holds and the values fit "
+                           f"is restored."),
+            "analytical": (f"Dear {surname}, flagging a live reputational/operational risk on a current "
+                           f"holding: {title}. I've prepared a same-sector, CIO-approved substitution at "
+                           f"comparable risk — the substitution metrics are attached."),
+            "values": (f"Dear {surname}, one of your holdings has acted against the standards you hold it "
+                       f"to: {title}. I've found a same-sector, CIO-approved replacement that puts your "
+                       f"capital back on the right side of {topic_labels}."),
+            "conservative": (f"Dear {surname}, a measured heads-up on a holding — no need for alarm: {title}. "
+                             f"I've prepared a same-sector, CIO-approved alternative so we can keep the "
+                             f"portfolio steady while addressing it."),
+        }
+        return by_tone.get(tone,
+            f"Dear {surname}, a development needs your attention: {title}. It touches a current holding, so "
+            f"I've prepared a same-sector, CIO-approved option that keeps your strategy intact.")
+
+    if polarity == "conflict":
+        by_tone = {
+            "conservative": (f"Dear {surname}, before we act on the latest CIO tactical update I want to flag "
+                             f"that it runs against the quiet, low-volatility approach you've asked me to "
+                             f"protect. My recommendation is to hold course — here is the reasoning, plainly."),
+            "analytical": (f"Dear {surname}, the latest CIO tactical update points into {topic_labels}, which "
+                           f"your mandate is explicitly positioned against. I'd hold course; the rationale and "
+                           f"a tangible alternative are below."),
+        }
+        return by_tone.get(tone,
+            f"Dear {surname}, before we act on the latest CIO tactical update I want to flag that it runs "
+            f"against the approach you've consistently asked us to protect. My recommendation is to hold "
+            f"course; here is my reasoning.")
+
+    return (f"Dear {surname}, a quick note on a development relevant to your interests: {title}. "
+            f"Nothing needs to change in the portfolio — I simply thought it worth sharing.")
+
+
 def _market_context(world: World, limit: int = 2) -> list[Statement]:
     out: list[Statement] = []
     for n in world.news:
@@ -418,25 +598,14 @@ def build_dialogue(world: World, client_id: str, match: Match) -> "tuple[Dialogu
                 ))
 
     market_context = _market_context(world)
-    title_lead = (match.news.title.split(",")[0].lower() if match.news.title else "made a notable move")
 
-    if match.polarity == "opportunity":
-        opener = (f"Dear {surname}, I wanted to call you with good news rather than a market dip: "
-                  f"{match.news.issuer_name or 'a company you hold'} has just {title_lead}. "
-                  f"It is exactly the kind of leadership you asked us to watch for.")
-    elif match.polarity == "conflict" and match.affected_holding:
-        opener = (f"Dear {surname}, a development needs your attention: {match.news.title}. "
-                  f"Because it touches your stance and a current holding, I have prepared a same-sector, "
-                  f"CIO-approved option that keeps your strategy intact while restoring the values fit.")
-    elif match.polarity == "conflict":
-        opener = (f"Dear {surname}, before we act on the latest CIO tactical update I want to flag that it runs "
-                  f"against the defensive, low-volatility approach you have consistently asked us to protect. "
-                  f"My recommendation is to hold course; here is my reasoning.")
-    else:
-        opener = (f"Dear {surname}, a quick note on a development relevant to your interests: {match.news.title}. "
-                  f"Nothing needs to change in the portfolio — I simply thought it worth sharing.")
+    opener = _styled_opener(
+        _tone(style), match.polarity, surname=surname, news=match.news,
+        affected=match.affected_holding, topic_labels=_topic_labels(match) or "your priorities",
+    )
 
     draft = opener
+    draft_source = "template"
     llm_used = False
     if llm.llm_available():
         prose = llm.chat(
@@ -450,12 +619,14 @@ def build_dialogue(world: World, client_id: str, match: Match) -> "tuple[Dialogu
                 f"Client: {name}\nStyle: {style}\n\nSituation: {match.headline}\n"
                 f"Talking points: {[p.text for p in points]}\n"
                 f"Proposed (for RM, not the client to execute): a same-sector, CIO-approved adjustment.\n\n"
-                f"Write the note."
+                f"Write the note. Open in the tone implied by the style; here is a style-matched draft to "
+                f"improve on, not copy:\n{opener}"
             ),
             max_tokens=320,
         )
         if prose:
             draft = prose.strip()
+            draft_source = "llm"
             llm_used = True
 
     return DialogueSuggestion(
@@ -463,6 +634,7 @@ def build_dialogue(world: World, client_id: str, match: Match) -> "tuple[Dialogu
         style=style,
         talking_points=points,
         draft_message=draft,
+        draft_source=draft_source,
         market_context=market_context,
         provenance=[p.provenance for p in points],
     ), llm_used
