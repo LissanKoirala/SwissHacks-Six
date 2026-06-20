@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ChevronRight } from "lucide-react";
+import {
+  ChevronRight,
+  NotebookPen,
+  Newspaper,
+  ClipboardList,
+  Wallet,
+  Scale,
+  Globe,
+  type LucideIcon,
+} from "lucide-react";
 import type { Polarity, SourceType } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -52,39 +61,26 @@ export function SentimentChip({ label }: { label: string }) {
   );
 }
 
-const SOURCE_META: Record<SourceType, { label: string; cls: string }> = {
-  crm_log: {
-    label: "CRM log",
-    cls: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-indigo-500/20",
-  },
-  news: {
-    label: "News",
-    cls: "bg-sky-500/10 text-sky-600 dark:text-sky-400 ring-sky-500/20",
-  },
-  cio_list: {
-    label: "CIO list",
-    cls: "bg-violet-500/10 text-violet-600 dark:text-violet-400 ring-violet-500/20",
-  },
-  portfolio: {
-    label: "Portfolio",
-    cls: "bg-teal-500/10 text-teal-600 dark:text-teal-400 ring-teal-500/20",
-  },
-  mandate: {
-    label: "Mandate",
-    cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-amber-500/20",
-  },
-  market_digest: {
-    label: "Market digest",
-    cls: "bg-muted text-muted-foreground ring-border",
-  },
+// One restrained chip style for every source type; the Lucide icon carries the
+// distinction (not a rainbow of hues). Keeps provenance scannable on-token.
+const SOURCE_META: Record<SourceType, { label: string; icon: LucideIcon }> = {
+  crm_log: { label: "CRM log", icon: NotebookPen },
+  news: { label: "News", icon: Newspaper },
+  cio_list: { label: "CIO list", icon: ClipboardList },
+  portfolio: { label: "Portfolio", icon: Wallet },
+  mandate: { label: "Mandate", icon: Scale },
+  market_digest: { label: "Market digest", icon: Globe },
 };
 
 export function SourceBadge({ type }: { type: SourceType }) {
-  const m = SOURCE_META[type] ?? {
-    label: type,
-    cls: "bg-muted text-muted-foreground ring-border",
-  };
-  return <span className={cn("chip ring-1 ring-inset", m.cls)}>{m.label}</span>;
+  const m = SOURCE_META[type];
+  const Icon = m?.icon;
+  return (
+    <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
+      {Icon && <Icon className="h-3 w-3" aria-hidden />}
+      {m?.label ?? type}
+    </span>
+  );
 }
 
 /* ------------------------------------------------------------ expander --- */
