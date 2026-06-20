@@ -4,7 +4,7 @@ never a per-client LLM call. Also labels the CIO approved universe with sentimen
 from __future__ import annotations
 
 from ..ingestion.base import Record
-from ..models import CIOStock, NewsItem, Provenance, Sentiment
+from ..models import CIOStock, Fundamentals, InsiderTrade, NewsItem, Provenance, Sentiment
 from ..topics import classify_text
 
 # Single source of truth for the sentiment threshold — shared with the matcher's polarity logic
@@ -26,6 +26,9 @@ def to_news_item(rec: Record) -> NewsItem:
     body = p.get("body", "")
     topics = classify_text(f"{title}. {body}")
     score = float(p.get("sentiment") or 0.0)
+    # Each signal cites its true origin (news/sec_filing/esg/earnings/analyst/macro) so the
+    # provenance badge is honest. Falls back to "news" for the legacy fixtures (#7.5).
+    signal_type = p.get("signal_type") or rec.source_type or "news"
     # Never surface an uncited fact: fall back the excerpt to source/url if there's no text (#9).
     excerpt = (body or title or p.get("source") or p.get("url") or p["id"])[:240]
     return NewsItem(
@@ -40,12 +43,42 @@ def to_news_item(rec: Record) -> NewsItem:
         issuer_name=p.get("issuer_name"),
         issuer_isin=p.get("issuer_isin"),
         market_digest=bool(p.get("market_digest", False)),
+        signal_type=signal_type,
         provenance=Provenance(
-            source_type="news",
+            source_type=signal_type,
             source_id=p["id"],
             excerpt=excerpt,
             url=p.get("url"),
             timestamp=p.get("published_at"),
+        ),
+    )
+
+
+def to_fundamentals(rec: Record) -> Fundamentals:
+    """Build a Fundamentals node (reference data) from a fundamentals Record, including any
+    Form-4 insider trades joined upstream by ISIN."""
+    p = rec.payload
+    trades = [
+        InsiderTrade(
+            insider=t["insider"], role=t.get("role"), transaction=t["transaction"],
+            shares=t.get("shares"), value_usd=t.get("value_usd"), date=t["date"],
+            provenance=Provenance(
+                source_type="insider", source_id=f"{p['isin']}:{t['date']}:{t['transaction']}",
+                excerpt=f"{t['insider']} {t['transaction']} {t.get('shares','?')} shares on {t['date']}.",
+                url=t.get("url"), timestamp=t["date"],
+            ),
+        )
+        for t in p.get("insider_trades", [])
+    ]
+    return Fundamentals(
+        isin=p["isin"], issuer=p["issuer"], as_of=p.get("as_of"), currency=p.get("currency"),
+        pe_ratio=p.get("pe_ratio"), dividend_yield=p.get("dividend_yield"),
+        next_ex_dividend=p.get("next_ex_dividend"), market_cap=p.get("market_cap"),
+        week52_high=p.get("week52_high"), week52_low=p.get("week52_low"),
+        insider_summary=p.get("insider_summary"), insider_trades=trades,
+        provenance=Provenance(
+            source_type="fundamentals", source_id=p["isin"], excerpt=rec.excerpt,
+            timestamp=p.get("as_of"),
         ),
     )
 

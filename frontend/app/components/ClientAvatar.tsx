@@ -24,7 +24,7 @@ export function ClientAvatar({
   if (!avatar || failed) {
     return (
       <span
-        className={`grid shrink-0 place-items-center rounded-full bg-accent-soft font-semibold text-accent-ink ring-2 ring-white ${dim} ${className}`}
+        className={`grid shrink-0 place-items-center rounded-full bg-primary/10 font-semibold text-primary ring-2 ring-background ${dim} ${className}`}
         aria-hidden
       >
         {initials}
@@ -36,7 +36,7 @@ export function ClientAvatar({
     <img
       src={avatar}
       alt=""
-      className={`shrink-0 rounded-full object-cover ring-2 ring-white ${dim} ${className}`}
+      className={`shrink-0 rounded-full object-cover ring-2 ring-background ${dim} ${className}`}
       onError={() => setFailed(true)}
     />
   );

@@ -113,6 +113,19 @@ def build_analytics(world: World, client_id: str) -> dict:
             sn += h.current_chf
     weighted_sentiment = round(sw / sn, 3) if sn else 0.0
 
+    # CIO deviation audit — held names off the CIO list or downgraded to SELL (Portfolio Agent).
+    # News-independent, fully cited; a standing watch the RM sees even with no breaking event.
+    deviations = world.cio_deviations(client_id)
+    cio_deviations = [{
+        "isin": h.isin, "issuer": h.issuer, "industry_group": h.industry_group,
+        "sub_asset_class": (h.sub_asset_class or "").strip(),
+        "current_chf": round(h.current_chf, 2), "pct": _pct(h.current_chf, total),
+        "status": h.cio_status, "cio_rating": h.cio_rating,
+        "provenance": h.provenance.model_dump() if h.provenance else None,
+        "cio_provenance": (world.cio_by_isin[h.isin].provenance.model_dump()
+                           if h.isin in world.cio_by_isin else None),
+    } for h in sorted(deviations, key=lambda x: -x.current_chf)]
+
     return {
         "client_id": client_id,
         "figures": {
@@ -123,10 +136,13 @@ def build_analytics(world: World, client_id: str) -> dict:
             "alerts": len(matches),
             "weighted_sentiment": weighted_sentiment,
             "regions": len(by_region),
+            "off_list_count": sum(1 for h in deviations if h.cio_status == "OFF_LIST"),
+            "sell_rated_count": sum(1 for h in deviations if h.cio_status == "SELL"),
         },
         "by_asset_class": by_asset_class,
         "by_sub_asset_class": by_sub_asset_class,
         "by_sector": by_sector,
         "by_region": by_region,
         "top_holdings": top_holdings,
+        "cio_deviations": cio_deviations,
     }

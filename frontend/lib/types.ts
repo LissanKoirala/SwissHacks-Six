@@ -6,7 +6,15 @@ export type SourceType =
   | "cio_list"
   | "portfolio"
   | "mandate"
-  | "market_digest";
+  | "market_digest"
+  // additional free data sources (CLAUDE.md §6)
+  | "sec_filing"
+  | "esg"
+  | "earnings"
+  | "analyst"
+  | "macro"
+  | "fundamentals"
+  | "insider";
 
 export type Polarity = "conflict" | "opportunity" | "neutral";
 
@@ -41,6 +49,35 @@ export interface NewsItem {
   sentiment: Sentiment;
   issuer_name?: string | null;
   issuer_isin?: string | null;
+  market_digest?: boolean;
+  // origin feed: "news" | "sec_filing" | "esg" | "earnings" | "analyst" | "macro"
+  signal_type?: string;
+  provenance: Provenance;
+}
+
+export interface InsiderTrade {
+  insider: string;
+  role?: string | null;
+  transaction: "BUY" | "SELL";
+  shares?: number | null;
+  value_usd?: number | null;
+  date: string;
+  provenance: Provenance;
+}
+
+export interface Fundamentals {
+  isin: string;
+  issuer: string;
+  as_of?: string | null;
+  currency?: string | null;
+  pe_ratio?: number | null;
+  dividend_yield?: number | null;
+  next_ex_dividend?: string | null;
+  market_cap?: number | null;
+  week52_high?: number | null;
+  week52_low?: number | null;
+  insider_summary?: string | null;
+  insider_trades: InsiderTrade[];
   provenance: Provenance;
 }
 
@@ -71,6 +108,10 @@ export interface Holding {
   live_change_pct?: number | null;
   price_source?: string | null;
   six_ticker?: string | null;
+  // CIO deviation status (Portfolio Agent: "assets no longer on the CIO list").
+  cio_rating?: string | null; // BUY / HOLD / SELL, or null if off-list
+  cio_status?: string | null; // "BUY" | "HOLD" | "SELL" | "OFF_LIST" | "CASH"
+  provenance?: Provenance | null; // pointer to the Sample Portfolio workbook row
 }
 
 export interface Match {
@@ -82,6 +123,27 @@ export interface Match {
   shared_topics: SharedTopic[];
   affected_holding?: Holding | null;
   why: Provenance[];
+}
+
+export interface SubstitutionMetrics {
+  sell_issuer?: string | null;
+  buy_issuer?: string | null;
+  vol_sell?: number | null;
+  vol_buy?: number | null;
+  vol_delta?: number | null;
+  beta_sell?: number | null;
+  beta_buy?: number | null;
+  pe_sell?: number | null;
+  pe_buy?: number | null;
+  sentiment_sell?: number | null;
+  sentiment_buy?: number | null;
+  sentiment_delta?: number | null;
+  sector_match: boolean;
+  sub_asset_class_match: boolean;
+  drift_pp_after?: number | null;
+  value_tags_sell: string[];
+  value_tags_buy: string[];
+  risk_source?: string | null;
 }
 
 export interface Swap {
@@ -98,6 +160,14 @@ export interface Swap {
   buy_live_price?: number | null;
   buy_live_ccy?: string | null;
   buy_live_ts?: string | null;
+  substitution?: SubstitutionMetrics | null;
+  provenance: Provenance[];
+}
+
+export interface GoodNewsBriefing {
+  headline: string;
+  why_authentic: string;
+  action_summary: string;
   provenance: Provenance[];
 }
 
@@ -107,6 +177,7 @@ export interface StrategyProposal {
   polarity: Polarity;
   swaps: Swap[];
   constraints_checked: string[];
+  good_news_briefing?: GoodNewsBriefing | null;
   provenance: Provenance[];
 }
 
@@ -156,6 +227,7 @@ export interface MandateTarget {
   current_pct: number;
   drift_pp: number;
   breach: boolean;
+  provenance?: Provenance | null; // pointer to the Portfolio Strategies workbook row
 }
 
 export interface Mandate {
@@ -213,6 +285,21 @@ export interface AnalyticsFigures {
   alerts: number;
   weighted_sentiment: number;
   regions: number;
+  off_list_count?: number;
+  sell_rated_count?: number;
+}
+
+export interface CioDeviation {
+  isin: string;
+  issuer: string;
+  industry_group: string | null;
+  sub_asset_class: string;
+  current_chf: number;
+  pct: number;
+  status: "OFF_LIST" | "SELL" | string;
+  cio_rating: string | null;
+  provenance?: Provenance | null;
+  cio_provenance?: Provenance | null;
 }
 
 export interface AllocationSlice {
@@ -269,6 +356,7 @@ export interface Analytics {
   by_sector: AllocationSlice[];
   by_region: RegionExposure[];
   top_holdings: TopHolding[];
+  cio_deviations: CioDeviation[];
 }
 
 // --- CRM knowledge graph (Network view) ---
@@ -406,6 +494,7 @@ export interface GlobeHolding {
   city: string;
   verdict: "VIOLATION" | "WATCH" | "OK";
   weight: number;
+  provenance?: Provenance | null;
 }
 
 export interface GlobeEvent {
@@ -421,6 +510,7 @@ export interface GlobeEvent {
   linked_holding_ids: string[];
   kind?: "alert" | "ambient";
   sentiment?: number;
+  provenance?: Provenance | null;
 }
 
 export interface GlobeArc {

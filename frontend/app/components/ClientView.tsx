@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Info, Plus } from "lucide-react";
 import type { Insights } from "@/lib/types";
 import { api } from "@/lib/api";
 import { prettyDate } from "@/lib/format";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill } from "./ui";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertCard } from "./AlertCard";
 import { StrategyPanel } from "./StrategyPanel";
 import { DialoguePanel } from "./DialoguePanel";
@@ -55,7 +57,7 @@ export function ClientView({ clientId }: { clientId: string }) {
 
   if (loading) {
     return (
-      <div className="grid h-full place-items-center text-sm text-slate-500">
+      <div className="grid h-full place-items-center text-sm text-muted-foreground">
         Loading insights…
       </div>
     );
@@ -64,11 +66,11 @@ export function ClientView({ clientId }: { clientId: string }) {
     return (
       <div className="grid h-full place-items-center px-8 text-center">
         <div>
-          <p className="text-sm font-medium text-rose-600">
+          <p className="text-sm font-medium text-destructive">
             Could not reach the backend.
           </p>
-          <p className="mt-1 text-xs text-slate-500">{error}</p>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-muted-foreground">{error}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
             Is the API running on http://localhost:8000?
           </p>
         </div>
@@ -91,24 +93,26 @@ export function ClientView({ clientId }: { clientId: string }) {
               name={client.name}
               size="lg"
             />
-            <h1 className="text-2xl font-semibold text-ink">{client.name}</h1>
+            <h1 className="font-display text-4xl font-light tracking-tight text-foreground">
+              {client.name}
+            </h1>
             <MandatePill mandate={client.mandate} />
-            <span className="text-xs text-slate-400">
-              generated {prettyDate(insights.generated_at)} ·{" "}
-              {insights.llm_used ? "LLM" : "deterministic"}
+            <span className="text-xs text-muted-foreground">
+              Generated{" "}
+              <span className="font-mono tabular-nums">
+                {prettyDate(insights.generated_at)}
+              </span>{" "}
+              · {insights.llm_used ? "LLM" : "deterministic"}
             </span>
           </div>
-          <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-ink-soft">
+          <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-foreground/80">
             {client.headline}
           </p>
         </header>
 
         {/* advisory-only banner — golden rule */}
-        <div className="mb-6 flex items-center gap-2 rounded-lg bg-accent-soft px-4 py-2.5 text-sm text-accent-ink ring-1 ring-inset ring-accent/20">
-          <svg className="h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3" />
-            <path d="M8 7.2v4M8 5.2h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+        <div className="mb-6 flex items-center gap-2 rounded-md bg-primary/10 px-4 py-2.5 text-sm text-primary ring-1 ring-inset ring-primary/20">
+          <Info className="h-4 w-4 shrink-0" aria-hidden />
           <span>
             <span className="font-semibold">Advisory only</span> — the RM
             approves, the client decides. Nothing here is auto-executed or
@@ -117,77 +121,96 @@ export function ClientView({ clientId }: { clientId: string }) {
         </div>
 
         {/* tabs */}
-        <div className="mb-6 flex gap-1 border-b border-slate-200">
-          {([
-            ["advisory", `Advisory${client.alert_count ? ` · ${client.alert_count}` : ""}`],
-            ["decision", "Decision Flow"],
-            ["portfolio", "Portfolio"],
-            ["analytics", "Analytics"],
-            ["risk", "Risk Timeline"],
-            ["map", "Investment Map"],
-            ["network", "CRM Network"],
-            ["rendezvous", "Rendezvous"],
-            ["profile", "Profile"],
-            ["capture", "＋ Add Note"],
-          ] as [Tab, string][]).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                tab === id
-                  ? "border-accent text-accent-ink"
-                  : "border-transparent text-slate-500 hover:text-ink"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* tab content */}
-        {tab === "advisory" && (
-          <div className="space-y-6">
-            {insights.matches.length === 0 ? (
-              <div className="card p-6 text-sm text-slate-500">
-                No active alerts. The profile is being watched against incoming
-                news and the CIO list.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {insights.matches.map((m) => (
-                  <AlertCard key={m.id} match={m} />
-                ))}
-              </div>
-            )}
-
-            {/* dual output — the product core */}
-            <div className="grid gap-5 lg:grid-cols-2">
-              <StrategyPanel proposal={insights.strategy_proposal} />
-              <DialoguePanel dialogue={insights.dialogue_suggestion} />
-            </div>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+          <div className="scroll-thin mb-6 overflow-x-auto">
+            <TabsList className="h-auto flex-nowrap">
+              {([
+                ["advisory", `Advisory${client.alert_count ? ` · ${client.alert_count}` : ""}`],
+                ["decision", "Decision Flow"],
+                ["portfolio", "Portfolio"],
+                ["analytics", "Analytics"],
+                ["risk", "Risk Timeline"],
+                ["map", "Investment Map"],
+                ["network", "CRM Network"],
+                ["rendezvous", "Rendezvous"],
+                ["profile", "Profile"],
+                [
+                  "capture",
+                  <span key="cap" className="flex items-center gap-1.5">
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Note
+                  </span>,
+                ],
+              ] as [Tab, ReactNode][]).map(([id, label]) => (
+                <TabsTrigger key={id as string} value={id as string} className="shrink-0">
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
           </div>
-        )}
 
-        {tab === "decision" && <DecisionFlow clientId={clientId} />}
+          {/* tab content */}
+          <TabsContent value="advisory" className="mt-0">
+            <div className="space-y-6">
+              {insights.matches.length === 0 ? (
+                <div className="card p-5 text-sm text-muted-foreground">
+                  No signals matched this client&rsquo;s profile against today&rsquo;s
+                  news and the CIO list. New alerts appear here as incoming items
+                  intersect a profile topic. Capture a meeting note to broaden the
+                  topics watched.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {insights.matches.map((m) => (
+                    <AlertCard key={m.id} match={m} />
+                  ))}
+                </div>
+              )}
 
-        {tab === "portfolio" && (
-          <PortfolioView clientId={clientId} affectedIsin={affectedIsin} />
-        )}
+              {/* dual output — the product core */}
+              <div className="grid gap-5 lg:grid-cols-2">
+                <StrategyPanel proposal={insights.strategy_proposal} />
+                <DialoguePanel dialogue={insights.dialogue_suggestion} />
+              </div>
+            </div>
+          </TabsContent>
 
-        {tab === "analytics" && <PortfolioCharts clientId={clientId} />}
+          <TabsContent value="decision" className="mt-0">
+            <DecisionFlow clientId={clientId} />
+          </TabsContent>
 
-        {tab === "risk" && <RiskTimeline clientId={clientId} />}
+          <TabsContent value="portfolio" className="mt-0">
+            <PortfolioView clientId={clientId} affectedIsin={affectedIsin} />
+          </TabsContent>
 
-        {tab === "map" && <InvestmentGlobe clientId={clientId} />}
+          <TabsContent value="analytics" className="mt-0">
+            <PortfolioCharts clientId={clientId} />
+          </TabsContent>
 
-        {tab === "network" && <CrmGraph clientId={clientId} />}
+          <TabsContent value="risk" className="mt-0">
+            <RiskTimeline clientId={clientId} />
+          </TabsContent>
 
-        {tab === "rendezvous" && <RendezvousView clientId={clientId} />}
+          <TabsContent value="map" className="mt-0">
+            <InvestmentGlobe clientId={clientId} />
+          </TabsContent>
 
-        {tab === "profile" && <ProfileView clientId={clientId} />}
+          <TabsContent value="network" className="mt-0">
+            <CrmGraph clientId={clientId} />
+          </TabsContent>
 
-        {tab === "capture" && <CaptureNote clientId={clientId} />}
+          <TabsContent value="rendezvous" className="mt-0">
+            <RendezvousView clientId={clientId} />
+          </TabsContent>
+
+          <TabsContent value="profile" className="mt-0">
+            <ProfileView clientId={clientId} />
+          </TabsContent>
+
+          <TabsContent value="capture" className="mt-0">
+            <CaptureNote clientId={clientId} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

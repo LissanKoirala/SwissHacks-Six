@@ -12,19 +12,19 @@ import { SourceBadge } from "./ui";
  */
 export function Provenance({ prov }: { prov: Prov }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+    <div className="rounded-lg border border-border bg-muted/40 p-3">
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
         <SourceBadge type={prov.source_type} />
-        <span className="font-mono text-[11px] text-slate-400">
+        <span className="citation font-mono text-[11px]">
           {prov.source_id}
         </span>
         {prov.timestamp && (
-          <span className="ml-auto text-[11px] text-slate-400">
+          <span className="ml-auto text-[11px] text-muted-foreground">
             {prettyDate(prov.timestamp)}
           </span>
         )}
       </div>
-      <p className="text-sm leading-relaxed text-ink-soft">
+      <p className="text-sm leading-relaxed text-muted-foreground">
         “{prov.excerpt}”
       </p>
       {prov.url && (
@@ -32,7 +32,7 @@ export function Provenance({ prov }: { prov: Prov }) {
           href={prov.url}
           target="_blank"
           rel="noreferrer"
-          className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+          className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
         >
           View source
           <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden>
@@ -77,13 +77,13 @@ export function ProvenanceTag({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-inset ring-slate-200 hover:bg-slate-200"
+        className="citation ml-1 font-mono text-[11px] ring-1 ring-inset ring-primary/20 transition-colors hover:bg-primary/15"
         aria-expanded={open}
       >
         {label}
       </button>
       {open && (
-        <span className="absolute left-0 top-full z-20 mt-1 block w-80 max-w-[80vw] rounded-lg border border-slate-200 bg-white p-1 shadow-pop">
+        <span className="absolute left-0 top-full z-20 mt-1 block w-80 max-w-[80vw] rounded-lg border border-border bg-popover p-1 shadow-pop">
           <Provenance prov={prov} />
         </span>
       )}

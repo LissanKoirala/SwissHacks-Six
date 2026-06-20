@@ -33,6 +33,18 @@ export function price(
   return ccy ? `${ccy} ${n}` : n;
 }
 
+export function compact(
+  value: number | null | undefined,
+  ccy?: string | null
+): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const n = new Intl.NumberFormat("en-GB", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+  return ccy ? `${ccy} ${n}` : n;
+}
+
 export function prettyDate(iso?: string | null): string {
   if (!iso) return "";
   // Accept both date-only and full ISO timestamps.

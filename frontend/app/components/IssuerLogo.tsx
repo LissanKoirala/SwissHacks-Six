@@ -27,7 +27,7 @@ export function IssuerLogo({
 
   return (
     <span
-      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-md bg-white ring-1 ring-inset ring-slate-200 ${dim} ${className}`}
+      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-md bg-surface-2 ring-1 ring-inset ring-border ${dim} ${className}`}
       title={issuer}
     >
       {src ? (
@@ -38,7 +38,7 @@ export function IssuerLogo({
           onError={() => setIdx((i) => i + 1)}
         />
       ) : (
-        <span className="grid h-full w-full place-items-center bg-slate-100 font-semibold text-slate-600">
+        <span className="grid h-full w-full place-items-center bg-secondary font-semibold tracking-tight text-secondary-foreground">
           {initials}
         </span>
       )}

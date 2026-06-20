@@ -28,11 +28,17 @@ export function ProfileView({ clientId }: { clientId: string }) {
   }, [clientId]);
 
   if (loading) {
-    return <p className="p-5 text-sm text-slate-500">Loading profile…</p>;
+    return (
+      <p className="p-5 text-sm text-muted-foreground">
+        Loading client profile from the CRM graph…
+      </p>
+    );
   }
   if (error) {
     return (
-      <p className="p-5 text-sm text-rose-600">Could not load profile: {error}</p>
+      <p className="p-5 text-sm text-destructive">
+        Could not load profile: {error}
+      </p>
     );
   }
   if (!data) return null;
@@ -49,13 +55,13 @@ export function ProfileView({ clientId }: { clientId: string }) {
     <div className="grid gap-5 md:grid-cols-2">
       {keys.map((k) => (
         <section key={k} className="card p-5">
-          <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-accent">
+          <h3 className="mb-3 text-xs font-medium tracking-wide text-muted-foreground">
             {titleCase(k)}
           </h3>
           <div className="space-y-3">
             {facets[k].map((entry, i) => (
               <div key={i}>
-                <p className="mb-1.5 text-sm leading-relaxed text-ink">
+                <p className="mb-1.5 text-sm leading-relaxed text-foreground">
                   {entry.text}
                 </p>
                 <Provenance prov={entry.provenance} />
@@ -65,7 +71,16 @@ export function ProfileView({ clientId }: { clientId: string }) {
         </section>
       ))}
       {keys.length === 0 && (
-        <p className="text-sm text-slate-500">No profile facets recorded.</p>
+        <div className="md:col-span-2">
+          <h3 className="font-display text-4xl font-light tracking-tight text-foreground">
+            No profile yet
+          </h3>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            The profile is built from confirmed meeting notes — capture a note
+            under Add Note, confirm the extracted facts, and the professional,
+            interests, historical and personality facets will populate here.
+          </p>
+        </div>
       )}
     </div>
   );
