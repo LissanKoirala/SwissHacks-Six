@@ -49,11 +49,20 @@ class Settings:
     elevenlabs_key = _clean(os.getenv("ELEVENLABS_API_KEY"))
     elevenlabs_stt_model = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v1").strip() or "scribe_v1"
 
+    ocr_provider = (os.getenv("OCR_PROVIDER", "phoeniqs").strip().lower() or "phoeniqs")
+    phoeniqs_ocr_model = os.getenv("PHOENIQS_OCR_MODEL", "inference-deepseek-ocr").strip() or "inference-deepseek-ocr"
+
     @property
     def stt_enabled(self) -> bool:
         if self.stt_provider == "elevenlabs":
             return bool(self.elevenlabs_key)
         # phoeniqs path not wired yet — see transcribe.py
+        return False
+
+    @property
+    def ocr_enabled(self) -> bool:
+        if self.ocr_provider == "phoeniqs":
+            return bool(self.phoeniqs_key)
         return False
 
     @property

@@ -41,9 +41,15 @@ def create_app() -> FastAPI:
             {"name": f"STT ({settings.stt_provider})", "configured": settings.stt_enabled,
              "live": settings.stt_enabled,
              "mode": "live" if settings.stt_enabled else "browser Web Speech fallback"},
+            {"name": f"OCR ({settings.ocr_provider})", "configured": settings.ocr_enabled,
+             "live": settings.ocr_enabled,
+             "mode": "live" if settings.ocr_enabled else "unavailable"},
         ]
         return {"use_live": settings.use_live, "probes": probes, "stt": {
             "provider": settings.stt_provider, "enabled": settings.stt_enabled,
+        }, "ocr": {
+            "provider": settings.ocr_provider, "enabled": settings.ocr_enabled,
+            "model": settings.phoeniqs_ocr_model if settings.ocr_provider == "phoeniqs" else "",
         }}
 
     @app.get("/clients")
@@ -155,6 +161,20 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "unknown client")
         from ..agents.capture import confirm_capture
         return _dump(confirm_capture(world, client_id, req))
+
+    @app.post("/api/ocr")
+    async def ocr_image(file: UploadFile = File(...)):
+        from ..agents.ocr import OcrError, get_ocr
+        if not settings.ocr_enabled:
+            raise HTTPException(503, f"OCR not configured (provider={settings.ocr_provider})")
+        image = await file.read()
+        if not image:
+            raise HTTPException(400, "empty image upload")
+        try:
+            text = get_ocr().read(image, file.content_type or "image/png")
+        except OcrError as e:
+            raise HTTPException(502, str(e))
+        return {"text": text, "provider": settings.ocr_provider, "model": settings.phoeniqs_ocr_model}
 
     @app.post("/api/transcribe")
     async def transcribe_audio(file: UploadFile = File(...), language: str | None = Form(default=None)):

@@ -1,9 +1,9 @@
 "use client";
 
 // RM Capture — multimodal interaction note (CLAUDE.md §8.B, CAPTURE_CONTRACT §3).
-// Type / dictate (Web Speech) / photo (tesseract.js OCR, in-browser) fill ONE
-// note textarea → Extract (read-only draft) → staged review → RM Confirm gate
-// (the only mutation). Light theme only; reuses card/chip/accent/ink tokens.
+// Type / dictate (server STT or browser fallback) / photo (server OCR via
+// Phoeniqs deepseek-ocr) fill ONE note textarea → Extract (read-only draft) →
+// staged review → RM Confirm gate (the only mutation). Light theme only.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -145,7 +145,7 @@ export function CaptureNote({
   const dictationSupported =
     (serverSttEnabled && mediaSupported) || speechSupported;
 
-  // --- OCR (tesseract.js) ---
+  // --- OCR (server: Phoeniqs deepseek-ocr) ---
   const [ocrBusy, setOcrBusy] = useState(false);
   const [ocrMsg, setOcrMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -372,28 +372,19 @@ export function CaptureNote({
     setOcrMsg("Reading the photo…");
     setError(null);
     try {
-      // Dynamic import inside the handler — keeps the WASM/worker out of SSR
-      // and the main bundle until the RM actually snaps a photo.
-      const { default: Tesseract } = await import("tesseract.js");
-      const { data } = await Tesseract.recognize(file, "eng", {
-        logger: (m: { status?: string; progress?: number }) => {
-          if (m.status === "recognizing text" && typeof m.progress === "number") {
-            setOcrMsg(`Reading the photo… ${Math.round(m.progress * 100)}%`);
-          }
-        },
-      });
-      const text = (data?.text ?? "").trim();
-      if (text) {
-        setNote((prev) => appendToNote(prev, text));
+      // Server-side OCR via Phoeniqs (deepseek-ocr) — handles cursive that
+      // tesseract.js couldn't. See backend/workbench/agents/ocr.py.
+      const { text } = await api.ocr(file, file.name || "note.png");
+      const trimmed = (text ?? "").trim();
+      if (trimmed) {
+        setNote((prev) => appendToNote(prev, trimmed));
         setOcrMsg("Photo read — text added to the note.");
       } else {
         setOcrMsg("No text found in that image. You can type the note instead.");
       }
-    } catch {
-      // OCR failure must never block capture — friendly nudge, RM types on.
-      setOcrMsg(
-        "Could not read that image. You can type the note instead.",
-      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setOcrMsg(`Could not read that image: ${msg}`);
     } finally {
       setOcrBusy(false);
     }
@@ -668,8 +659,8 @@ export function CaptureNote({
         <div className="mt-1 flex justify-between text-[11px] text-slate-400">
           <span>
             {serverSttEnabled
-              ? `Dictation via ${sttProvider || "server"} STT · OCR runs locally in your browser`
-              : "Dictation needs Chrome/Edge (Web Speech) · OCR runs locally in your browser"}
+              ? `Dictation via ${sttProvider || "server"} STT · OCR via Phoeniqs`
+              : "Dictation needs Chrome/Edge (Web Speech) · OCR via Phoeniqs"}
           </span>
           <span className="tabular-nums">
             {note.length} / {NOTE_MAX}
