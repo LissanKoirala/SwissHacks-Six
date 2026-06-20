@@ -135,12 +135,6 @@ export function ClientView({ clientId }: { clientId: string }) {
               }`}
             >
               {label}
-              {/* TO-TEST markers — pending RM sign-off; remove this block when cleared */}
-              {(id === "risk" || id === "capture") && (
-                <span className="ml-1.5 inline-block rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-inset ring-amber-300">
-                  To test
-                </span>
-              )}
             </button>
           ))}
         </div>
