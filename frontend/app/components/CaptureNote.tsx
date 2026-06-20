@@ -149,6 +149,7 @@ export function CaptureNote({
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const [serverSttEnabled, setServerSttEnabled] = useState<boolean | null>(null);
   const [sttProvider, setSttProvider] = useState<string>("");
+  const [serverTtsEnabled, setServerTtsEnabled] = useState<boolean>(false);
   const speechSupported = useMemo(() => getSpeechRecognitionCtor() !== null, []);
   const mediaSupported = useMemo(
     () =>
@@ -203,6 +204,7 @@ export function CaptureNote({
         if (!alive) return;
         setServerSttEnabled(!!d.stt?.enabled);
         setSttProvider(d.stt?.provider ?? "");
+        setServerTtsEnabled(!!d.tts?.enabled);
       })
       .catch(() => alive && setServerSttEnabled(false));
     return () => {
@@ -574,6 +576,7 @@ export function CaptureNote({
           clientId={clientId}
           baseNote={note}
           serverSttEnabled={!!serverSttEnabled}
+          serverTtsEnabled={serverTtsEnabled}
           mediaSupported={mediaSupported}
           onAppend={(text) => setNote((prev) => appendToNote(prev, text))}
         />

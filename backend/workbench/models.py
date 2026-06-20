@@ -105,6 +105,11 @@ class CaptureFollowupRequest(BaseModel):
     asked: list[str] = []           # question ids already asked this session
 
 
+class TTSRequest(BaseModel):
+    """Text to speak aloud for the conversational capture voice."""
+    text: str
+
+
 class ProposedEdge(BaseModel):
     """A candidate interest edge the RM can deselect/edit before confirm."""
     topic: str                      # MUST be a TOPIC_VOCAB key

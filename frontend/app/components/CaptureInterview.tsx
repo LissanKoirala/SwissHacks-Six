@@ -58,12 +58,14 @@ export function CaptureInterview({
   clientId,
   baseNote,
   serverSttEnabled,
+  serverTtsEnabled,
   mediaSupported,
   onAppend,
 }: {
   clientId: string;
   baseNote: string; // the note as it stands when the interview starts
   serverSttEnabled: boolean;
+  serverTtsEnabled: boolean; // ElevenLabs voice via /api/tts
   mediaSupported: boolean;
   onAppend: (text: string) => void;
 }) {
@@ -83,17 +85,31 @@ export function CaptureInterview({
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const srRef = useRef<SR | null>(null);
   const srTextRef = useRef("");
+  const audioRef = useRef<HTMLAudioElement | null>(null); // ElevenLabs playback
 
   const speechSupported = useMemo(() => getSRCtor() !== null, []);
+  const browserTts = useMemo(ttsSupported, []);
   const useServer = serverSttEnabled && mediaSupported;
   const canAnswer = useServer || speechSupported;
-  const canSpeak = useMemo(ttsSupported, []);
+  const canSpeak = serverTtsEnabled || browserTts;
 
   /* ------------------------------------------------------------- TTS --- */
 
-  const speak = useCallback(
+  const stopSpeaking = useCallback(() => {
+    try {
+      window.speechSynthesis?.cancel();
+    } catch {
+      /* noop */
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+  }, []);
+
+  const browserSpeak = useCallback(
     (text: string, onDone: () => void) => {
-      if (!canSpeak) {
+      if (!browserTts) {
         onDone();
         return;
       }
@@ -110,7 +126,40 @@ export function CaptureInterview({
         onDone();
       }
     },
-    [canSpeak],
+    [browserTts],
+  );
+
+  // Prefer the ElevenLabs voice; fall back to the browser voice on any failure.
+  const speak = useCallback(
+    (text: string, onDone: () => void) => {
+      stopSpeaking();
+      if (!serverTtsEnabled) {
+        browserSpeak(text, onDone);
+        return;
+      }
+      api
+        .tts(text)
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audioRef.current = audio;
+          const cleanup = () => URL.revokeObjectURL(url);
+          audio.onended = () => {
+            cleanup();
+            onDone();
+          };
+          audio.onerror = () => {
+            cleanup();
+            browserSpeak(text, onDone);
+          };
+          audio.play().catch(() => {
+            cleanup();
+            browserSpeak(text, onDone);
+          });
+        })
+        .catch(() => browserSpeak(text, onDone));
+    },
+    [serverTtsEnabled, browserSpeak, stopSpeaking],
   );
 
   /* --------------------------------------------------- question turns --- */
@@ -233,11 +282,7 @@ export function CaptureInterview({
   }
 
   function startAnswer() {
-    try {
-      window.speechSynthesis?.cancel();
-    } catch {
-      /* noop */
-    }
+    stopSpeaking();
     if (useServer) void startServerRecording();
     else if (speechSupported) startWebSpeech();
   }
@@ -259,11 +304,7 @@ export function CaptureInterview({
   }
 
   function endInterview() {
-    try {
-      window.speechSynthesis?.cancel();
-    } catch {
-      /* noop */
-    }
+    stopSpeaking();
     stopAnswer();
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     setActive(false);
@@ -274,11 +315,7 @@ export function CaptureInterview({
   // Cleanup on unmount / client switch.
   useEffect(() => {
     return () => {
-      try {
-        window.speechSynthesis?.cancel();
-      } catch {
-        /* noop */
-      }
+      stopSpeaking();
       try {
         mediaRecorderRef.current?.stop();
       } catch {
@@ -291,7 +328,7 @@ export function CaptureInterview({
         /* noop */
       }
     };
-  }, [clientId]);
+  }, [clientId, stopSpeaking]);
 
   /* ----------------------------------------------------------- render --- */
 

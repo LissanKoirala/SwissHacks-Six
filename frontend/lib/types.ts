@@ -297,6 +297,7 @@ export interface IntegrationHealth {
   use_live: boolean;
   probes: IntegrationProbe[];
   stt?: { provider: string; enabled: boolean };
+  tts?: { provider: string; enabled: boolean };
   ocr?: { provider: string; enabled: boolean; model?: string };
 }
 

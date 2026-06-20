@@ -117,6 +117,19 @@ export const api = {
     }
     return (await res.json()) as { text: string; provider: string; model?: string };
   },
+  tts: async (text: string): Promise<Blob> => {
+    const res = await fetch(`${API_BASE}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText} — POST /api/tts ${detail}`);
+    }
+    return res.blob();
+  },
   transcribe: async (audio: Blob, filename = "audio.webm"): Promise<{ text: string; provider: string }> => {
     const form = new FormData();
     form.append("file", audio, filename);
