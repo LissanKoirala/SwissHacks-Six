@@ -14,6 +14,7 @@ Design notes:
 """
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timezone
 
 from ..config import settings
@@ -22,6 +23,11 @@ from .classifier import to_news_item
 from .matcher import match_client
 
 _BREAKING_CAP = 50
+
+# Serialises a watch tick against itself (a scheduled tick vs an on-demand /breaking/poll), so two
+# ticks can't both ingest + mutate the shared world at once. The poll is the only writer of news at
+# runtime; request handlers only read, and list.append/dict.pop are individually GIL-atomic.
+_poll_lock = threading.Lock()
 
 
 def _now() -> str:
@@ -113,16 +119,20 @@ def _push(alert: dict) -> None:
 
 def poll_once(world: World, *, push: bool = True) -> list[dict]:
     """One watch tick: ingest new live news, detect breaking matches, buffer them (newest first),
-    invalidate the affected clients' insights, and push notifications. Returns the new alerts."""
-    fresh = refresh_news(world)
-    alerts = detect_breaking(world, fresh)
-    for a in alerts:
-        world.insights_cache.pop(a["client_id"], None)  # so /insights reflects the new match
-        if push:
+    invalidate the affected clients' insights, and push notifications. Returns the new alerts.
+    Serialised so concurrent ticks (scheduled + on-demand) can't race the shared world."""
+    with _poll_lock:
+        fresh = refresh_news(world)
+        alerts = detect_breaking(world, fresh)
+        for a in alerts:
+            world.insights_cache.pop(a["client_id"], None)  # so /insights reflects the new match
+        if alerts:
+            world.breaking[:0] = alerts            # prepend newest
+            del world.breaking[_BREAKING_CAP:]     # keep bounded
+    # Push outside the lock (network I/O shouldn't block the next tick).
+    if push:
+        for a in alerts:
             _push(a)
-    if alerts:
-        world.breaking[:0] = alerts            # prepend newest
-        del world.breaking[_BREAKING_CAP:]     # keep bounded
     return alerts
 
 
