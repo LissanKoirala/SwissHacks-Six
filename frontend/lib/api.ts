@@ -24,6 +24,12 @@ import type {
   TransactionsData,
   RMQueryBody,
   RMQueryResult,
+  Task,
+  TaskCreateBody,
+  TaskUpdateBody,
+  TaskSignoffBody,
+  IngestResult,
+  EmailMessage,
 } from "./types";
 
 // Default to 127.0.0.1 (not "localhost"): on macOS "localhost" can resolve to IPv6 ::1 first,
@@ -52,6 +58,19 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   });
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText} — POST ${path}`);
+  }
+  return (await res.json()) as T;
+}
+
+async function patch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "PATCH",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`${res.status} ${res.statusText} — PATCH ${path}`);
   }
   return (await res.json()) as T;
 }
@@ -103,6 +122,20 @@ export const api = {
   query: (id: string, body: RMQueryBody) =>
     post<RMQueryResult>(`/clients/${id}/query`, body),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
+
+  // --- The Front Door: inbox + agentic kanban board ---
+  tasks: (clientId?: string) =>
+    get<Task[]>(`/tasks${clientId ? `?client_id=${clientId}` : ""}`),
+  inbox: () => get<EmailMessage[]>("/inbox"),
+  createTask: (body: TaskCreateBody) => post<Task>("/tasks", body),
+  updateTask: (id: string, body: TaskUpdateBody) =>
+    patch<Task>(`/tasks/${id}`, body),
+  runTask: (id: string) => post<Task>(`/tasks/${id}/execute`, {}),
+  signoffTask: (id: string, body: TaskSignoffBody) =>
+    post<Task>(`/tasks/${id}/signoff`, body),
+  dismissTask: (id: string) => post<Task>(`/tasks/${id}/dismiss`, {}),
+  ingestEmail: () => post<IngestResult>("/ingest/email", {}),
+  ingestNews: () => post<IngestResult>("/ingest/news", {}),
   ocr: async (image: Blob, filename = "note.png"): Promise<{ text: string; provider: string; model?: string }> => {
     const form = new FormData();
     form.append("file", image, filename);

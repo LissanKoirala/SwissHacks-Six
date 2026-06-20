@@ -7,3 +7,7 @@ python-dotenv>=1.0
 python-multipart>=0.0.9
 pytest>=8.0
 flights>=0.9
+# Gmail OAuth ingestion (EMAIL_PROVIDER=gmail). Optional — the offline/IMAP paths don't need these.
+google-api-python-client>=2.0
+google-auth>=2.0
+google-auth-oauthlib>=1.0

@@ -926,3 +926,95 @@ export interface CapturePrompts {
   first_name: string;
   prompts: CapturePrompt[];
 }
+
+/* --------------------------------------------------------------------------
+ * The Front Door — inbound email + the agentic kanban board
+ * ------------------------------------------------------------------------ */
+
+export type TaskStatus = "backlog" | "started" | "review" | "done" | "dismissed";
+export type TaskPriority = "low" | "medium" | "high";
+export type TaskKind =
+  | "email_reply"
+  | "investment_review"
+  | "research"
+  | "schedule"
+  | "document"
+  | "general";
+export type TaskSource = "email" | "news" | "manual" | "system";
+
+export interface EmailMessage {
+  id: string;
+  from_name: string;
+  from_email: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  received_at: string;
+  client_id?: string | null;
+  provenance: Provenance;
+}
+
+export interface DraftEmail {
+  to_name: string;
+  to_email: string;
+  subject: string;
+  body: string;
+}
+
+export interface TaskArtifact {
+  kind: "draft_email" | "strategy" | "research_note" | "analysis" | "note";
+  summary: string;
+  body: string;
+  draft_email?: DraftEmail | null;
+  strategy_proposal?: StrategyProposal | null;
+  dialogue?: DialogueSuggestion | null;
+  confidence: "high" | "medium" | "low";
+  llm_used: boolean;
+  provenance: Provenance[];
+}
+
+export interface Task {
+  id: string;
+  client_id?: string | null;
+  title: string;
+  detail: string;
+  kind: TaskKind;
+  source: TaskSource;
+  status: TaskStatus;
+  priority: TaskPriority;
+  created_at: string;
+  updated_at: string;
+  dedup_key?: string | null;
+  origin?: Provenance | null;
+  artifact?: TaskArtifact | null;
+  activity: string[];
+  complex: boolean;
+  requires_signoff: boolean;
+  signed_off_by?: string | null;
+}
+
+export interface TaskCreateBody {
+  title: string;
+  detail?: string;
+  client_id?: string | null;
+  kind?: TaskKind;
+  priority?: TaskPriority;
+  execute?: boolean;
+}
+
+export interface TaskUpdateBody {
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  title?: string;
+  detail?: string;
+}
+
+export interface TaskSignoffBody {
+  rm_name?: string;
+  edited_body?: string | null;
+}
+
+export interface IngestResult {
+  created: Task[];
+  count: number;
+}

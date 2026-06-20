@@ -10,7 +10,15 @@ from ..analytics import build_analytics
 from ..config import settings
 from ..agents.flight_fli import _fli_installed
 from ..graph.crm_graph import build_crm_graph
-from ..models import CaptureConfirmRequest, CaptureExtractRequest, RMQueryRequest
+from ..models import (
+    CaptureConfirmRequest,
+    CaptureExtractRequest,
+    EmailIngestRequest,
+    RMQueryRequest,
+    TaskCreateRequest,
+    TaskSignoffRequest,
+    TaskUpdateRequest,
+)
 from ..seed import build_world
 
 
@@ -24,6 +32,33 @@ def create_app() -> FastAPI:
     )
     world = build_world(use_live_news=settings.news_enabled)
     app.state.world = world
+
+    @app.on_event("startup")
+    async def _start_front_door_poller():
+        # Autonomous intake: re-scan the inbox + news/risk watch on an interval so new mail and
+        # material world events open tasks on their own. Both scans are idempotent (dedup keys),
+        # so re-running is safe. Advisory only — it CREATES + DRAFTS; the RM sign-off gate is intact.
+        if not settings.poll_enabled:
+            return
+        import asyncio
+        from ..taskboard import ingest_email, ingest_news
+
+        async def _loop():
+            while True:
+                await asyncio.sleep(settings.front_door_poll_seconds)
+                try:  # one bad scan must never kill the loop
+                    await asyncio.to_thread(ingest_email, world, execute=True, use_llm=False)
+                    await asyncio.to_thread(ingest_news, world, execute=True)
+                except Exception:
+                    pass
+
+        app.state.poller_task = asyncio.create_task(_loop())
+
+    @app.on_event("shutdown")
+    async def _stop_front_door_poller():
+        task = getattr(app.state, "poller_task", None)
+        if task is not None:
+            task.cancel()
 
     @app.get("/health")
     def health():
@@ -54,6 +89,13 @@ def create_app() -> FastAPI:
             {"name": "Google Flights (fli)", "configured": _fli_installed(),
              "live": settings.flights_enabled and _fli_installed(),
              "mode": "live" if settings.flights_enabled else "heuristic estimates"},
+            {"name": f"Email inbox ({settings.email_provider})", "configured": settings.email_configured,
+             "live": settings.email_enabled,
+             "mode": (f"live {settings.email_provider}" if settings.email_enabled
+                      else "seed inbox fixtures")},
+            {"name": "Front Door poller", "configured": True, "live": settings.poll_enabled,
+             "mode": (f"autonomous · every {settings.front_door_poll_seconds}s"
+                      if settings.poll_enabled else "on-demand (boot + POST /ingest/*)")},
         ]
         return {"use_live": settings.use_live, "probes": probes, "stt": {
             "provider": settings.stt_provider, "enabled": settings.stt_enabled,
@@ -259,6 +301,98 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "unknown client")
         from ..agents.capture import build_capture_prompts
         return build_capture_prompts(world, client_id)
+
+    # --- The Front Door: inbox + agentic kanban board -----------------------
+    # The agent proposes (creates tasks, drafts deliverables); the RM disposes (sign-off / move /
+    # dismiss). Nothing here sends an email or places a trade (Golden rule §2).
+
+    @app.get("/inbox")
+    def inbox():
+        """The triaged inbound-email feed behind the board (seed fixtures, or live IMAP)."""
+        return [e.model_dump() for e in world.inbox]
+
+    @app.get("/tasks")
+    def tasks(client_id: str | None = None, status: str | None = None):
+        from ..taskboard import list_tasks
+        if client_id and client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        return [t.model_dump() for t in list_tasks(world, client_id=client_id, status=status)]
+
+    @app.get("/clients/{client_id}/tasks")
+    def client_tasks(client_id: str):
+        from ..taskboard import list_tasks
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        return [t.model_dump() for t in list_tasks(world, client_id=client_id)]
+
+    @app.get("/tasks/{task_id}")
+    def get_task(task_id: str):
+        t = world.task_by_id(task_id)
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/tasks")
+    def create_task(req: TaskCreateRequest):
+        from ..taskboard import add_task
+        from ..agents.task_executor import execute_task
+        if req.client_id and req.client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        task = add_task(world, title=req.title, detail=req.detail, client_id=req.client_id,
+                        kind=req.kind, priority=req.priority, source="manual")
+        if req.execute:
+            execute_task(world, task)
+            from ..taskboard import _save
+            _save(world)
+        return task.model_dump()
+
+    @app.patch("/tasks/{task_id}")
+    def patch_task(task_id: str, req: TaskUpdateRequest):
+        from ..taskboard import update_task
+        t = update_task(world, task_id, status=req.status, priority=req.priority,
+                        title=req.title, detail=req.detail)
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/tasks/{task_id}/execute")
+    def execute_task_route(task_id: str):
+        from ..taskboard import run_task
+        t = run_task(world, task_id)
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/tasks/{task_id}/signoff")
+    def signoff_task_route(task_id: str, req: TaskSignoffRequest):
+        from ..taskboard import signoff_task
+        t = signoff_task(world, task_id, rm_name=req.rm_name, edited_body=req.edited_body)
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/tasks/{task_id}/dismiss")
+    def dismiss_task_route(task_id: str):
+        from ..taskboard import update_task
+        t = update_task(world, task_id, status="dismissed")
+        if t is None:
+            raise HTTPException(404, "unknown task")
+        return t.model_dump()
+
+    @app.post("/ingest/email")
+    def ingest_email_route(req: EmailIngestRequest | None = None):
+        """Scan the inbox (seed fixtures or live IMAP) → triage → create + attempt tasks."""
+        from ..taskboard import ingest_email
+        raw = req.raw_email if req else None
+        created = ingest_email(world, raw_email=raw)
+        return {"created": [t.model_dump() for t in created], "count": len(created)}
+
+    @app.post("/ingest/news")
+    def ingest_news_route():
+        """Run the selective news/risk watch → create + attempt tasks on material signals only."""
+        from ..taskboard import ingest_news
+        created = ingest_news(world)
+        return {"created": [t.model_dump() for t in created], "count": len(created)}
 
     return app
 

@@ -10,6 +10,11 @@ demo/secrets/
 *.pem
 mcp_key
 CH56655-api2026hack22.zip
+# Gmail OAuth — never commit credentials/tokens
+.gmail_token.json
+.gmail_client_secret.json
+backend/.gmail_token.json
+backend/.gmail_client_secret.json
 
 # python
 __pycache__/
@@ -29,3 +34,6 @@ backend/.cache/
 
 # RM capture write-through store (replayed on boot)
 backend/data/captured_entries.json
+
+# Front Door kanban board write-through store (replayed on boot)
+backend/data/tasks.json

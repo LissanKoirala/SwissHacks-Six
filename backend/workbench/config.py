@@ -73,6 +73,43 @@ class Settings:
     # Google Flights via the ``flights`` (fli) library — no API key; can be slow on first load.
     live_flights = os.getenv("USE_LIVE_FLIGHTS", "0").strip() in ("1", "true", "True")
 
+    # --- The Front Door: inbound email ingestion (CLAUDE.md §6 one-adapter-per-source) ---
+    # Provider is swappable; everything runs on seed email fixtures with NO credentials. Drop in
+    # IMAP creds (any mailbox: Gmail app-password, Outlook, Fastmail…) later and flip USE_LIVE=1.
+    #   EMAIL_PROVIDER = imap | fixture
+    #   IMAP: EMAIL_IMAP_HOST, EMAIL_IMAP_PORT(=993), EMAIL_IMAP_USER, EMAIL_IMAP_PASSWORD,
+    #         EMAIL_IMAP_FOLDER(=INBOX), EMAIL_IMAP_SSL(=1)
+    email_provider = (os.getenv("EMAIL_PROVIDER", "fixture").strip().lower() or "fixture")
+    email_imap_host = _clean(os.getenv("EMAIL_IMAP_HOST"))
+    email_imap_port = int(os.getenv("EMAIL_IMAP_PORT", "993").strip() or "993")
+    email_imap_user = _clean(os.getenv("EMAIL_IMAP_USER"))
+    email_imap_password = _clean(os.getenv("EMAIL_IMAP_PASSWORD"))
+    email_imap_folder = os.getenv("EMAIL_IMAP_FOLDER", "INBOX").strip() or "INBOX"
+    email_imap_ssl = os.getenv("EMAIL_IMAP_SSL", "1").strip() in ("1", "true", "True")
+    # How many recent messages to pull per live scan (keeps the demo snappy + cheap).
+    email_scan_limit = int(os.getenv("EMAIL_SCAN_LIMIT", "25").strip() or "25")
+
+    # --- Gmail via OAuth (EMAIL_PROVIDER=gmail) — the "proper Google auth" path -------------------
+    # No app password / no IMAP toggle: a teammate runs `python -m workbench.ingestion.gmail_oauth`
+    # ONCE to authorise the account, which writes a token file (refresh token). Then set
+    # EMAIL_PROVIDER=gmail + USE_LIVE=1 and the backend pulls the inbox over the Gmail API, read-only.
+    # Credentials are filled in later — these are just the knobs (nothing secret lives in the repo).
+    gmail_client_id = _clean(os.getenv("GMAIL_OAUTH_CLIENT_ID"))
+    gmail_client_secret = _clean(os.getenv("GMAIL_OAUTH_CLIENT_SECRET"))
+    gmail_refresh_token = _clean(os.getenv("GMAIL_OAUTH_REFRESH_TOKEN"))
+    # Where the OAuth helper stores/reads the token (refresh token + scopes). Git-ignored.
+    gmail_token_file = os.getenv("GMAIL_TOKEN_FILE", "").strip() or str(DATA_DIR.parent / ".gmail_token.json")
+    # Gmail search query the scan uses (Gmail syntax). Defaults to unread workbench-tagged mail.
+    gmail_query = os.getenv("GMAIL_QUERY", "subject:[workbench] is:unread").strip()
+
+    # --- The Front Door: autonomous poller (turns pull-based intake into a live trigger) ---
+    # A background loop re-scans the inbox + news/risk watch on an interval so new mail and material
+    # world events open tasks on their own — no manual POST needed. On by default so it just works;
+    # set FRONT_DOOR_POLL=0 to disable. Advisory only: it CREATES + DRAFTS; sign-off gate untouched.
+    front_door_poll = os.getenv("FRONT_DOOR_POLL", "1").strip() in ("1", "true", "True")
+    # Floor at 15s so a typo can't spin a hot loop.
+    front_door_poll_seconds = max(15, int(os.getenv("FRONT_DOOR_POLL_SECONDS", "60").strip() or "60"))
+
     @property
     def stt_enabled(self) -> bool:
         if self.stt_provider == "elevenlabs":
@@ -115,6 +152,33 @@ class Settings:
     def macro_enabled(self) -> bool:
         # Frankfurter needs no key; gated on USE_LIVE only.
         return self.use_live
+
+    @property
+    def email_configured(self) -> bool:
+        """Live mail credentials are present for the chosen provider (independent of USE_LIVE)."""
+        if self.email_provider == "imap":
+            return bool(self.email_imap_host and self.email_imap_user and self.email_imap_password)
+        if self.email_provider == "gmail":
+            return self.gmail_configured
+        return False
+
+    @property
+    def gmail_configured(self) -> bool:
+        """Gmail OAuth is ready: either a saved token file, or client+refresh-token env vars."""
+        import os as _os
+        if self.gmail_token_file and _os.path.exists(self.gmail_token_file):
+            return True
+        return bool(self.gmail_client_id and self.gmail_client_secret and self.gmail_refresh_token)
+
+    @property
+    def email_enabled(self) -> bool:
+        """Pull live mail only when USE_LIVE=1 AND creds exist; otherwise seed fixtures."""
+        return self.use_live and self.email_configured
+
+    @property
+    def poll_enabled(self) -> bool:
+        """Run the autonomous Front Door poller."""
+        return self.front_door_poll
 
 
 settings = Settings()
