@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ShaderMaterial } from "three";
 import {
+  boostTextureAnisotropy,
   createDayNightMaterial,
   loadDayNightTextures,
   updateGlobeRotation,
@@ -53,6 +54,7 @@ type GlobeInstance = {
   ): GlobeInstance;
   onZoom(fn: (coords: { lat: number; lng: number }) => void): GlobeInstance;
   controls(): { autoRotate: boolean; autoRotateSpeed: number };
+  renderer(): { capabilities: { getMaxAnisotropy: () => number } };
   _destructor?: () => void;
 };
 
@@ -62,7 +64,75 @@ type GlobePoint = RendezvousGlobePoint & {
   tooltip: string;
 };
 
+type GlobeViewport = { logical: number };
+
 type RingDatum = { lat: number; lng: number };
+
+function longitudeSpan(lngs: number[]): number {
+  if (lngs.length < 2) return 0;
+  const sorted = [...lngs].sort((a, b) => a - b);
+  let maxGap = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    const cur = sorted[i];
+    const next = i === sorted.length - 1 ? sorted[0] + 360 : sorted[i + 1];
+    maxGap = Math.max(maxGap, next - cur);
+  }
+  return 360 - maxGap;
+}
+
+function routePointOfView(globe: RendezvousGlobeData): {
+  lat: number;
+  lng: number;
+  altitude: number;
+} {
+  if (!globe.arcs.length) {
+    return { lat: globe.focus_lat, lng: globe.focus_lng, altitude: 2.0 };
+  }
+
+  const coords = globe.arcs.flatMap((arc) => [
+    { lat: arc.from_lat, lng: arc.from_lng },
+    { lat: arc.to_lat, lng: arc.to_lng },
+  ]);
+  const lats = coords.map((c) => c.lat);
+  const lngs = coords.map((c) => c.lng);
+  const latSpan = Math.max(...lats) - Math.min(...lats);
+  const lngSpan = longitudeSpan(lngs);
+  const span = Math.max(latSpan, lngSpan);
+  const maxHours = globe.arcs.reduce(
+    (max, arc) => Math.max(max, arc.travel_hours ?? 0),
+    0,
+  );
+
+  // Keep this intentionally subtle: regional routes get a nudge, never a crop.
+  const routeAltitude =
+    maxHours <= 3 ? 1.35 : maxHours <= 6 ? 1.45 : maxHours <= 10 ? 1.8 : 2.0;
+  const spanAltitude = span < 12 ? 1.25 : span < 25 ? 1.45 : span < 50 ? 1.85 : 2.0;
+  const altitude = Math.max(1.15, Math.min(routeAltitude, spanAltitude));
+
+  const routeCenterLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const routeCenterLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+
+  return {
+    lat: globe.focus_lat * 0.65 + routeCenterLat * 0.35,
+    lng: globe.focus_lng * 0.65 + routeCenterLng * 0.35,
+    altitude,
+  };
+}
+
+function applyGlobeView(
+  instance: GlobeInstance,
+  globe: RendezvousGlobeData,
+  material: ShaderMaterial,
+  animateMs: number,
+  freezeRotation: boolean,
+) {
+  const pov = routePointOfView(globe);
+  instance.pointOfView(pov, animateMs);
+  updateGlobeRotation(material, pov.lng, pov.lat);
+  const controls = instance.controls();
+  controls.autoRotate = !freezeRotation;
+  controls.autoRotateSpeed = freezeRotation ? 0 : 0.28;
+}
 
 function esc(s: string): string {
   return s
@@ -143,14 +213,16 @@ export function RendezvousGlobe({
   const mountRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<GlobeInstance | null>(null);
   const materialRef = useRef<ShaderMaterial | null>(null);
-  const [dim, setDim] = useState(0);
+  const texturesRef = useRef<import("three").Texture[]>([]);
+  const [viewport, setViewport] = useState<GlobeViewport>({ logical: 0 });
 
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const measure = () => {
-      const w = Math.floor(el.clientWidth);
-      if (w > 0) setDim(w);
+      const logical = Math.floor(el.clientWidth);
+      if (logical <= 0) return;
+      setViewport({ logical });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -168,7 +240,7 @@ export function RendezvousGlobe({
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined" || dim <= 0 || !globe.points.length) return;
+    if (typeof window === "undefined" || viewport.logical <= 0 || !globe.points.length) return;
     const mount = mountRef.current;
     if (!mount) return;
 
@@ -179,6 +251,7 @@ export function RendezvousGlobe({
       const [dayTexture, nightTexture] = await loadDayNightTextures();
       if (disposed || !mountRef.current) return;
 
+      texturesRef.current = [dayTexture, nightTexture];
       const material = createDayNightMaterial(dayTexture, nightTexture);
       materialRef.current = material;
 
@@ -188,25 +261,27 @@ export function RendezvousGlobe({
 
       if (disposed || !mountRef.current) return;
 
-      instance = Globe()(mountRef.current).width(dim).height(dim);
+      instance = Globe()(mountRef.current)
+        .width(viewport.logical)
+        .height(viewport.logical);
       configureGlobeLayers(instance, globe, material);
       globeRef.current = instance;
 
-      const controls = instance.controls();
-      controls.autoRotate = !freezeRotation;
-      controls.autoRotateSpeed = freezeRotation ? 0 : 0.28;
+      try {
+        const maxAniso = instance.renderer().capabilities.getMaxAnisotropy();
+        boostTextureAnisotropy(texturesRef.current, maxAniso);
+      } catch {
+        /* noop */
+      }
 
-      instance.pointOfView(
-        { lat: globe.focus_lat, lng: globe.focus_lng, altitude: 2.0 },
-        freezeRotation ? 800 : 0,
-      );
-      updateGlobeRotation(material, globe.focus_lng, globe.focus_lat);
+      applyGlobeView(instance, globe, material, freezeRotation ? 800 : 0, freezeRotation);
     })();
 
     return () => {
       disposed = true;
       globeRef.current = null;
       materialRef.current = null;
+      texturesRef.current = [];
       try {
         instance?._destructor?.();
       } catch {
@@ -214,20 +289,16 @@ export function RendezvousGlobe({
       }
       if (mount) mount.replaceChildren();
     };
-  }, [dim]);
+  }, [viewport.logical]);
 
   useEffect(() => {
     const g = globeRef.current;
     const material = materialRef.current;
-    if (!g || !material || dim <= 0) return;
-    g.width(dim).height(dim);
+    if (!g || !material || viewport.logical <= 0) return;
+    g.width(viewport.logical).height(viewport.logical);
     configureGlobeLayers(g, globe, material);
-    g.pointOfView({ lat: globe.focus_lat, lng: globe.focus_lng, altitude: 2.0 }, 800);
-    updateGlobeRotation(material, globe.focus_lng, globe.focus_lat);
-    const controls = g.controls();
-    controls.autoRotate = !freezeRotation;
-    controls.autoRotateSpeed = freezeRotation ? 0 : 0.28;
-  }, [globe, freezeRotation, dim]);
+    applyGlobeView(g, globe, material, 800, freezeRotation);
+  }, [globe, freezeRotation, viewport.logical]);
 
   if (!globe.points.length) return null;
 
@@ -237,9 +308,9 @@ export function RendezvousGlobe({
         ref={mountRef}
         className="block w-full [&>canvas]:!block [&>canvas]:!h-full [&>canvas]:!w-full"
         style={{
-          width: dim > 0 ? dim : "100%",
-          height: dim > 0 ? dim : undefined,
-          aspectRatio: dim > 0 ? undefined : "1 / 1",
+          width: viewport.logical > 0 ? viewport.logical : "100%",
+          height: viewport.logical > 0 ? viewport.logical : undefined,
+          aspectRatio: viewport.logical > 0 ? undefined : "1 / 1",
         }}
         aria-label="Globe showing meeting location and travel routes"
       />
