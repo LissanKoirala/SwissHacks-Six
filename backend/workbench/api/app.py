@@ -20,6 +20,7 @@ from ..db_models import RmUser
 from ..graph.crm_graph import build_crm_graph
 from ..models import CaptureConfirmRequest, CaptureExtractRequest, RMQueryRequest
 from ..scheduler import start_scheduler
+from ..agents.news_watcher import start_news_watch
 from ..seed import build_world
 
 
@@ -213,6 +214,15 @@ def create_app() -> FastAPI:
         from ..agents.opportunities import build_opportunities
         return build_opportunities(world, client_id)
 
+    @app.get("/clients/{client_id}/audit")
+    def client_audit(client_id: str):
+        """Proactive, news-independent standing-deviation audit (Portfolio Agent): held names that
+        conflict with the client's DNA, CIO deviations, and mandate drift breaches — all cited."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.portfolio_audit import build_portfolio_audit
+        return build_portfolio_audit(world, client_id)
+
     @app.get("/clients/{client_id}/transactions")
     def client_transactions(client_id: str):
         """Transaction ledger + cash flows: cost basis, unrealised P&L, income yield (HI4)."""
@@ -325,7 +335,20 @@ def create_app() -> FastAPI:
         """The composed briefing text over the seed book — visible even logged-out."""
         return {"text": compose_for(world)}
 
+    @app.get("/breaking")
+    def breaking():
+        """Breaking alerts the 24/7 news watch has surfaced since boot (newest first)."""
+        return {"alerts": world.breaking, "watch_enabled": settings.news_watch_enabled}
+
+    @app.post("/breaking/poll")
+    def breaking_poll():
+        """Run one news-watch tick on demand (the demo trigger — no interval wait). Ingests any new
+        live news, surfaces fresh matches as breaking alerts. No-op offline."""
+        from ..agents.news_watcher import poll_once
+        return {"new_alerts": poll_once(world, push=False)}
+
     start_scheduler(world)
+    start_news_watch(world)
 
     return app
 

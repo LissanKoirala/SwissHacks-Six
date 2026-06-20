@@ -55,6 +55,10 @@ class World:
     # per-world insights cache (lazy, §9) — keyed by client_id, bound to THIS world
     insights_cache: dict = field(default_factory=dict)
 
+    # 24/7 news watch (the News Agent's live tick): a bounded buffer of breaking alerts the poller
+    # has surfaced since boot, newest first, so the dashboard can show real-time activity.
+    breaking: list = field(default_factory=list)
+
     # --- convenience lookups ---
 
     def portfolio_of(self, client_id: str) -> str:
