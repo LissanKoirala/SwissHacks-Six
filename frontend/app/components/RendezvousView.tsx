@@ -159,36 +159,44 @@ function ModeToggle({
   mode,
   defaultMode,
   onChange,
+  busy,
 }: {
   mode: MeetingOptimization["mode"];
   defaultMode: MeetingOptimization["default_mode"];
   onChange: (m: MeetingOptimization["mode"]) => void;
+  busy?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
-      {(["fairness", "environmental"] as const).map((m) => {
-        const active = mode === m;
-        const isDefault = defaultMode === m;
-        return (
-          <button
-            key={m}
-            type="button"
-            onClick={() => onChange(m)}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              active
-                ? m === "environmental"
-                  ? "bg-success text-white shadow-sm"
-                  : "bg-card text-ink shadow-sm"
-                : "text-muted-foreground hover:text-ink"
-            }`}
-          >
-            {m === "environmental" ? "CO₂-first" : "Fairness-first"}
-            {isDefault && !active && (
-              <span className="ml-1 text-[10px] opacity-60">(auto)</span>
-            )}
-          </button>
-        );
-      })}
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
+        {(["fairness", "environmental"] as const).map((m) => {
+          const active = mode === m;
+          const isDefault = defaultMode === m;
+          return (
+            <button
+              key={m}
+              type="button"
+              disabled={busy}
+              onClick={() => onChange(m)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-70 ${
+                active
+                  ? m === "environmental"
+                    ? "bg-success text-white shadow-sm"
+                    : "bg-card text-ink shadow-sm"
+                  : "text-muted-foreground hover:text-ink"
+              }`}
+            >
+              {m === "environmental" ? "CO₂-first" : "Fairness-first"}
+              {isDefault && !active && (
+                <span className="ml-1 text-[10px] opacity-60">(auto)</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {busy && (
+        <span className="text-[10px] text-muted-foreground">Updating…</span>
+      )}
     </div>
   );
 }
@@ -401,6 +409,8 @@ function OptimiserHero({
   quotesPending,
   quotesDeferred,
   quotesPendingFor,
+  displayMode,
+  refreshing,
 }: {
   meeting: MeetingOptimization;
   selected: CandidateCity;
@@ -413,8 +423,10 @@ function OptimiserHero({
   quotesPending?: boolean;
   quotesDeferred?: boolean;
   quotesPendingFor?: (iata: string) => boolean;
+  displayMode?: MeetingOptimization["mode"];
+  refreshing?: boolean;
 }) {
-  const greenest = meeting.mode === "environmental";
+  const greenest = (displayMode ?? meeting.mode) === "environmental";
   const longHaul = selected.legs.filter((l) => l.mode === "flight").length;
   const globe = selected.globe ?? meeting.globe;
   const briefing = selected.city_briefing;
@@ -480,9 +492,10 @@ function OptimiserHero({
                 {selected.country} · {meeting.participants.length} attendees
               </p>
               <ModeToggle
-                mode={meeting.mode}
+                mode={displayMode ?? meeting.mode}
                 defaultMode={meeting.default_mode}
                 onChange={onModeChange}
+                busy={refreshing}
               />
             </div>
 
@@ -590,7 +603,7 @@ function OptimiserHero({
       {meeting.candidates.length > 0 && (
         <CandidateTable
           candidates={meeting.candidates}
-          mode={meeting.mode}
+          mode={displayMode ?? meeting.mode}
           highlightIata={highlightIata}
           onSelect={onSelectCity}
           quotesPendingFor={quotesPendingFor}
@@ -785,6 +798,7 @@ export function RendezvousView({ clientId }: { clientId: string }) {
   const [data, setData] = useState<Rendezvous | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [pickedIata, setPickedIata] = useState<string | null>(null);
   const [modeOverride, setModeOverride] = useState<
     MeetingOptimization["mode"] | null
@@ -795,12 +809,36 @@ export function RendezvousView({ clientId }: { clientId: string }) {
   >({});
   const quoteCacheRef = useRef(quoteCache);
   quoteCacheRef.current = quoteCache;
+  const readyRef = useRef(false);
+
+  // Hard reset when switching clients.
+  useEffect(() => {
+    readyRef.current = false;
+    setData(null);
+    setQuoteCache({});
+    setPickedIata(null);
+    setModeOverride(null);
+    setEventStart(null);
+    setRefreshing(false);
+    setLoading(true);
+    setError(null);
+  }, [clientId]);
+
+  // Clear stale fares when the meeting date changes (not on mode toggle).
+  useEffect(() => {
+    setQuoteCache({});
+  }, [eventStart]);
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
+    const soft = readyRef.current;
+    if (soft) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
-    setQuoteCache({});
+
     api
       .rendezvous(clientId, {
         mode: modeOverride ?? undefined,
@@ -809,13 +847,18 @@ export function RendezvousView({ clientId }: { clientId: string }) {
       .then((r) => {
         if (!alive) return;
         setData(r);
+        readyRef.current = true;
         setPickedIata((cur) => {
           const iatas = new Set(r.meeting?.candidates.map((c) => c.iata) ?? []);
           return cur && iatas.has(cur) ? cur : null;
         });
       })
       .catch((e) => alive && setError(String(e)))
-      .finally(() => alive && setLoading(false));
+      .finally(() => {
+        if (!alive) return;
+        setLoading(false);
+        setRefreshing(false);
+      });
     return () => {
       alive = false;
     };
@@ -876,7 +919,7 @@ export function RendezvousView({ clientId }: { clientId: string }) {
     };
   }, [clientId, highlightIata, eventIso, meeting?.live_flight_quotes_deferred]);
 
-  if (loading) {
+  if (loading && !data) {
     return <p className="p-5 text-sm text-muted-foreground">Planning the next rendezvous…</p>;
   }
   if (error) {
@@ -899,28 +942,40 @@ export function RendezvousView({ clientId }: { clientId: string }) {
   );
   const quotesPendingFor = (iata: string) =>
     quotesDeferred && !quoteCache[iata];
+  const displayMode = modeOverride ?? meeting?.mode;
 
   return (
     <div className="space-y-6">
       {hasMeeting && meetingWithQuotes && selectedCandidate && meeting && (
-        <OptimiserHero
-          meeting={meetingWithQuotes}
-          selected={selectedCandidate}
-          highlightIata={highlightIata}
-          isPreview={
-            pickedIata !== null && pickedIata !== meeting.optimal_iata
+        <div
+          className={
+            refreshing
+              ? "pointer-events-none opacity-75 transition-opacity duration-200"
+              : undefined
           }
-          onSelectCity={setPickedIata}
-          onModeChange={(m) => {
-            setModeOverride(m);
-            setPickedIata(null);
-          }}
-          onDatePick={setEventStart}
-          onDateCustom={setEventStart}
-          quotesPending={quotesPending}
-          quotesDeferred={quotesDeferred}
-          quotesPendingFor={quotesPendingFor}
-        />
+          aria-busy={refreshing}
+        >
+          <OptimiserHero
+            meeting={meetingWithQuotes}
+            selected={selectedCandidate}
+            highlightIata={highlightIata}
+            isPreview={
+              pickedIata !== null && pickedIata !== meeting.optimal_iata
+            }
+            onSelectCity={setPickedIata}
+            onModeChange={(m) => {
+              if (m === displayMode) return;
+              setModeOverride(m);
+            }}
+            onDatePick={setEventStart}
+            onDateCustom={setEventStart}
+            quotesPending={quotesPending}
+            quotesDeferred={quotesDeferred}
+            quotesPendingFor={quotesPendingFor}
+            displayMode={displayMode}
+            refreshing={refreshing}
+          />
+        </div>
       )}
 
       {activities.length > 0 && selectedCandidate && (

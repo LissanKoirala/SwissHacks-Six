@@ -1,8 +1,9 @@
-"""Google sign-in, identity only (spec §5). Scopes: openid email profile — no Calendar/Gmail,
-so no access/refresh tokens are persisted. A signed session cookie holds only the user id.
+"""Google sign-in + optional Gmail/Calendar (scopes from settings.google_scopes). A signed
+session cookie holds only the user id; Google access/refresh tokens are Fernet-encrypted in the
+oauth_token table so the app can read inbox / draft / read+add calendar events on the RM's behalf.
 
-Auth is optional: logged-out requests still get the seed demo; signing in only gates the
-phone/briefing settings and the test-send. Degrades gracefully when Google isn't configured."""
+Auth is optional: logged-out requests still get the seed demo. Degrades gracefully when Google
+isn't configured."""
 from __future__ import annotations
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
@@ -28,7 +29,7 @@ def init_oauth() -> None:
         client_id=settings.google_client_id,
         client_secret=settings.google_client_secret,
         server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-        client_kwargs={"scope": "openid email profile"},
+        client_kwargs={"scope": settings.google_scopes},
     )
     _registered = True
 
@@ -41,7 +42,11 @@ async def google_login(request: Request):
     if not settings.google_enabled:
         raise HTTPException(503, "Google sign-in not configured (set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)")
     init_oauth()
-    return await oauth.google.authorize_redirect(request, settings.google_redirect_uri)
+    # offline + consent → guarantees a refresh token so we can call Gmail/Calendar later.
+    return await oauth.google.authorize_redirect(
+        request, settings.google_redirect_uri,
+        access_type="offline", prompt="consent", include_granted_scopes="true",
+    )
 
 
 @router.get("/google/callback")
@@ -68,6 +73,12 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
     user.name = info.get("name") or user.name or ""
     user.picture = info.get("picture")
     db.commit()
+
+    # Persist the encrypted Google tokens so Gmail/Calendar work on the RM's behalf.
+    if settings.workspace_enabled and token.get("access_token"):
+        from .google_api import store_token
+
+        store_token(db, user, token)
 
     request.session["user_id"] = user.id
     return RedirectResponse(settings.frontend_url)
@@ -105,12 +116,36 @@ def public_user(user: RmUser) -> dict:
     }
 
 
+def _workspace_status(db: Session, user: RmUser) -> dict:
+    if not settings.workspace_enabled:
+        return {"connected": False, "gmail": False, "calendar": False}
+    from .google_api import token_for
+
+    row = token_for(db, user)
+    scopes = (row.scopes if row else "") or ""
+    return {
+        "connected": row is not None,
+        "gmail": "gmail" in scopes,
+        "calendar": "calendar" in scopes,
+    }
+
+
 @router.get("/me")
-def me(user: RmUser | None = Depends(current_user)):
-    return public_user(user) if user else None
+def me(user: RmUser | None = Depends(current_user), db: Session = Depends(get_db)):
+    if not user:
+        return None
+    out = public_user(user)
+    out["workspace"] = _workspace_status(db, user)
+    return out
 
 
 @router.get("/config")
 def auth_config():
-    """Lets the UI show whether Google sign-in is wired before creds exist."""
-    return {"google_enabled": settings.google_enabled, "twilio_enabled": settings.twilio_enabled}
+    """Lets the UI show whether Google sign-in / workspace is wired before creds exist."""
+    return {
+        "google_enabled": settings.google_enabled,
+        "twilio_enabled": settings.twilio_enabled,
+        "workspace_enabled": settings.workspace_enabled,
+        "gmail_scope": settings.gmail_scope,
+        "calendar_scope": settings.calendar_scope,
+    }

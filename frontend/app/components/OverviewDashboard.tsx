@@ -6,7 +6,7 @@
 // any client name drills into ClientView. This view decides nothing; it orients the RM.
 
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, FileText, Rocket } from "lucide-react";
+import { BarChart3, ChevronRight, FileText, Rocket } from "lucide-react";
 import type {
   Overview,
   OverviewTask,
@@ -19,8 +19,9 @@ import type {
 } from "@/lib/types";
 import { api } from "@/lib/api";
 import { chf, prettyDate, titleCase } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { ClientAvatar } from "./ClientAvatar";
-import { MandatePill, PolarityChip } from "./ui";
+import { Collapsible, MandatePill, PolarityChip } from "./ui";
 import { ProvenanceTag } from "./Provenance";
 
 /* ---------------------------------------------------------------- tokens --- */
@@ -210,6 +211,92 @@ function TaskCard({
         </button>
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------- priority grouping §1 --- */
+
+const SEV_ORDER: Record<Severity, number> = { high: 0, med: 1, low: 2 };
+
+interface ClientTaskGroupData {
+  client_id: string;
+  client_name: string;
+  mandate: string;
+  tasks: OverviewTask[];
+  top_severity: Severity;
+}
+
+function groupTasksByClient(tasks: OverviewTask[]): ClientTaskGroupData[] {
+  const map = new Map<string, ClientTaskGroupData>();
+  for (const t of tasks) {
+    const g =
+      map.get(t.client_id) ??
+      {
+        client_id: t.client_id,
+        client_name: t.client_name,
+        mandate: t.mandate,
+        tasks: [],
+        top_severity: "low" as Severity,
+      };
+    g.tasks.push(t);
+    map.set(t.client_id, g);
+  }
+  for (const g of map.values()) {
+    g.tasks.sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
+    g.top_severity = g.tasks[0].severity;
+  }
+  // most urgent clients first, then by how many issues they carry
+  return [...map.values()].sort(
+    (a, b) =>
+      SEV_ORDER[a.top_severity] - SEV_ORDER[b.top_severity] ||
+      b.tasks.length - a.tasks.length,
+  );
+}
+
+function ClientTaskGroup({
+  group,
+  onOpen,
+}: {
+  group: ClientTaskGroupData;
+  onOpen: (id: string) => void;
+}) {
+  const sev = SEVERITY[group.top_severity];
+  return (
+    <Collapsible
+      defaultOpen
+      trigger={(open, toggle) => (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
+            open && "rounded-b-none",
+          )}
+        >
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              open && "rotate-90",
+            )}
+            aria-hidden
+          />
+          <ClientAvatar clientId={group.client_id} name={group.client_name} size="sm" />
+          <span className="text-sm font-semibold text-ink">{group.client_name}</span>
+          <MandatePill mandate={group.mandate} />
+          <span className={`chip ring-1 ring-inset ${sev.chip}`}>{sev.label}</span>
+          <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
+            {group.tasks.length}
+          </span>
+        </button>
+      )}
+    >
+      <div className="space-y-3 rounded-b-lg border border-t-0 border-border p-3">
+        {group.tasks.map((t) => (
+          <TaskCard key={t.id} task={t} onOpen={onOpen} />
+        ))}
+      </div>
+    </Collapsible>
   );
 }
 
@@ -431,8 +518,88 @@ export function OverviewDashboard({
 
   if (loading) {
     return (
-      <div className="grid h-full place-items-center text-sm text-muted-foreground">
-        Loading the desk…
+      <div className="scroll-thin h-full overflow-y-auto">
+        <div className="mx-auto max-w-6xl animate-pulse px-8 py-6">
+          {/* greeting + briefing */}
+          <div className="mb-5">
+            <div className="h-8 w-64 rounded-lg bg-muted" />
+            <div className="mt-2 h-10 rounded-lg bg-muted" />
+          </div>
+
+          {/* kpi strip */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="card px-4 py-3">
+                <div className="h-7 w-12 rounded bg-muted" />
+                <div className="mt-2 h-3 w-20 rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+
+          {/* priority tasks */}
+          <div className="mt-7">
+            <div className="mb-3 h-4 w-40 rounded bg-muted" />
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="card relative overflow-hidden p-4 pl-5">
+                  <span className="absolute inset-y-0 left-0 w-1.5 rounded-l-lg bg-muted" />
+                  <div className="flex items-start gap-3">
+                    <div className="h-9 w-9 shrink-0 rounded-full bg-muted" />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex gap-2">
+                        <div className="h-4 w-28 rounded bg-muted" />
+                        <div className="h-4 w-16 rounded bg-muted" />
+                      </div>
+                      <div className="h-3 w-3/4 rounded bg-muted" />
+                      <div className="h-12 rounded-lg bg-muted" />
+                    </div>
+                    <div className="h-8 w-24 shrink-0 rounded-lg bg-muted" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* meetings + market moves */}
+          <div className="mt-7 grid gap-6 lg:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, col) => (
+              <div key={col}>
+                <div className="mb-3 h-4 w-32 rounded bg-muted" />
+                <div className="card space-y-2.5 p-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex gap-3 rounded-lg border border-border p-3">
+                      <div className="h-12 w-12 shrink-0 rounded-lg bg-muted" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-24 rounded bg-muted" />
+                        <div className="h-3 w-48 rounded bg-muted" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* portfolio events + news wire */}
+          <div className="mt-7 grid gap-6 lg:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, col) => (
+              <div key={col}>
+                <div className="mb-3 h-4 w-36 rounded bg-muted" />
+                <div className="card space-y-2.5 p-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="rounded-lg border border-border p-3 space-y-2">
+                      <div className="flex gap-2 items-center">
+                        <div className="h-5 w-16 rounded-full bg-muted" />
+                        <div className="h-3 flex-1 rounded bg-muted" />
+                      </div>
+                      <div className="h-3 w-5/6 rounded bg-muted" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -477,24 +644,50 @@ export function OverviewDashboard({
 
         <KpiStrip o={o} />
 
-        {/* §1 priority tasks */}
+        {/* §1 priority tasks — collapsible section, grouped per client */}
         <section className="mt-7">
-          <SectionHeader
-            title="Priority — touch base"
-            count={o.priority_tasks.length}
-            hint="a world event hit their profile"
-          />
-          {o.priority_tasks.length === 0 ? (
-            <div className="card p-5 text-sm text-muted-foreground">
-              Nothing flagged across the book this morning.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {o.priority_tasks.map((t) => (
-                <TaskCard key={t.id} task={t} onOpen={onOpenClient} />
-              ))}
-            </div>
-          )}
+          <Collapsible
+            defaultOpen
+            trigger={(open, toggle) => (
+              <div className="mb-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-expanded={open}
+                  className="group flex items-center gap-2"
+                >
+                  <ChevronRight
+                    className={cn(
+                      "h-4 w-4 text-muted-foreground transition-transform",
+                      open && "rotate-90",
+                    )}
+                    aria-hidden
+                  />
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground transition-colors group-hover:text-primary">
+                    Priority — touch base
+                  </h2>
+                </button>
+                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
+                  {o.priority_tasks.length}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  a world event hit their profile
+                </span>
+              </div>
+            )}
+          >
+            {o.priority_tasks.length === 0 ? (
+              <div className="card p-5 text-sm text-muted-foreground">
+                Nothing flagged across the book this morning.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {groupTasksByClient(o.priority_tasks).map((g) => (
+                  <ClientTaskGroup key={g.client_id} group={g} onOpen={onOpenClient} />
+                ))}
+              </div>
+            )}
+          </Collapsible>
         </section>
 
         {/* §2 meetings + §3 market moves */}

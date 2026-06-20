@@ -20,6 +20,8 @@ import type {
   CaptureConfirm,
   CaptureResult,
   CapturePrompts,
+  CaptureFollowup,
+  CaptureFollowupBody,
   Overview,
   Opportunity,
   PortfolioAudit,
@@ -31,6 +33,19 @@ import type {
   BriefingPrefsBody,
   BriefingPrefsResult,
   SendTestResult,
+  AuthConfig,
+  GmailMessage,
+  CalendarEvent,
+  DraftBody,
+  DraftResult,
+  EventBody,
+  AddEventResult,
+  Task,
+  TaskCreateBody,
+  TaskUpdateBody,
+  TaskSignoffBody,
+  IngestResult,
+  EmailMessage,
 } from "./types";
 
 // Default to 127.0.0.1 (not "localhost"): on macOS "localhost" can resolve to IPv6 ::1 first,
@@ -73,6 +88,20 @@ async function send<T>(method: "POST" | "PUT", path: string, body: unknown): Pro
 
 const post = <T>(path: string, body: unknown) => send<T>("POST", path, body);
 const put = <T>(path: string, body: unknown) => send<T>("PUT", path, body);
+
+async function patch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "PATCH",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    cache: "no-store",
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`${res.status} ${res.statusText} — PATCH ${path}`);
+  }
+  return (await res.json()) as T;
+}
 
 export const api = {
   overview: () => get<Overview>("/overview"),
@@ -121,20 +150,44 @@ export const api = {
     post<CaptureResult>(`/clients/${id}/capture/confirm`, body),
   capturePrompts: (id: string) =>
     get<CapturePrompts>(`/clients/${id}/capture/prompts`),
+  captureFollowup: (id: string, body: CaptureFollowupBody) =>
+    post<CaptureFollowup>(`/clients/${id}/capture/followup`, body),
   query: (id: string, body: RMQueryBody) =>
     post<RMQueryResult>(`/clients/${id}/query`, body),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
 
   // --- auth (Google sign-in, identity only) + Twilio morning briefing ---
   me: () => get<MeUser | null>("/auth/me"),
-  authConfig: () =>
-    get<{ google_enabled: boolean; twilio_enabled: boolean }>("/auth/config"),
+  authConfig: () => get<AuthConfig>("/auth/config"),
   loginUrl: () => `${API_BASE}/auth/google/login`,
   logout: () => post<{ ok: boolean }>("/auth/logout", {}),
   briefingPreview: () => get<{ text: string }>("/briefing/preview"),
   updateBriefing: (body: BriefingPrefsBody) =>
     put<BriefingPrefsResult>("/me/briefing", body),
   sendTestBriefing: () => post<SendTestResult>("/briefing/send-test", {}),
+
+  // --- Google Workspace (Gmail read/draft + Calendar read/add) ---
+  gmailInbox: () => get<{ messages: GmailMessage[] }>("/integrations/google/inbox"),
+  gmailDraft: (body: DraftBody) =>
+    post<DraftResult>("/integrations/google/draft", body),
+  calendarEvents: () =>
+    get<{ events: CalendarEvent[] }>("/integrations/google/calendar"),
+  addCalendarEvent: (body: EventBody) =>
+    post<AddEventResult>("/integrations/google/calendar", body),
+
+  // --- The Front Door: inbox + agentic kanban board ---
+  tasks: (clientId?: string) =>
+    get<Task[]>(`/tasks${clientId ? `?client_id=${clientId}` : ""}`),
+  inbox: () => get<EmailMessage[]>("/inbox"),
+  createTask: (body: TaskCreateBody) => post<Task>("/tasks", body),
+  updateTask: (id: string, body: TaskUpdateBody) =>
+    patch<Task>(`/tasks/${id}`, body),
+  runTask: (id: string) => post<Task>(`/tasks/${id}/execute`, {}),
+  signoffTask: (id: string, body: TaskSignoffBody) =>
+    post<Task>(`/tasks/${id}/signoff`, body),
+  dismissTask: (id: string) => post<Task>(`/tasks/${id}/dismiss`, {}),
+  ingestEmail: () => post<IngestResult>("/ingest/email", {}),
+  ingestNews: () => post<IngestResult>("/ingest/news", {}),
   ocr: async (image: Blob, filename = "note.png"): Promise<{ text: string; provider: string; model?: string }> => {
     const form = new FormData();
     form.append("file", image, filename);
@@ -144,6 +197,19 @@ export const api = {
       throw new Error(`${res.status} ${res.statusText} — POST /api/ocr ${detail}`);
     }
     return (await res.json()) as { text: string; provider: string; model?: string };
+  },
+  tts: async (text: string): Promise<Blob> => {
+    const res = await fetch(`${API_BASE}/api/tts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${res.statusText} — POST /api/tts ${detail}`);
+    }
+    return res.blob();
   },
   transcribe: async (audio: Blob, filename = "audio.webm"): Promise<{ text: string; provider: string }> => {
     const form = new FormData();

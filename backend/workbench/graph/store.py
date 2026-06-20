@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from ..models import (
     CashFlow,
     CIOStock,
+    EmailMessage,
     Fundamentals,
     Holding,
     InterestEdge,
@@ -21,6 +22,7 @@ from ..models import (
     NewsItem,
     PortfolioTransaction,
     Profile,
+    Task,
 )
 
 
@@ -58,6 +60,10 @@ class World:
     # 24/7 news watch (the News Agent's live tick): a bounded buffer of breaking alerts the poller
     # has surfaced since boot, newest first, so the dashboard can show real-time activity.
     breaking: list = field(default_factory=list)
+
+    # --- The Front Door: inbound email + the agentic kanban board (bound to THIS world) ---
+    inbox: list[EmailMessage] = field(default_factory=list)   # triaged inbound emails
+    tasks: list[Task] = field(default_factory=list)           # the kanban tasks, persisted
 
     # --- convenience lookups ---
 
@@ -116,3 +122,14 @@ class World:
         Portfolio Agent must flag ('assets no longer on the CIO list')."""
         return [h for h in self.holdings_for_client(client_id)
                 if h.cio_status in ("OFF_LIST", "SELL")]
+
+    # --- task board lookups ---
+
+    def task_by_id(self, task_id: str):
+        for t in self.tasks:
+            if t.id == task_id:
+                return t
+        return None
+
+    def task_dedup_keys(self) -> set[str]:
+        return {t.dedup_key for t in self.tasks if t.dedup_key}

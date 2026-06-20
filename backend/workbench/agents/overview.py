@@ -413,7 +413,11 @@ def _briefing(tasks: list[OverviewTask], meetings: list[OverviewMeeting]) -> str
 
 def build_overview(world: World) -> dict:
     today = date.today()
-    insights_by_client = {cid: get_insights(world, cid) for cid in world.clients}
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    client_ids = list(world.clients)
+    with ThreadPoolExecutor(max_workers=len(client_ids) or 1) as pool:
+        futures = {pool.submit(get_insights, world, cid): cid for cid in client_ids}
+        insights_by_client = {futures[f]: f.result() for f in as_completed(futures)}
 
     tasks = _build_tasks(world, insights_by_client)
     alerted = {t.client_id for t in tasks}

@@ -156,6 +156,15 @@ def build_world(use_live_news: bool = False) -> World:
     except Exception:
         pass
 
+    # --- The Front Door: wire the agentic kanban board ---
+    # Replay persisted tasks if present, else bootstrap from the seed inbox + news watch so the
+    # board opens already-worked. Guarded so a board failure never crashes the rest of the app.
+    try:
+        from .taskboard import bootstrap as _bootstrap_board
+        _bootstrap_board(world)
+    except Exception:
+        pass
+
     return world
 
 

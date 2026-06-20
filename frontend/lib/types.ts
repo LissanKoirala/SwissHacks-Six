@@ -379,6 +379,7 @@ export interface IntegrationHealth {
   use_live: boolean;
   probes: IntegrationProbe[];
   stt?: { provider: string; enabled: boolean };
+  tts?: { provider: string; enabled: boolean };
   ocr?: { provider: string; enabled: boolean; model?: string };
 }
 
@@ -939,12 +940,14 @@ export interface ProposedEdge {
   polarity: Polarity;
   rationale: string;
   selected: boolean;
+  weight: number; // RM-set importance (1.0 = normal)
 }
 
 export interface ProposedFacet {
   facet: string;
   text: string;
   selected: boolean;
+  weight: number; // RM-set importance (1.0 = normal)
 }
 
 export interface RiskPreview {
@@ -984,6 +987,9 @@ export interface CaptureConfirm {
   date?: string;
   edges: ProposedEdge[];
   facets: ProposedFacet[];
+  // Risk cues from the staged draft, carried through so the timeline reflects the
+  // new entry without a second model call.
+  risk_signals?: { term: string; direction: "up" | "down" | "flat" }[];
 }
 
 export interface CaptureResult {
@@ -1000,6 +1006,20 @@ export interface CapturePrompt {
   kind: string;
   question: string;
   hint: string;
+}
+
+// Conversational capture — the TTS voice asks one follow-up at a time.
+export interface CaptureFollowupBody {
+  note: string;
+  asked: string[];
+}
+
+export interface CaptureFollowup {
+  id: string;
+  question: string;
+  done: boolean;
+  kind: string;
+  source: "llm" | "guided";
 }
 
 export interface CapturePrompts {
@@ -1125,6 +1145,12 @@ export interface Overview {
 
 // --- Auth (Google sign-in) + Twilio morning briefing ---
 
+export interface WorkspaceStatus {
+  connected: boolean;
+  gmail: boolean;
+  calendar: boolean;
+}
+
 export interface MeUser {
   id: string;
   email: string;
@@ -1133,6 +1159,63 @@ export interface MeUser {
   phone_e164?: string | null;
   briefing_hour: number;
   briefing_enabled: boolean;
+  workspace?: WorkspaceStatus;
+}
+
+export interface GmailMessage {
+  id: string;
+  thread_id: string;
+  from: string;
+  subject: string;
+  date: string;
+  snippet: string;
+  unread: boolean;
+}
+
+export interface CalendarEvent {
+  id: string;
+  summary: string;
+  start: string;
+  end: string;
+  all_day: boolean;
+  location: string;
+  attendees: string[];
+  html_link: string;
+}
+
+export interface DraftBody {
+  to: string;
+  subject?: string;
+  body?: string;
+}
+
+export interface DraftResult {
+  id: string;
+  message_id?: string | null;
+  url: string;
+}
+
+export interface EventBody {
+  summary: string;
+  start: string;
+  end: string;
+  attendees?: string[];
+  description?: string;
+  location?: string;
+}
+
+export interface AddEventResult {
+  id: string;
+  html_link: string;
+  summary: string;
+}
+
+export interface AuthConfig {
+  google_enabled: boolean;
+  twilio_enabled: boolean;
+  workspace_enabled: boolean;
+  gmail_scope: boolean;
+  calendar_scope: boolean;
 }
 
 export interface BriefingPrefsBody {
@@ -1156,4 +1239,96 @@ export interface SendTestResult {
   sid?: string;
   error?: string;
   skipped?: string;
+}
+
+/* --------------------------------------------------------------------------
+ * The Front Door — inbound email + the agentic kanban board
+ * ------------------------------------------------------------------------ */
+
+export type TaskStatus = "backlog" | "started" | "review" | "done" | "dismissed";
+export type TaskPriority = "low" | "medium" | "high";
+export type TaskKind =
+  | "email_reply"
+  | "investment_review"
+  | "research"
+  | "schedule"
+  | "document"
+  | "general";
+export type TaskSource = "email" | "news" | "manual" | "system";
+
+export interface EmailMessage {
+  id: string;
+  from_name: string;
+  from_email: string;
+  to_email: string;
+  subject: string;
+  body: string;
+  received_at: string;
+  client_id?: string | null;
+  provenance: Provenance;
+}
+
+export interface DraftEmail {
+  to_name: string;
+  to_email: string;
+  subject: string;
+  body: string;
+}
+
+export interface TaskArtifact {
+  kind: "draft_email" | "strategy" | "research_note" | "analysis" | "note";
+  summary: string;
+  body: string;
+  draft_email?: DraftEmail | null;
+  strategy_proposal?: StrategyProposal | null;
+  dialogue?: DialogueSuggestion | null;
+  confidence: "high" | "medium" | "low";
+  llm_used: boolean;
+  provenance: Provenance[];
+}
+
+export interface Task {
+  id: string;
+  client_id?: string | null;
+  title: string;
+  detail: string;
+  kind: TaskKind;
+  source: TaskSource;
+  status: TaskStatus;
+  priority: TaskPriority;
+  created_at: string;
+  updated_at: string;
+  dedup_key?: string | null;
+  origin?: Provenance | null;
+  artifact?: TaskArtifact | null;
+  activity: string[];
+  complex: boolean;
+  requires_signoff: boolean;
+  signed_off_by?: string | null;
+}
+
+export interface TaskCreateBody {
+  title: string;
+  detail?: string;
+  client_id?: string | null;
+  kind?: TaskKind;
+  priority?: TaskPriority;
+  execute?: boolean;
+}
+
+export interface TaskUpdateBody {
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  title?: string;
+  detail?: string;
+}
+
+export interface TaskSignoffBody {
+  rm_name?: string;
+  edited_body?: string | null;
+}
+
+export interface IngestResult {
+  created: Task[];
+  count: number;
 }

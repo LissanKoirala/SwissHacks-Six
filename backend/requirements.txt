@@ -10,7 +10,12 @@ authlib>=1.3
 itsdangerous>=2.1
 twilio>=9.0
 apscheduler>=3.10
+cryptography>=42.0
 # bundled SQLite fallback for interpreters built without stdlib sqlite3 (no-op otherwise)
 pysqlite3-binary>=0.5; sys_platform == "linux"
 pytest>=8.0
 flights>=0.9
+# Gmail OAuth ingestion (EMAIL_PROVIDER=gmail). Optional — the offline/IMAP paths don't need these.
+google-api-python-client>=2.0
+google-auth>=2.0
+google-auth-oauthlib>=1.0

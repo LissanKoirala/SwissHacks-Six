@@ -36,6 +36,14 @@ class Provenance(BaseModel):
 
 # --- CRM graph --------------------------------------------------------------
 
+class RiskSignal(BaseModel):
+    """A risk-appetite cue lifted from a note: a short phrase and its direction.
+    `direction` is "up" (risk-on) or "down" (de-risk). Stored on the log entry so the
+    risk timeline can reuse the analysis instead of re-scoring (CLAUDE.md §9)."""
+    term: str
+    direction: str  # "up" | "down"
+
+
 class MeetingLogEntry(BaseModel):
     """Immutable, append-only raw entry (CLAUDE.md §3)."""
     id: str
@@ -46,12 +54,17 @@ class MeetingLogEntry(BaseModel):
     rm_name: Optional[str] = None
     note: str
     source: Provenance
+    # Risk cues captured by the analysis at confirm time. Empty → the timeline falls
+    # back to its keyword lexicon for this entry.
+    risk_signals: list[RiskSignal] = Field(default_factory=list)
 
 
 class Statement(BaseModel):
-    """One distilled profile point, with a pointer back to the log line that justifies it."""
+    """One distilled profile point, with a pointer back to the log line that justifies it.
+    `weight` is the RM-set importance (1.0 = normal) so the desk can rank what matters."""
     text: str
     provenance: Provenance
+    weight: float = 1.0
     # How this fact entered the profile: "seed" (curated ground truth), "log" (auto-derived from
     # the meeting log by the CRM agent), or "capture" (materialised from an RM note). Lets the UI
     # show that the DNA is genuinely read from the logs, not hand-entered (CLAUDE.md §8.B).
@@ -98,6 +111,18 @@ class CaptureExtractRequest(BaseModel):
     date: str = ""                  # ISO yyyy-mm-dd; default = server today if empty
 
 
+class CaptureFollowupRequest(BaseModel):
+    """Conversational capture turn: the note gathered so far + the ids of questions
+    already asked → the single best next spoken follow-up (read-only)."""
+    note: str = ""                  # transcript accumulated so far
+    asked: list[str] = []           # question ids already asked this session
+
+
+class TTSRequest(BaseModel):
+    """Text to speak aloud for the conversational capture voice."""
+    text: str
+
+
 class ProposedEdge(BaseModel):
     """A candidate interest edge the RM can deselect/edit before confirm."""
     topic: str                      # MUST be a TOPIC_VOCAB key
@@ -106,6 +131,7 @@ class ProposedEdge(BaseModel):
     polarity: str                   # opportunity / conflict / neutral
     rationale: str                  # short why, quotes the cue
     selected: bool = True           # default-on; RM can deselect/edit
+    weight: float = 1.0             # RM-set importance (1.0 = normal)
 
 
 class ProposedFacet(BaseModel):
@@ -113,6 +139,7 @@ class ProposedFacet(BaseModel):
     facet: str
     text: str
     selected: bool = True
+    weight: float = 1.0             # RM-set importance (1.0 = normal)
 
 
 class CaptureConfirmRequest(BaseModel):
@@ -124,6 +151,9 @@ class CaptureConfirmRequest(BaseModel):
     date: str = ""
     edges: list[ProposedEdge] = []  # only the RM-kept ones (selected) are applied
     facets: list[ProposedFacet] = []
+    # Risk cues the analysis surfaced for this note (from the staged draft). Carried
+    # through so the timeline reflects the new entry without a second model call.
+    risk_signals: list[RiskSignal] = []
 
 
 # --- News graph -------------------------------------------------------------
@@ -431,3 +461,110 @@ class ClientInsights(BaseModel):
     additional_proposals: list[StrategyProposal] = Field(default_factory=list)
     generated_at: str
     llm_used: bool = False
+
+
+# --- The Front Door: email/news → kanban → agentic execution → RM sign-off -----------------
+# A workbench that does the work. Two "front doors" create tasks: inbound client email and
+# selectively-surfaced news/risk. The agent then ATTEMPTS each task with the client's data at
+# hand and parks a draft for the RM to sign off (Golden rule §2: advisory only — the agent
+# proposes, the RM approves, nothing auto-executes a trade or auto-sends a message).
+
+# backlog  → freshly created, agent has not run yet
+# started  → a COMPLEX task the agent began and left part-done for the RM to carry forward
+# review   → the agent produced a complete draft; awaiting RM sign-off (the confirm gate)
+# done     → RM signed off
+# dismissed→ RM archived it (not actionable)
+TaskStatus = Literal["backlog", "started", "review", "done", "dismissed"]
+TaskPriority = Literal["low", "medium", "high"]
+# How the agent attempts the task; also picks which deterministic/LLM tool runs.
+TaskKind = Literal[
+    "email_reply", "investment_review", "research", "schedule", "document", "general",
+]
+TaskSource = Literal["email", "news", "manual", "system"]
+
+
+class EmailMessage(BaseModel):
+    """One inbound message at the front door. Seed fixtures offline; IMAP/Graph when a key is
+    dropped in (see ingestion/email.py). Routed to a client, then mined for tasks."""
+    # id + provenance are internal: sources (fixture/IMAP) set them, and a hand-dropped email
+    # (POST /ingest/email) gets them synthesised server-side from its content — see ingest_email.
+    id: str = ""
+    from_name: str = ""
+    from_email: str = ""
+    to_email: str = ""
+    subject: str = ""
+    body: str = ""
+    received_at: str = ""
+    client_id: Optional[str] = None      # resolved by the triage router (may be None = unrouted)
+    provenance: Optional[Provenance] = None
+
+
+class DraftEmail(BaseModel):
+    """A ready-to-send reply the RM reviews, edits and sends — never auto-sent (§2)."""
+    to_name: str = ""
+    to_email: str = ""
+    subject: str = ""
+    body: str = ""
+
+
+class TaskArtifact(BaseModel):
+    """The agent's work product for a task — what it actually produced with the client's data.
+    Everything here is a DRAFT for the RM; carries provenance so the RM can see why."""
+    kind: Literal["draft_email", "strategy", "research_note", "analysis", "note"]
+    summary: str                          # one line: what the agent did
+    body: str = ""                        # markdown deliverable (narrative / analysis / brief)
+    draft_email: Optional[DraftEmail] = None
+    strategy_proposal: Optional[StrategyProposal] = None
+    dialogue: Optional[DialogueSuggestion] = None
+    confidence: Literal["high", "medium", "low"] = "medium"
+    llm_used: bool = False
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
+class Task(BaseModel):
+    """A unit of RM work on the kanban board."""
+    id: str
+    client_id: Optional[str] = None
+    title: str
+    detail: str = ""
+    kind: TaskKind = "general"
+    source: TaskSource = "manual"
+    status: TaskStatus = "backlog"
+    priority: TaskPriority = "medium"
+    created_at: str
+    updated_at: str
+    dedup_key: Optional[str] = None       # e.g. "email:<id>" / "news:<client>:<news>" — idempotent ingest
+    origin: Optional[Provenance] = None   # the email / news item that spawned the task
+    artifact: Optional[TaskArtifact] = None  # the agent's attempt
+    activity: list[str] = Field(default_factory=list)  # human-readable execution trail
+    complex: bool = False                 # left in `started` for the RM to carry forward
+    requires_signoff: bool = True         # advisory only — the RM gate
+    signed_off_by: Optional[str] = None
+
+
+class TaskCreateRequest(BaseModel):
+    title: str
+    detail: str = ""
+    client_id: Optional[str] = None
+    kind: TaskKind = "general"
+    priority: TaskPriority = "medium"
+    execute: bool = True                  # let the agent attempt it immediately
+
+
+class TaskUpdateRequest(BaseModel):
+    """RM edits a card: move column, re-prioritise, tweak title/detail."""
+    status: Optional[TaskStatus] = None
+    priority: Optional[TaskPriority] = None
+    title: Optional[str] = None
+    detail: Optional[str] = None
+
+
+class TaskSignoffRequest(BaseModel):
+    """The confirm gate. RM approves the agent's draft; may hand-edit the deliverable body first."""
+    rm_name: str = ""
+    edited_body: Optional[str] = None     # RM's final edit of the draft (email/brief), if any
+
+
+class EmailIngestRequest(BaseModel):
+    """Scan the inbox, or drop in a single raw email to triage on the spot."""
+    raw_email: Optional[EmailMessage] = None
