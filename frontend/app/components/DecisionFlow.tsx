@@ -13,47 +13,53 @@ import { ProvenanceList } from "./Provenance";
 import { PolarityChip } from "./ui";
 
 /* ------------------------------------------------------------- layout consts --- */
+/* Vertical layered flow: layers stack top → bottom as full-width bands, so the
+ * canvas fills its column height and never needs horizontal scrolling. Node x
+ * positions are derived from the measured container width (responsive). */
 
-const COL_W = 224; // node card width
-const COL_GAP = 96; // horizontal gap between columns (room for connectors)
-const ROW_H = 132; // vertical slot per node
-const TOP_PAD = 64; // space for the tinted column headers
-const NODE_H = 96; // node card height
+const GUTTER = 96; // left rail holding the layer-name pills
+const BAND_H = 140; // vertical slot per layer band
+const TOP_PAD = 12; // padding above the first band
+const BOT_PAD = 12; // padding below the last band
+const NODE_H = 98; // node card height
+const CARD_W = 192; // preferred node card width (shrinks to fit a crowded band)
+const CARD_MIN = 138; // floor for card width
 
-// Per-layer accent — header tint + node card edge. Light theme only.
+// Per-layer accent — band tint + label pill. Light theme only. Class strings
+// are literal so Tailwind's JIT picks them up.
 const LAYER_TINT: Record<
   DecisionLayerId,
-  { header: string; headerText: string; rail: string }
+  { header: string; headerText: string; band: string }
 > = {
   notes: {
     header: "bg-indigo-50",
     headerText: "text-indigo-700",
-    rail: "before:bg-indigo-300",
+    band: "bg-indigo-50/40",
   },
   dna: {
     header: "bg-violet-50",
     headerText: "text-violet-700",
-    rail: "before:bg-violet-300",
+    band: "bg-violet-50/40",
   },
   signal: {
     header: "bg-sky-50",
     headerText: "text-sky-700",
-    rail: "before:bg-sky-300",
+    band: "bg-sky-50/40",
   },
   holding: {
     header: "bg-teal-50",
     headerText: "text-teal-700",
-    rail: "before:bg-teal-300",
+    band: "bg-teal-50/40",
   },
   candidate: {
     header: "bg-emerald-50",
     headerText: "text-emerald-700",
-    rail: "before:bg-emerald-300",
+    band: "bg-emerald-50/40",
   },
   action: {
     header: "bg-accent-soft",
     headerText: "text-accent-ink",
-    rail: "before:bg-accent",
+    band: "bg-accent-soft/50",
   },
 };
 
@@ -92,7 +98,8 @@ function edgeColour(kind: DecisionEdge["kind"]): string {
 
 interface Placed {
   node: DecisionNode;
-  col: number;
+  layerIndex: number;
+  cardW: number;
   cx: number; // centre x of the card
   cy: number; // centre y of the card
   left: number;
@@ -100,66 +107,72 @@ interface Placed {
 }
 
 function placeNodes(
-  decision: Decision
-): { placed: Placed[]; byId: Record<string, Placed>; width: number; height: number } {
+  decision: Decision,
+  width: number
+): { placed: Placed[]; byId: Record<string, Placed>; height: number } {
   const order: DecisionLayerId[] = decision.layers.map((l) => l.id);
-  const colIndex: Record<string, number> = {};
-  order.forEach((id, i) => (colIndex[id] = i));
+  const layerIdx: Record<string, number> = {};
+  order.forEach((id, i) => (layerIdx[id] = i));
 
-  // Bucket nodes by layer so we can stack multiples within a column.
+  // Bucket nodes by layer so we can spread multiples across the band.
   const buckets: Record<string, DecisionNode[]> = {};
   for (const n of decision.nodes) {
     (buckets[n.layer] ??= []).push(n);
   }
-  const maxStack = Math.max(1, ...Object.values(buckets).map((b) => b.length));
+
+  const spanLeft = GUTTER;
+  const spanRight = Math.max(GUTTER + CARD_MIN, width - 12);
+  const span = spanRight - spanLeft;
 
   const placed: Placed[] = [];
   const byId: Record<string, Placed> = {};
   for (const n of decision.nodes) {
-    const col = colIndex[n.layer] ?? 0;
+    const li = layerIdx[n.layer] ?? 0;
     const stack = buckets[n.layer];
     const idx = stack.indexOf(n);
-    const left = col * (COL_W + COL_GAP);
-    // centre the stack vertically within the canvas
-    const stackTop =
-      TOP_PAD + ((maxStack - stack.length) * ROW_H) / 2 + idx * ROW_H;
+    const count = stack.length;
+    // Card shrinks if a band is crowded so siblings never overlap.
+    const cardW = Math.max(
+      CARD_MIN,
+      Math.min(CARD_W, span / count - 12)
+    );
+    const cx = spanLeft + (span * (idx + 1)) / (count + 1);
+    const cy = TOP_PAD + li * BAND_H + NODE_H / 2;
     const p: Placed = {
       node: n,
-      col,
-      left,
-      top: stackTop,
-      cx: left + COL_W / 2,
-      cy: stackTop + NODE_H / 2,
+      layerIndex: li,
+      cardW,
+      cx,
+      cy,
+      left: cx - cardW / 2,
+      top: cy - NODE_H / 2,
     };
     placed.push(p);
     byId[n.id] = p;
   }
 
-  const width = order.length * (COL_W + COL_GAP) - COL_GAP;
-  const height = TOP_PAD + maxStack * ROW_H + 16;
-  return { placed, byId, width, height };
+  const height = TOP_PAD + order.length * BAND_H + BOT_PAD;
+  return { placed, byId, height };
 }
 
-// Cubic Bézier from the right edge of source to the left edge of target.
+// Vertical cubic Bézier from the bottom edge of source to the top edge of target.
 function connectorPath(from: Placed, to: Placed): string {
-  const x1 = from.left + COL_W;
-  const y1 = from.cy;
-  const x2 = to.left;
-  const y2 = to.cy;
-  const mx = (x1 + x2) / 2;
-  return `M ${x1},${y1} C ${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+  const x1 = from.cx;
+  const y1 = from.top + NODE_H;
+  const x2 = to.cx;
+  const y2 = to.top;
+  const my = (y1 + y2) / 2;
+  return `M ${x1},${y1} C ${x1},${my} ${x2},${my} ${x2},${y2}`;
 }
 
 /* ------------------------------------------------------------------ node card --- */
 
 function FlowNode({
   placed,
-  layerLabel,
   selected,
   onSelect,
 }: {
   placed: Placed;
-  layerLabel: string;
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
@@ -169,29 +182,26 @@ function FlowNode({
     <button
       type="button"
       onClick={() => onSelect(node.id)}
-      className={`absolute flex flex-col rounded-xl border bg-white p-3 text-left shadow-card ring-2 ring-transparent transition-all ${tone.border} ${tone.ring} ${
+      className={`absolute flex flex-col rounded-xl border bg-white p-2.5 text-left shadow-card ring-2 ring-transparent transition-all ${tone.border} ${tone.ring} ${
         selected ? "ring-accent shadow-pop" : ""
       }`}
       style={{
         left: placed.left,
         top: placed.top,
-        width: COL_W,
-        minHeight: NODE_H,
+        width: placed.cardW,
+        height: NODE_H,
       }}
       aria-pressed={selected}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-        {layerLabel}
-      </span>
-      <span className="mt-0.5 line-clamp-2 text-sm font-semibold leading-snug text-ink">
+      <span className="line-clamp-2 text-sm font-semibold leading-snug text-ink">
         {node.title}
       </span>
       {node.subtitle && (
-        <span className="mt-1 line-clamp-1 text-xs text-slate-500">
+        <span className="mt-0.5 line-clamp-1 text-xs text-slate-500">
           {node.subtitle}
         </span>
       )}
-      <span className="mt-auto flex items-center gap-1 pt-2 text-[10px] font-medium text-accent">
+      <span className="mt-auto flex items-center gap-1 pt-1 text-[10px] font-medium text-accent">
         <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden>
           <path
             d="M2 6h7M6 3l3 3-3 3"
@@ -219,29 +229,54 @@ function FlowCanvas({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
-  const { placed, byId, width, height } = useMemo(
-    () => placeNodes(decision),
-    [decision]
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(680);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    setWidth(el.clientWidth || 680);
+    const ro = new ResizeObserver((entries) => {
+      const cw = entries[0]?.contentRect.width;
+      if (cw) setWidth(cw);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const { placed, byId, height } = useMemo(
+    () => placeNodes(decision, width),
+    [decision, width]
   );
-  const layerLabel: Record<string, string> = useMemo(() => {
-    const m: Record<string, string> = {};
-    decision.layers.forEach((l) => (m[l.id] = l.label));
-    return m;
-  }, [decision.layers]);
 
   return (
-    <div className="scroll-thin overflow-x-auto pb-2">
-      <div className="relative mx-auto" style={{ width, minHeight: height }}>
-        {/* tinted column headers */}
+    <div ref={wrapRef} className="relative w-full" style={{ minHeight: height }}>
+      <div className="relative" style={{ width, minHeight: height }}>
+        {/* tinted layer bands + left-rail label pills */}
         {decision.layers.map((l, i) => {
           const tint = LAYER_TINT[l.id];
+          const bandTop = TOP_PAD + i * BAND_H;
           return (
-            <div
-              key={l.id}
-              className={`absolute rounded-lg px-3 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide ${tint.header} ${tint.headerText}`}
-              style={{ left: i * (COL_W + COL_GAP), top: 0, width: COL_W }}
-            >
-              {l.label}
+            <div key={l.id}>
+              <div
+                className={`absolute rounded-xl ${tint.band}`}
+                style={{
+                  left: 0,
+                  top: bandTop - 6,
+                  width,
+                  height: BAND_H - 4,
+                }}
+              />
+              <div
+                className={`absolute flex items-center justify-center rounded-lg px-2 py-1 text-center text-[10px] font-semibold uppercase leading-tight tracking-wide ${tint.header} ${tint.headerText}`}
+                style={{
+                  left: 4,
+                  top: bandTop + NODE_H / 2 - 14,
+                  width: GUTTER - 16,
+                }}
+              >
+                {l.label}
+              </div>
             </div>
           );
         })}
@@ -280,8 +315,8 @@ function FlowCanvas({
             const d = connectorPath(from, to);
             const active =
               selectedId === e.source || selectedId === e.target;
-            const midX = (from.left + COL_W + to.left) / 2;
-            const midY = (from.cy + to.cy) / 2;
+            const midX = (from.cx + to.cx) / 2;
+            const midY = (from.top + NODE_H + to.top) / 2;
             return (
               <g key={e.id}>
                 {/* base line */}
@@ -330,7 +365,6 @@ function FlowCanvas({
           <FlowNode
             key={p.node.id}
             placed={p}
-            layerLabel={layerLabel[p.node.layer] ?? p.node.layer}
             selected={selectedId === p.node.id}
             onSelect={onSelect}
           />

@@ -407,6 +407,8 @@ export interface GlobeEvent {
   severity: "high" | "med" | "low";
   summary: string;
   linked_holding_ids: string[];
+  kind?: "alert" | "ambient";
+  sentiment?: number;
 }
 
 export interface GlobeArc {
@@ -423,11 +425,13 @@ export interface Globe {
   client_id: string;
   holdings: GlobeHolding[];
   events: GlobeEvent[];
+  news: GlobeEvent[];
   arcs: GlobeArc[];
   stats: {
     holdings: number;
     violations: number;
     watches: number;
     events: number;
+    news: number;
   };
 }

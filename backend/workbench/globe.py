@@ -8,7 +8,7 @@ the rest of the workbench cites — no new strategy is derived here (§2/§9).""
 from __future__ import annotations
 
 from .agents.orchestrator import get_insights
-from .geo import REGION_ANCHOR, resolve_geo
+from .geo import REGION_ANCHOR, _jitter, resolve_geo
 from .graph.store import World
 
 # Conflicts a market/thematic push attributes to (matches analytics.TOPIC_REGION).
@@ -114,6 +114,8 @@ def build_globe(world: World, client_id: str) -> dict:
             "severity": severity,
             "summary": news.title,
             "linked_holding_ids": linked,
+            "kind": "alert",
+            "sentiment": round(news.sentiment.score, 2),
         })
 
         color = _ARC_COLOR.get(severity, _ARC_COLOR["low"])
@@ -129,6 +131,48 @@ def build_globe(world: World, client_id: str) -> dict:
                 "label": m.headline,
             })
 
+    # --- ambient world news: the rest of the news graph, geo-located ---------
+    # Everything in the news graph that did NOT drive an alert for this client
+    # still pulses on the globe (worldmonitor-style), dimmer, coloured by
+    # sentiment. This gives the RM live world context, not just their own
+    # alerts. Each pulse stays grounded in a real news item (§7.5 provenance).
+    alert_news_ids = {m.news.id for m in matches}
+    news_items: list[dict] = []
+    for n in world.news:
+        if n.id in alert_news_ids:
+            continue  # already shown as a bright alert signal above
+        if n.issuer_name:
+            nlat, nlng, country, _city = resolve_geo(
+                n.issuer_name, None, n.issuer_isin)
+        elif n.topics:
+            nlat, nlng, country = _topic_anchor(n.topics[0])
+            nlat += _jitter(n.id, "lat")
+            nlng += _jitter(n.id, "lng")
+        else:
+            glat, glng, gcountry = REGION_ANCHOR["Global"]
+            nlat = glat + _jitter(n.id, "lat") * 3.0
+            nlng = glng + _jitter(n.id, "lng") * 8.0
+            country = gcountry
+        score = n.sentiment.score
+        severity = ("high" if score <= -0.5
+                    else "med" if abs(score) >= 0.3 else "low")
+        linked = [_holding_id(h) for h in holdings
+                  if n.issuer_isin and h.isin == n.issuer_isin]
+        news_items.append({
+            "id": f"news:{n.id}",
+            "headline": n.topics[0] if n.topics else "market",
+            "source": n.source,
+            "published_at": n.published_at,
+            "lat": nlat,
+            "lng": nlng,
+            "country": country,
+            "severity": severity,
+            "summary": n.title,
+            "linked_holding_ids": linked,
+            "kind": "ambient",
+            "sentiment": round(score, 2),
+        })
+
     violations = sum(1 for h in globe_holdings if h["verdict"] == "VIOLATION")
     watches = sum(1 for h in globe_holdings if h["verdict"] == "WATCH")
 
@@ -136,11 +180,13 @@ def build_globe(world: World, client_id: str) -> dict:
         "client_id": client_id,
         "holdings": globe_holdings,
         "events": events,
+        "news": news_items,
         "arcs": arcs,
         "stats": {
             "holdings": len(globe_holdings),
             "violations": violations,
             "watches": watches,
             "events": len(events),
+            "news": len(news_items),
         },
     }

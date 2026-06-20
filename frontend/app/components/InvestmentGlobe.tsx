@@ -53,7 +53,7 @@ type GlobeInstance = {
 };
 
 type GlobePoint = {
-  kind: "holding" | "event";
+  kind: "holding" | "event" | "news";
   lat: number;
   lng: number;
   label: string;
@@ -105,6 +105,22 @@ const SEVERITY_HEX: Record<GlobeEvent["severity"], string> = {
   med: "#f59e0b",
   low: "#22d3ee",
 };
+
+/* Ambient world-news pulse colour by sentiment: red = negative, green =
+ * positive, cyan = neutral. Dimmer than the alert pulses by design. */
+function sentimentHex(score?: number): string {
+  if (score == null) return "#38bdf8";
+  if (score <= -0.3) return "#fb7185";
+  if (score >= 0.3) return "#34d399";
+  return "#38bdf8";
+}
+
+function sentimentLabel(score?: number): { text: string; cls: string } {
+  if (score == null) return { text: "neutral", cls: "text-slate-500" };
+  if (score <= -0.3) return { text: "negative", cls: "text-rose-600" };
+  if (score >= 0.3) return { text: "positive", cls: "text-emerald-600" };
+  return { text: "neutral", cls: "text-slate-500" };
+}
 
 /* globe.gl tooltips take an HTML string. Escape interpolated values so a stray
  * `<` in seed copy can never break out into markup (defence in depth). */
@@ -165,6 +181,22 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         radius: 0.9,
       }));
 
+      // Ambient world news — the rest of the news graph, dimmer + shorter so
+      // it reads as background context against the tall, bright alert pulses.
+      const newsPoints: GlobePoint[] = (data.news ?? []).map((e) => ({
+        kind: "news",
+        lat: e.lat,
+        lng: e.lng,
+        label: `<div style="font:12px system-ui;color:#0f172a;background:#fff;padding:6px 8px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18)">
+          <strong>${esc(e.summary)}</strong><br/>
+          ${esc(e.source)} · ${esc(e.country)} · ${esc(prettyDate(e.published_at))}<br/>
+          <span style="color:#64748b">world news · ${esc(e.headline)}</span>
+        </div>`,
+        color: sentimentHex(e.sentiment),
+        altitude: 0.12,
+        radius: 0.42,
+      }));
+
       globe = Globe()(mountRef.current)
         .width(GLOBE_SIZE)
         .height(GLOBE_SIZE)
@@ -174,7 +206,7 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         .showAtmosphere(true)
         .atmosphereColor("#22d3ee")
         .atmosphereAltitude(0.18)
-        .pointsData([...holdingPoints, ...eventPoints])
+        .pointsData([...holdingPoints, ...eventPoints, ...newsPoints])
         .pointLat((d: GlobePoint) => d.lat)
         .pointLng((d: GlobePoint) => d.lng)
         .pointColor((d: GlobePoint) => d.color)
@@ -234,9 +266,9 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
         aria-label="3D globe of portfolio holdings, news events and signal arcs"
       />
       <p className="mt-3 text-center text-[11px] text-slate-400">
-        Bars = holdings (height ∝ weight, colour = verdict); pulses = news
-        events; dashed arcs = signal → affected holdings. Every alert is cited
-        on the right.
+        Bars = holdings (height ∝ weight, colour = verdict); tall pulses = alert
+        signals; low pulses = ambient world news (colour = sentiment); dashed
+        arcs = signal → affected holdings. Every item is cited on the right.
       </p>
     </div>
   );
@@ -299,6 +331,27 @@ function EventCard({ event }: { event: GlobeEvent }) {
         {event.linked_holding_ids.length} linked holding
         {event.linked_holding_ids.length === 1 ? "" : "s"}
       </p>
+    </div>
+  );
+}
+
+function NewsRow({ item }: { item: GlobeEvent }) {
+  const senti = sentimentLabel(item.sentiment);
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+      <span
+        className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+        style={{ backgroundColor: sentimentHex(item.sentiment) }}
+      />
+      <div className="min-w-0">
+        <p className="text-sm font-medium leading-snug text-ink">
+          {item.summary}
+        </p>
+        <p className="mt-0.5 text-xs text-slate-500">
+          {item.source} · {item.country} ·{" "}
+          <span className={senti.cls}>{senti.text}</span>
+        </p>
+      </div>
     </div>
   );
 }
@@ -377,7 +430,8 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
           ) : (
             <span className="text-emerald-700">no live conflicts</span>
           )}{" "}
-          · {stats.events} signal{stats.events === 1 ? "" : "s"}
+          · {stats.events} signal{stats.events === 1 ? "" : "s"} ·{" "}
+          {stats.news} world-news pulse{stats.news === 1 ? "" : "s"}
         </h2>
       </header>
 
@@ -401,6 +455,19 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
               <div className="space-y-3">
                 {data.events.map((e) => (
                   <EventCard key={e.id} event={e} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data.news && data.news.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                World news · {data.news.length}
+              </p>
+              <div className="scroll-thin max-h-[300px] space-y-2 overflow-y-auto pr-1">
+                {data.news.map((e) => (
+                  <NewsRow key={e.id} item={e} />
                 ))}
               </div>
             </div>
