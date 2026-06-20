@@ -398,8 +398,8 @@ def _briefing(tasks: list[OverviewTask], meetings: list[OverviewMeeting]) -> str
     highs = [t for t in tasks if t.severity == "high"]
     if highs:
         top = highs[0]
-        extra = f" (+{len(highs) - 1} more)" if len(highs) > 1 else ""
-        return (f"{len(highs)} client{'s' if len(highs) != 1 else ''} need attention first{extra} — "
+        n = len({t.client_id for t in highs})  # distinct clients, not tasks
+        return (f"{n} client{'s' if n != 1 else ''} need attention first — "
                 f"start with {top.client_name}: {top.reason}")
     if tasks:
         return f"No red flags, but {len(tasks)} opportunit{'ies' if len(tasks) != 1 else 'y'} to follow up across the book."
