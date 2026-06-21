@@ -56,18 +56,29 @@ const MOVES: MoveSpec[] = [
   { startS: MOVE_START_3, duration: MOVE_S, fromColumn: 2, toColumn: 3 },
 ];
 
+type Tone = "danger" | "primary" | "purple" | "success";
+
 interface ColumnDef {
   key: string;
   label: string;
   description: string;
+  status: string;
+  tone: Tone;
 }
 
 const COLUMNS: ColumnDef[] = [
-  { key: "signal", label: "Signal", description: "Biogen conflicts with his neuro-research stance" },
-  { key: "strategy", label: "Strategy", description: "SWAP → Eli Lilly · CHF 101,097 · CIO-approved" },
-  { key: "dialogue", label: "Dialogue", description: "Drafted — empathetic, mission-driven outreach" },
-  { key: "delivered", label: "Delivered", description: "Sent · risk 0.62 → 0.19 — values fit restored" },
+  { key: "signal", label: "Signal", status: "Conflict detected", tone: "danger", description: "Biogen conflicts with his neuro-research stance" },
+  { key: "strategy", label: "Strategy", status: "Swap proposed", tone: "primary", description: "SWAP → Eli Lilly · CHF 101,097 · CIO-approved" },
+  { key: "dialogue", label: "Dialogue", status: "Draft ready", tone: "purple", description: "Drafted — empathetic, mission-driven outreach" },
+  { key: "delivered", label: "Delivered", status: "Signed off", tone: "success", description: "Sent · risk 0.62 → 0.19 — values fit restored" },
 ];
+
+const TONE: Record<Tone, { bg: string; fg: string }> = {
+  danger: { bg: "#fde8e9", fg: COLORS.destructive },
+  primary: { bg: COLORS.primarySubtle, fg: COLORS.primary },
+  purple: { bg: "rgba(134,0,250,0.10)", fg: COLORS.purple },
+  success: { bg: "#e7f6ee", fg: COLORS.success },
+};
 
 const COLOR = {
   foreground: COLORS.ink,
@@ -318,7 +329,8 @@ interface AdvisoryCardProps {
   textBlend: number;
   shadowBoost: number;
   stageLabel: string;
-  isDelivered: boolean;
+  statusLabel: string;
+  statusTone: Tone;
 }
 
 const AdvisoryCard: React.FC<AdvisoryCardProps> = ({
@@ -327,8 +339,10 @@ const AdvisoryCard: React.FC<AdvisoryCardProps> = ({
   textBlend,
   shadowBoost,
   stageLabel,
-  isDelivered,
+  statusLabel,
+  statusTone,
 }) => {
+  const tone = TONE[statusTone];
   const restingShadow = "0 1px 2px 0 rgba(16,24,40,0.05)";
   const liftedShadow =
     "0 24px 46px -10px rgba(16,24,40,0.22), 0 14px 26px -10px rgba(16,24,40,0.12), 0 0 0 1px rgba(16,24,40,0.04)";
@@ -361,19 +375,12 @@ const AdvisoryCard: React.FC<AdvisoryCardProps> = ({
               fontWeight: 700,
               padding: "3px 10px",
               borderRadius: 999,
-              background: isDelivered ? COLOR.successBg : COLOR.destructiveBg,
-              color: isDelivered ? COLOR.successFg : COLOR.destructiveFg,
+              background: tone.bg,
+              color: tone.fg,
             }}
           >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 999,
-                background: isDelivered ? COLOR.successFg : COLOR.destructiveFg,
-              }}
-            />
-            {isDelivered ? "Resolved" : "Conflict"}
+            <span style={{ width: 8, height: 8, borderRadius: 999, background: tone.fg }} />
+            {statusLabel}
           </span>
         </div>
         <span
@@ -399,6 +406,8 @@ const AdvisoryCard: React.FC<AdvisoryCardProps> = ({
         <span style={{ fontSize: 19, fontWeight: 600, color: COLOR.foreground, lineHeight: 1.3 }}>
           Biogen Inc. — Mr. Schneider
         </span>
+        {/* an obvious left→right wipe: the old line is clipped away as the new
+            line is revealed, with a primary wipe edge sweeping across. */}
         <div style={{ position: "relative", height: 44 }}>
           <span
             style={{
@@ -407,8 +416,7 @@ const AdvisoryCard: React.FC<AdvisoryCardProps> = ({
               fontSize: 15,
               lineHeight: 1.35,
               color: COLOR.mutedForeground,
-              opacity: 1 - textBlend,
-              transform: `translateY(${textBlend * -4}px)`,
+              clipPath: `inset(0 0 0 ${textBlend * 100}%)`,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -423,9 +431,9 @@ const AdvisoryCard: React.FC<AdvisoryCardProps> = ({
               inset: 0,
               fontSize: 15,
               lineHeight: 1.35,
-              color: COLOR.mutedForeground,
-              opacity: textBlend,
-              transform: `translateY(${(1 - textBlend) * 4}px)`,
+              fontWeight: 500,
+              color: COLOR.foreground,
+              clipPath: `inset(0 ${(1 - textBlend) * 100}% 0 0)`,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -434,6 +442,20 @@ const AdvisoryCard: React.FC<AdvisoryCardProps> = ({
           >
             {toDescription}
           </span>
+          {textBlend > 0.02 && textBlend < 0.98 ? (
+            <span
+              style={{
+                position: "absolute",
+                top: -2,
+                bottom: -2,
+                left: `${textBlend * 100}%`,
+                width: 3,
+                background: COLOR.primary,
+                borderRadius: 2,
+                boxShadow: `0 0 10px 1px ${COLOR.primary}`,
+              }}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -567,10 +589,12 @@ export const WfBoard: React.FC<{ dur: number }> = ({ dur }) => {
 
   const fromDesc = COLUMNS[motion.fromColumn]!.description;
   const toDesc = COLUMNS[motion.toColumn]!.description;
-  const stageLabel =
-    COLUMNS[
-      Math.round(motion.fromColumn + (motion.toColumn - motion.fromColumn) * (motion.textBlend > 0.5 ? 1 : 0))
-    ]!.label;
+  // the stage/status flip to the destination at the midpoint of the wipe
+  const settledColumn =
+    Math.round(motion.fromColumn + (motion.toColumn - motion.fromColumn) * (motion.textBlend > 0.5 ? 1 : 0));
+  const stageLabel = COLUMNS[settledColumn]!.label;
+  const statusLabel = COLUMNS[settledColumn]!.status;
+  const statusTone = COLUMNS[settledColumn]!.tone;
 
   const celebrationT = interpolate(currentS, [FINAL_LAND_S - 0.15, FINAL_LAND_S + 0.9], [0, 1], {
     extrapolateLeft: "clamp",
@@ -688,7 +712,8 @@ export const WfBoard: React.FC<{ dur: number }> = ({ dur }) => {
             textBlend={motion.textBlend}
             shadowBoost={motion.shadowBoost}
             stageLabel={stageLabel}
-            isDelivered={currentS >= FINAL_LAND_S}
+            statusLabel={statusLabel}
+            statusTone={statusTone}
           />
 
           <div
