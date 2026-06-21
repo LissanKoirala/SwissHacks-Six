@@ -4,7 +4,7 @@ import { COLORS } from "./theme";
 import { WfArticle } from "./scenes/wf/Article";
 import { WfClassify } from "./scenes/wf/Classify";
 import { WfCollision } from "./scenes/wf/Collision";
-import { WfBoard } from "./scenes/wf/Board";
+import { WfBoard, WF_BOARD_DURATION } from "./scenes/wf/Board";
 import { WfAlert } from "./scenes/wf/Alert";
 import { WfReview } from "./scenes/wf/Review";
 
@@ -12,13 +12,14 @@ const OVERLAP = 10;
 
 type SceneDef = { C: React.FC<{ dur: number }>; dur: number };
 
-// real news article → classify → collide with the client → kanban (to do →
-// in progress → needs sign-off) → 9am alert → review the proposal.
+// real news article → classify (sentiment × topic) → collide with the client's
+// interests & holdings → the agentic kanban (To do → In progress → Needs
+// sign-off, with drag-and-drop physics) → the 9am phone alert → review & approve.
 export const WF_SCENES: SceneDef[] = [
   { C: WfArticle, dur: 160 },
   { C: WfClassify, dur: 220 },
   { C: WfCollision, dur: 190 },
-  { C: WfBoard, dur: 300 },
+  { C: WfBoard, dur: WF_BOARD_DURATION },
   { C: WfAlert, dur: 190 },
   { C: WfReview, dur: 210 },
 ];
