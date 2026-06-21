@@ -20,7 +20,7 @@ import {
 import { COLORS, MONO } from "../../theme";
 import { FONT } from "../../fonts";
 import { SCHNEIDER } from "../../content";
-import { enterExit } from "../../ui";
+import { enterExit, SwissLogo } from "../../ui";
 
 // ---------------------------------------------------------------------------
 // Timing (frames reset to 0 at the start of this scene's Sequence)
@@ -788,6 +788,7 @@ export const WfBoard: React.FC<{ dur: number }> = ({ dur }) => {
           <span style={{ width: 40, height: 3, background: COLOR.primary, borderRadius: 2 }} />
         </div>
       </div>
+      <SwissLogo />
     </AbsoluteFill>
   );
 };
