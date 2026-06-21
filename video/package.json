@@ -9,6 +9,7 @@
     "render": "remotion render Pitch out/pitch.mp4",
     "render:workflow": "remotion render Workflow out/workflow.mp4",
     "still": "remotion still Pitch out/poster.png --frame=40",
+    "shots": "node scripts/shoot.mjs",
     "upgrade": "remotion upgrade"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
+    "puppeteer-core": "^25.1.0",
     "typescript": "^5.6.3"
   }
 }
