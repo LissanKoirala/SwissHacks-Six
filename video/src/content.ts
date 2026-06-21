@@ -111,6 +111,29 @@ export const RENDEZVOUS = {
   },
 };
 
+// Capture · the voice back-and-forth. The workbench asks, the RM answers aloud;
+// keywords get picked up and the sentiment shifts — feeding the next slide.
+export const CAPTURE_CHAT = {
+  turns: [
+    {
+      q: "What did you cover with Eugen today?",
+      a: "Lunch at the Kronenhalle — relaxed, proud his grandson started an engineering apprenticeship.",
+      keys: ["grandson", "engineering apprenticeship"],
+    },
+    {
+      q: "Any change in his risk appetite?",
+      a: "He wants steady, dependable dividends, and is wary of anything speculative.",
+      keys: ["steady dividends", "wary", "speculative"],
+      risk: "down" as const,
+    },
+    {
+      q: "Anything for the family?",
+      a: "Keen to set aside more for the grandchildren.",
+      keys: ["grandchildren"],
+    },
+  ],
+};
+
 // Trust & explainability — the provenance chain cutting through real haystacks.
 // Each column is a full stack; only the cited item lights up, and the chain
 // points at exactly those. Data is the real Schneider/Biogen/Eli-Lilly thread.
