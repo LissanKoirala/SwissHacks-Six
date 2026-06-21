@@ -427,7 +427,11 @@ export function ClientView({ clientId }: { clientId: string }) {
                     matchId={primaryMatchId}
                     currentBuyIsin={primaryBuyIsin}
                   />
-                  <DialoguePanel dialogue={insights.dialogue_suggestion} />
+                  <DialoguePanel
+                    dialogue={insights.dialogue_suggestion}
+                    clientId={clientId}
+                    clientName={client.name}
+                  />
                 </div>
 
                 {/* the digital twin's predicted reaction to the proposal (#3) */}
@@ -503,11 +507,7 @@ export function ClientView({ clientId }: { clientId: string }) {
                 <RendezvousView clientId={clientId} />
               )}
               {clientSub === "workspace" && (
-                <ClientWorkspace
-                  clientId={clientId}
-                  clientName={client.name}
-                  contextBody={insights.dialogue_suggestion?.draft_message ?? ""}
-                />
+                <ClientWorkspace clientId={clientId} clientName={client.name} />
               )}
             </TabsContent>
           </Tabs>

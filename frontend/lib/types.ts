@@ -1276,6 +1276,17 @@ export interface ClientInbox {
   messages: GmailMessage[];
 }
 
+export interface GmailMessageFull {
+  id: string;
+  thread_id: string;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  body: string;
+  unread: boolean;
+}
+
 export interface ClientCalendar {
   email: string;
   events: CalendarEvent[];

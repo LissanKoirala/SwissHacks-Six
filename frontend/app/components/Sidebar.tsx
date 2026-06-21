@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Home, LayoutGrid, Briefcase, Newspaper, ShieldCheck } from "lucide-react";
+import { Home, LayoutGrid, Briefcase, Newspaper, ShieldCheck, ChevronRight } from "lucide-react";
 import type { ClientSummary, IntegrationHealth } from "@/lib/types";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill } from "./ui";
@@ -192,13 +192,14 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* integration health footer */}
+      {/* integration health footer — collapsed by default (dev diagnostics) */}
       {health && (
-        <div className="border-t border-sidebar-border px-4 py-3">
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <details className="group border-t border-sidebar-border px-4 py-3">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+            <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
             Integrations · {health.use_live ? "live" : "seed"}
-          </p>
-          <ul className="space-y-1">
+          </summary>
+          <ul className="mt-2 space-y-1">
             {health.probes.map((p) => (
               <li
                 key={p.name}
@@ -215,7 +216,7 @@ export function Sidebar({
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
 
       {/* account + morning-briefing settings */}

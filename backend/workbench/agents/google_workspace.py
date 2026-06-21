@@ -26,6 +26,54 @@ def _header(payload: dict, name: str) -> str:
     return ""
 
 
+def _decode_b64(data: str) -> str:
+    return base64.urlsafe_b64decode(data.encode("utf-8")).decode("utf-8", "replace")
+
+
+def _extract_body(payload: dict) -> str:
+    """Best-effort plain-text body: prefer text/plain, fall back to text/html (tags stripped)."""
+    plain: str | None = None
+    html: str | None = None
+
+    def walk(part: dict) -> None:
+        nonlocal plain, html
+        mime = part.get("mimeType", "")
+        data = (part.get("body") or {}).get("data")
+        if data:
+            if mime == "text/plain" and plain is None:
+                plain = _decode_b64(data)
+            elif mime == "text/html" and html is None:
+                html = _decode_b64(data)
+        for sub in part.get("parts") or []:
+            walk(sub)
+
+    walk(payload or {})
+    if plain:
+        return plain.strip()
+    if html:
+        import re
+        text = re.sub(r"<(script|style)[\s\S]*?</\1>", " ", html, flags=re.I)
+        text = re.sub(r"<[^>]+>", " ", text)
+        return re.sub(r"[ \t]{2,}", " ", text).strip()
+    return ""
+
+
+def get_message(db: Session, row: OAuthToken, message_id: str) -> dict:
+    """Full message — headers + the plain-text body — for the in-app email viewer."""
+    msg = call(db, row, "GET", f"{GMAIL}/messages/{message_id}", params={"format": "full"})
+    payload = msg.get("payload", {})
+    return {
+        "id": msg.get("id"),
+        "thread_id": msg.get("threadId"),
+        "from": _header(payload, "From"),
+        "to": _header(payload, "To"),
+        "subject": _header(payload, "Subject") or "(no subject)",
+        "date": _header(payload, "Date"),
+        "body": _extract_body(payload),
+        "unread": "UNREAD" in (msg.get("labelIds") or []),
+    }
+
+
 def list_inbox(db: Session, row: OAuthToken, max_results: int = 12,
                query: str | None = None) -> list[dict]:
     """Recent messages: from / subject / snippet / date (metadata only).
@@ -116,4 +164,4 @@ def create_event(db: Session, row: OAuthToken, *, summary: str, start: str, end:
     return {"id": ev.get("id"), "html_link": ev.get("htmlLink", ""), "summary": ev.get("summary")}
 
 
-__all__ = ["list_inbox", "create_draft", "list_events", "create_event", "GoogleError"]
+__all__ = ["list_inbox", "get_message", "create_draft", "list_events", "create_event", "GoogleError"]

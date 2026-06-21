@@ -43,6 +43,7 @@ import type {
   EventBody,
   AddEventResult,
   ClientInbox,
+  GmailMessageFull,
   ClientCalendar,
   ClientDraftBody,
   Task,
@@ -192,6 +193,8 @@ export const api = {
   // --- Per-client Workspace (Gmail/Calendar scoped to one client by their email) ---
   clientInbox: (id: string) =>
     get<ClientInbox>(`/clients/${id}/workspace/inbox`),
+  clientMessage: (id: string, messageId: string) =>
+    get<GmailMessageFull>(`/clients/${id}/workspace/inbox/${messageId}`),
   clientCalendar: (id: string) =>
     get<ClientCalendar>(`/clients/${id}/workspace/calendar`),
   clientDraft: (id: string, body: ClientDraftBody) =>

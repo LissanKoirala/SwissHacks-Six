@@ -587,6 +587,19 @@ def create_app() -> FastAPI:
         except GoogleError as e:
             raise HTTPException(502, str(e))
 
+    @app.get("/clients/{client_id}/workspace/inbox/{message_id}")
+    def client_message(client_id: str, message_id: str,
+                       user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, get_message
+
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        row = _gtoken(user, db)
+        try:
+            return get_message(db, row, message_id)
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
     @app.get("/clients/{client_id}/workspace/calendar")
     def client_calendar(client_id: str, user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
         from ..agents.google_workspace import GoogleError, list_events
