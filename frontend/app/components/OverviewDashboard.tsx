@@ -1,9 +1,9 @@
 "use client";
 
 // The RM's morning landing page (docs/OVERVIEW_CONTRACT.md). One glanceable desk view
-// across all clients — priority tasks, upcoming meetings, and the news wire — every card
-// grounded in a real source. Detail lives one click away: any client name drills into
-// ClientView. This view decides nothing; it orients the RM.
+// across all clients — priority tasks and upcoming meetings — every card grounded in a
+// real source. Detail lives one click away: any client name drills into ClientView.
+// This view decides nothing; it orients the RM.
 
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
@@ -17,13 +17,11 @@ import type {
   MeUser,
 } from "@/lib/types";
 import { api } from "@/lib/api";
-import { chf, prettyDate, titleCase } from "@/lib/format";
+import { chf, prettyDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ClientAvatar } from "./ClientAvatar";
 import { LinkPreviewThumb } from "./LinkPreviewThumb";
-import { PublisherLogo } from "./PublisherLogo";
 import { Collapsible, MandatePill, PolarityChip } from "./ui";
-import { ProvenanceTag } from "./Provenance";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +31,6 @@ import {
 } from "@/components/ui/dialog";
 
 const PRIORITY_PREVIEW = 3;
-const NEWS_WIRE_PREVIEW = 5;
 
 /* ---------------------------------------------------------------- tokens --- */
 
@@ -400,168 +397,6 @@ function MeetingsStrip({
   );
 }
 
-/* ------------------------------------------------------------ news wire --- */
-
-function ClientPolarityChip({
-  ref_,
-  onOpen,
-}: {
-  ref_: NewsWireItem["relevant_clients"][number];
-  onOpen: (id: string) => void;
-}) {
-  const dot: Record<Polarity, string> = {
-    conflict: "bg-warning",
-    opportunity: "bg-success",
-    neutral: "bg-muted-foreground",
-  };
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(ref_.client_id)}
-      title={`${ref_.polarity} · open ${ref_.client_name}`}
-      className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-0.5 text-[11px] text-muted-foreground ring-1 ring-inset ring-border hover:bg-muted"
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${dot[ref_.polarity]}`} />
-      {firstName(ref_.client_name)}
-    </button>
-  );
-}
-
-function newsArticleUrl(n: NewsWireItem): string | null {
-  return n.url ?? n.provenance.url ?? null;
-}
-
-function NewsRow({
-  n,
-  onOpen,
-}: {
-  n: NewsWireItem;
-  onOpen: (id: string) => void;
-}) {
-  const up = n.sentiment_score > 0.05;
-  const down = n.sentiment_score < -0.05;
-  const articleUrl = newsArticleUrl(n);
-
-  return (
-    <div className="overflow-hidden rounded-lg border border-border">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch">
-        <div className="min-w-0 p-3">
-          <div className="flex items-center gap-2">
-            <PublisherLogo articleUrl={articleUrl} source={n.source} />
-            <span className="text-[11px] font-medium text-muted-foreground">{n.source}</span>
-            <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
-              {prettyDate(n.published_at)}
-            </span>
-          </div>
-          <p className="mt-1 line-clamp-2 min-h-10 text-sm font-medium leading-snug text-ink">
-            {n.title}
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span
-              className={`chip ring-1 ring-inset ${
-                up
-                  ? "bg-success/10 text-success ring-success/20"
-                  : down
-                  ? "bg-destructive/10 text-destructive ring-destructive/20"
-                  : "bg-muted text-muted-foreground ring-border"
-              }`}
-            >
-              {n.sentiment_label} {n.sentiment_score >= 0 ? "+" : ""}
-              {n.sentiment_score.toFixed(2)}
-            </span>
-            {n.topics.map((t) => (
-              <span key={t} className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
-                {titleCase(t)}
-              </span>
-            ))}
-            <ProvenanceTag prov={n.provenance} label="source" />
-          </div>
-          <div className="mt-2 flex min-h-7 flex-wrap items-center gap-1.5">
-            {n.relevant_clients.length > 0 ? (
-              <>
-                <span className="text-[11px] text-muted-foreground">Affects</span>
-                {n.relevant_clients.map((r) => (
-                  <ClientPolarityChip key={r.client_id} ref_={r} onOpen={onOpen} />
-                ))}
-              </>
-            ) : null}
-          </div>
-        </div>
-        {articleUrl ? (
-          <LinkPreviewThumb
-            url={articleUrl}
-            layout="thumbnail-stretch"
-            className="!h-full !min-h-0 !w-auto self-stretch rounded-none rounded-r-md ring-0"
-          />
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function NewsWireList({
-  items,
-  onOpen,
-  className,
-}: {
-  items: NewsWireItem[];
-  onOpen: (id: string) => void;
-  className?: string;
-}) {
-  return (
-    <div className={cn("space-y-2.5", className)}>
-      {items.map((n) => (
-        <NewsRow key={n.id} n={n} onOpen={onOpen} />
-      ))}
-    </div>
-  );
-}
-
-function NewsWireSection({
-  news,
-  onOpenClient,
-}: {
-  news: NewsWireItem[];
-  onOpenClient: (id: string) => void;
-}) {
-  const [allOpen, setAllOpen] = useState(false);
-  const preview = news.slice(0, NEWS_WIRE_PREVIEW);
-  const hasMore = news.length > NEWS_WIRE_PREVIEW;
-
-  const openClient = (id: string) => {
-    setAllOpen(false);
-    onOpenClient(id);
-  };
-
-  return (
-    <>
-      <NewsWireList items={preview} onOpen={openClient} />
-      {hasMore && (
-        <button
-          type="button"
-          onClick={() => setAllOpen(true)}
-          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-        >
-          Show all {news.length} stories
-          <ChevronRight className="h-4 w-4" aria-hidden />
-        </button>
-      )}
-      <Dialog open={allOpen} onOpenChange={setAllOpen}>
-        <DialogContent className="max-h-[85vh] max-w-3xl gap-4 overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>News wire</DialogTitle>
-            <DialogDescription>
-              {news.length} stor{news.length !== 1 ? "ies" : "y"} tagged to who they touch
-              across the book.
-            </DialogDescription>
-          </DialogHeader>
-          <NewsWireList items={news} onOpen={openClient} />
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
 /* -------------------------------------------------------------- the page --- */
 
 export function OverviewDashboard({
@@ -651,32 +486,6 @@ export function OverviewDashboard({
             </div>
           </div>
 
-          {/* news wire */}
-          <div className="mt-7">
-            <div className="mb-3 h-4 w-36 rounded bg-muted" />
-            <div className="card space-y-2.5 p-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="overflow-hidden rounded-lg border border-border">
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch">
-                    <div className="space-y-2 p-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 shrink-0 rounded-lg bg-muted" />
-                        <div className="h-3 w-16 rounded bg-muted" />
-                        <div className="ml-auto h-3 w-12 rounded bg-muted" />
-                      </div>
-                      <div className="h-3 w-5/6 rounded bg-muted" />
-                      <div className="flex gap-2">
-                        <div className="h-5 w-14 rounded-full bg-muted" />
-                        <div className="h-5 w-16 rounded-full bg-muted" />
-                      </div>
-                      <div className="min-h-7" />
-                    </div>
-                    <div className="aspect-video h-full min-h-[5rem] w-auto shrink-0 self-stretch border-l border-border/50 bg-muted" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     );
@@ -776,18 +585,6 @@ export function OverviewDashboard({
               />
             )}
           </Collapsible>
-        </section>
-
-        {/* §2 news wire */}
-        <section className="mt-7">
-          <SectionHeader
-            title="News wire"
-            count={o.news.length}
-            hint="tagged to who it touches"
-          />
-          <div className="card p-4">
-            <NewsWireSection news={o.news} onOpenClient={onOpenClient} />
-          </div>
         </section>
 
         <p className="mt-8 text-center text-[11px] text-muted-foreground">
