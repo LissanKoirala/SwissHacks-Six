@@ -42,12 +42,20 @@ def refresh_news(world: World) -> list:
     from ..ingestion.market_signals import FMPSignalLiveSource
     from ..ingestion.macro import MacroLiveSource
 
+    from ..ingestion.news import RSSFeedSource
+
     existing = {n.id for n in world.news}
     recs = []
     if settings.news_enabled:
         for kw in ("palm oil deforestation", "Parkinson research", "labour supply chain", "AI infrastructure"):
             try:
                 recs += EventRegistrySource(kw).fetch()
+            except Exception:
+                pass
+    if settings.rss_enabled:
+        for url in settings.rss_feed_urls:
+            try:
+                recs += RSSFeedSource(url).fetch()
             except Exception:
                 pass
     for live in (SecFilingLiveSource, FMPSignalLiveSource, MacroLiveSource):

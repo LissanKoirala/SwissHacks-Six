@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Home, LayoutGrid, Briefcase, ShieldCheck } from "lucide-react";
+import { Home, LayoutGrid, Briefcase, Newspaper, ShieldCheck } from "lucide-react";
 import type { ClientSummary, IntegrationHealth } from "@/lib/types";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill } from "./ui";
@@ -21,6 +21,8 @@ export function Sidebar({
   tasksActive,
   onShowWorkspace,
   workspaceActive,
+  onShowNews,
+  newsActive,
 }: {
   clients: ClientSummary[];
   selectedId: string | null;
@@ -32,6 +34,8 @@ export function Sidebar({
   tasksActive: boolean;
   onShowWorkspace: () => void;
   workspaceActive: boolean;
+  onShowNews: () => void;
+  newsActive: boolean;
 }) {
   const totalAlerts = clients.reduce((s, c) => s + (c.alert_count || 0), 0);
   // Triage-ordered book: the most urgent client floats to the top.
@@ -114,6 +118,20 @@ export function Sidebar({
         >
           <Briefcase className="h-4 w-4 shrink-0" />
           Workspace
+        </button>
+        <button
+          type="button"
+          onClick={onShowNews}
+          aria-current={newsActive ? "page" : undefined}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors",
+            newsActive
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <Newspaper className="h-4 w-4 shrink-0" />
+          News feed
         </button>
       </div>
 

@@ -120,6 +120,7 @@ export const api = {
   opportunities: (id: string) =>
     get<Opportunity[]>(`/clients/${id}/opportunities`),
   audit: (id: string) => get<PortfolioAudit>(`/clients/${id}/audit`),
+  news: () => get<import("./types").NewsItem[]>("/news"),
   breaking: () => get<BreakingFeed>("/breaking"),
   transactions: (id: string) =>
     get<TransactionsData>(`/clients/${id}/transactions`),
