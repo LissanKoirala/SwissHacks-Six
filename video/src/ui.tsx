@@ -210,6 +210,30 @@ export const Card: React.FC<{
   </div>
 );
 
+// A framed screenshot of the real app — rounded clip, hairline ring, soft
+// shadow. `src` is a public/ path (staticFile). Width drives the box; height
+// follows the image's aspect ratio.
+export const Screenshot: React.FC<{
+  src: string;
+  width: number;
+  ratio: number; // height / width of the source image
+  style?: React.CSSProperties;
+}> = ({ src, width, ratio, style }) => (
+  <div
+    style={{
+      width,
+      height: width * ratio,
+      borderRadius: 16,
+      overflow: "hidden",
+      background: COLORS.card,
+      boxShadow: `inset 0 0 0 1.5px ${COLORS.border}, 0 34px 70px -38px rgba(16,24,40,0.5)`,
+      ...style,
+    }}
+  >
+    <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+  </div>
+);
+
 // A draw-in connector arrow for flows. `progress` 0..1 reveals it.
 export const FlowArrow: React.FC<{ progress: number; width?: number }> = ({
   progress,

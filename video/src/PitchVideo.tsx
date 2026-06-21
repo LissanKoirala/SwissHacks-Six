@@ -13,6 +13,7 @@ import { RiskScene } from "./scenes/Risk";
 import { TrustScene } from "./scenes/Trust";
 import { TwinScene } from "./scenes/Twin";
 import { RendezvousScene } from "./scenes/Rendezvous";
+import { CaptureScene } from "./scenes/Capture";
 import { LoopScene } from "./scenes/Loop";
 import { PipelineScene } from "./scenes/Pipeline";
 import { OutroScene } from "./scenes/Outro";
@@ -38,6 +39,7 @@ export const SCENES: SceneDef[] = [
   { C: TrustScene, dur: 190 },
   { C: TwinScene, dur: 240 },
   { C: RendezvousScene, dur: 235 },
+  { C: CaptureScene, dur: 230 },
   { C: LoopScene, dur: 230 },
   { C: PipelineScene, dur: 200 },
   { C: OutroScene, dur: 150 },
