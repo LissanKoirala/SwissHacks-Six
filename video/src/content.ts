@@ -111,38 +111,24 @@ export const RENDEZVOUS = {
   },
 };
 
-// The relationship loop — plan → rendezvous → log → CRM updates → (sharper plan).
-// Stage detail is grounded in the real capture of a Kronenhalle lunch with Räber.
-export const LOOP = {
+// CRM update — the voice note from the previous slide fans into the four profile
+// facets. Each "added" line is faithful to the Kronenhalle lunch note; the
+// personality facet also nudges the risk appetite down.
+export const CRM_UPDATE = {
   client: "Eugen Räber",
-  stages: [
-    {
-      key: "plan",
-      label: "Plan",
-      title: "Rendezvous",
-      lines: ["Kronenhalle · Zürich", "0 kg CO₂ · fairest for all"],
-    },
-    {
-      key: "meet",
-      label: "Rendezvous",
-      title: "The meeting",
-      lines: ["Lunch · in person", "He talks; you listen"],
-    },
-    {
-      key: "log",
-      label: "Log it",
-      title: "Capture the note",
-      lines: ["voice · photo · text", "→ immutable meeting log"],
-      meta: "raeber#2026-06-21#21",
-    },
-    {
-      key: "crm",
-      label: "CRM updates",
-      title: "Living profile",
-      lines: ["+1 log · +2 facets", "risk ↓ ‘wary · steady’"],
-    },
+  source: {
+    label: "From the voice note",
+    title: "Lunch at the Kronenhalle",
+    snippet:
+      "“Proud of his grandson's engineering apprenticeship. Wants steady, dependable dividends, wary of anything speculative. Keen to set aside more for the grandchildren.”",
+  },
+  facets: [
+    { key: "Professional", existing: "Respects tangible hardware (ASML).", added: "Reaffirmed respect for real engineering." },
+    { key: "Interests", existing: "Flims & the mountains; classical tastes.", added: "Grandson started an engineering apprenticeship." },
+    { key: "Historical", existing: "Long-term holder.", added: "Wants steady, dependable dividends." },
+    { key: "Personality", existing: "Quiet, predictable.", added: "Wary of speculation — risk appetite ↓", risk: true },
   ],
-  close: "The profile is now richer — so the next plan is sharper.",
+  close: "A living record — the next plan draws on it.",
 };
 
 // Client digital twin — a real "bounce then clear" loop for Julian Ammann
