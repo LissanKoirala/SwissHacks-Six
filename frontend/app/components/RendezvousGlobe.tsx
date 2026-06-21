@@ -9,6 +9,7 @@ import {
   updateGlobeRotation,
   updateSunPosition,
 } from "@/lib/globeDayNight";
+import { loadGlobeGl } from "@/lib/loadGlobeGl";
 import type { RendezvousGlobeArc, RendezvousGlobeData, RendezvousGlobePoint } from "@/lib/types";
 
 type GlobeInstance = {
@@ -255,7 +256,7 @@ export function RendezvousGlobe({
       const material = createDayNightMaterial(dayTexture, nightTexture);
       materialRef.current = material;
 
-      const Globe = (await import("globe.gl")).default as unknown as () => (
+      const Globe = (await loadGlobeGl()) as unknown as () => (
         el: HTMLElement,
       ) => GlobeInstance;
 

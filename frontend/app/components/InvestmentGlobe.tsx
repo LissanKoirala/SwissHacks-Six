@@ -20,6 +20,8 @@ import type {
 } from "@/lib/types";
 import { api } from "@/lib/api";
 import { issuerInitials, issuerLogoSources } from "@/lib/assets";
+import { loadGlobeGl } from "@/lib/loadGlobeGl";
+import { publisherLogoSources } from "@/lib/publishers";
 import { chf, prettyDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ProvenanceTag } from "./Provenance";
@@ -99,6 +101,8 @@ type GlobeHtmlMarker = {
   issuer: string;
   isin?: string | null;
   yahoo?: string | null;
+  source?: string;
+  articleUrl?: string | null;
   verdict?: GlobeHolding["verdict"];
   weight?: number;
   highlighted: boolean;
@@ -235,11 +239,24 @@ function createGlobeMarkerEl(d: GlobeHtmlMarker): HTMLElement {
   el.style.transition = "opacity 280ms ease, width 280ms ease, height 280ms ease";
   el.dataset.baseOpacity = d.dimmed ? "0.3" : "1";
 
-  const logoSources = issuerLogoSources({
-    isin: d.isin,
-    issuer: d.issuer,
-    yahoo: d.yahoo,
-  });
+  const logoSources = Array.from(
+    new Set(
+      d.kind === "story"
+        ? [
+            ...issuerLogoSources({
+              isin: d.isin,
+              issuer: d.issuer,
+              yahoo: d.yahoo,
+            }),
+            ...publisherLogoSources(d.source ?? d.issuer, d.articleUrl),
+          ]
+        : issuerLogoSources({
+            isin: d.isin,
+            issuer: d.issuer,
+            yahoo: d.yahoo,
+          }),
+    ),
+  );
   const initials = issuerInitials(d.issuer);
 
   const mountInitials = () => {
@@ -321,7 +338,7 @@ function buildHtmlMarkers(
 
   if (!active) return holdingMarkers;
 
-  const storyIssuer = active.issuer_name ?? active.summary;
+  const storyIssuer = active.issuer_name ?? active.source;
   const storyMarkers: GlobeHtmlMarker[] = [
     {
       id: `story:${active.id}`,
@@ -330,6 +347,8 @@ function buildHtmlMarkers(
       lng: active.lng,
       issuer: storyIssuer,
       isin: active.issuer_isin,
+      source: active.source,
+      articleUrl: active.url ?? active.provenance?.url ?? null,
       highlighted: true,
       dimmed: false,
       sizePx: 38,
@@ -346,11 +365,13 @@ function buildHtmlMarkers(
 function GlobeCanvas({
   data,
   active,
+  storyIndex,
   impactArcs,
   impactHoldingIds,
 }: {
   data: GlobeData;
   active: GlobeEvent | null;
+  storyIndex: number;
   impactArcs: GlobeArc[];
   impactHoldingIds: string[];
 }) {
@@ -396,7 +417,7 @@ function GlobeCanvas({
     let disposed = false;
 
     (async () => {
-      const Globe = (await import("globe.gl")).default as unknown as () => (el: HTMLElement) => GlobeInstance;
+      const Globe = (await loadGlobeGl()) as unknown as () => (el: HTMLElement) => GlobeInstance;
       if (disposed || !mountRef.current) return;
 
       const hasStoryReel = data.events.length + (data.news?.length ?? 0) > 0;
@@ -478,22 +499,20 @@ function GlobeCanvas({
   useEffect(() => {
     const g = globeRef.current;
     if (!g || !ready) return;
-    activeRef.current = { id: active?.id ?? null, linked: new Set(impactHoldingIds) };
-    g.htmlElementsData(
-      buildHtmlMarkers(data, active, new Set(impactHoldingIds)),
-    );
+    const linked = new Set(impactHoldingIds);
+    activeRef.current = { id: active?.id ?? null, linked };
+    g.htmlElementsData(buildHtmlMarkers(data, active, linked));
     g.arcsData(active ? impactArcs : data.arcs);
     if (active) {
       g.ringsData([{ lat: active.lat, lng: active.lng, color: storyHex(active) }]);
       g.pointOfView(
-        projectionCamera(data.holdings, active, new Set(impactHoldingIds)),
+        projectionCamera(data.holdings, active, linked),
         reduceMotion ? 0 : 1200,
       );
     } else {
       g.ringsData([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active?.id, ready, impactHoldingIds, data]);
+  }, [active, storyIndex, ready, impactArcs, impactHoldingIds, data, reduceMotion]);
 
   useEffect(() => {
     if (size.w > 0 && size.h > 0) globeRef.current?.width(size.w).height(size.h);
@@ -532,6 +551,102 @@ function GlobeCanvas({
           <span className="text-[11px] tracking-wide">Rendering globe…</span>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------- scrollable news reel --- */
+
+function NewsReel({
+  stories,
+  index,
+  onSelect,
+}: {
+  stories: GlobeEvent[];
+  index: number;
+  onSelect: (i: number) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const selectingRef = useRef(false);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root || stories.length === 0) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (selectingRef.current) return;
+        const hit = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!hit) return;
+        const idx = Number((hit.target as HTMLElement).dataset.index);
+        if (!Number.isNaN(idx)) onSelect(idx);
+      },
+      { root, threshold: [0.55, 0.7, 0.85] },
+    );
+
+    itemRefs.current.forEach((el) => {
+      if (el) io.observe(el);
+    });
+    return () => io.disconnect();
+  }, [stories, onSelect]);
+
+  useEffect(() => {
+    selectingRef.current = true;
+    itemRefs.current[index]?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+    const t = window.setTimeout(() => {
+      selectingRef.current = false;
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [index]);
+
+  if (stories.length === 0) return null;
+
+  return (
+    <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-[90] bg-gradient-to-t from-black/80 via-black/50 to-transparent px-4 pb-4 pt-8">
+      <div
+        ref={scrollRef}
+        className="scroll-thin flex gap-2 overflow-x-auto pb-1"
+        aria-label="News stories — scroll to change map projection"
+      >
+        {stories.map((s, i) => {
+          const tone = storyHex(s);
+          const active = i === index;
+          return (
+            <button
+              key={s.id}
+              ref={(el) => {
+                itemRefs.current[i] = el;
+              }}
+              type="button"
+              data-index={i}
+              onClick={() => onSelect(i)}
+              className={cn(
+                "min-w-[11rem] max-w-[14rem] shrink-0 rounded-lg border px-3 py-2 text-left transition-colors",
+                active
+                  ? "border-white/40 bg-white/15 text-white"
+                  : "border-white/15 bg-black/40 text-white/75 hover:border-white/25 hover:bg-white/10",
+              )}
+            >
+              <p className="line-clamp-2 text-[11px] font-semibold leading-snug">{s.summary}</p>
+              <p className="mt-1 truncate text-[10px] text-white/55">
+                {s.source} · {prettyDate(s.published_at)}
+              </p>
+              <span
+                className="mt-1.5 inline-block h-1 w-8 rounded-full"
+                style={{ background: tone }}
+                aria-hidden
+              />
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -881,12 +996,25 @@ export function InvestmentGlobe({
     setIndex(0);
     setCountryFilter("all");
     setFetchedMatches([]);
-    api
-      .globe(clientId)
-      .then((g) => alive && setData(g))
-      .catch((e) => alive && setError(String(e)))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
+    (async () => {
+      try {
+        await api.refreshLiveNews();
+      } catch {
+        // best-effort — globe still loads seed/cached items
+      }
+      if (!alive) return;
+      try {
+        const g = await api.globe(clientId);
+        if (alive) setData(g);
+      } catch (e) {
+        if (alive) setError(String(e));
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, [clientId]);
 
   const effectiveMatches = matches.length > 0 ? matches : fetchedMatches;
@@ -903,10 +1031,14 @@ export function InvestmentGlobe({
     };
   }, [clientId, matches.length]);
 
-  // The rotating reel: impactful signals first, then ambient world news.
+  // Impactful client signals first, then live world news (newest first).
   const stories = useMemo<GlobeEvent[]>(() => {
     if (!data) return [];
-    return [...data.events, ...(data.news ?? [])];
+    const alerts = [...data.events];
+    const ambient = [...(data.news ?? [])].sort((a, b) =>
+      (b.published_at ?? "").localeCompare(a.published_at ?? ""),
+    );
+    return [...alerts, ...ambient];
   }, [data]);
 
   const active = stories[index] ?? null;
@@ -1046,21 +1178,25 @@ export function InvestmentGlobe({
               <GlobeCanvas
                 data={data}
                 active={active}
+                storyIndex={index}
                 impactArcs={impactArcs}
                 impactHoldingIds={impactHoldingIds}
               />
               {stories.length > 0 && (
-                <StoryOverlay
-                  stories={stories}
-                  index={index}
-                  paused={paused}
-                  impactCount={impactHoldingIds.length}
-                  onPrev={() => advance(-1)}
-                  onNext={() => advance(1)}
-                  onSelect={setIndex}
-                  onTogglePause={() => setPaused((p) => !p)}
-                  onHoverChange={setHovering}
-                />
+                <>
+                  <StoryOverlay
+                    stories={stories}
+                    index={index}
+                    paused={paused}
+                    impactCount={impactHoldingIds.length}
+                    onPrev={() => advance(-1)}
+                    onNext={() => advance(1)}
+                    onSelect={setIndex}
+                    onTogglePause={() => setPaused((p) => !p)}
+                    onHoverChange={setHovering}
+                  />
+                  <NewsReel stories={stories} index={index} onSelect={setIndex} />
+                </>
               )}
             </>
           ) : (
@@ -1070,8 +1206,8 @@ export function InvestmentGlobe({
           )}
         </div>
         <p className="border-t border-border px-5 py-3 text-center text-[11px] leading-relaxed text-muted-foreground">
-          Logo badges mark holdings (size tracks weight, ring shows verdict); the news reel flies
-          to each story, shows its origin badge, and highlights the holdings it affects.
+          Logo badges mark holdings (size tracks weight, ring shows verdict); scroll the news
+          reel or let it rotate — the map flies to each story and highlights affected holdings.
         </p>
       </div>
 

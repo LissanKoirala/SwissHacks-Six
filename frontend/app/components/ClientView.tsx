@@ -25,7 +25,6 @@ import { AskTwinPanel } from "./AskTwinPanel";
 import { PortfolioView } from "./PortfolioView";
 import { ProfileView } from "./ProfileView";
 import { PortfolioCharts } from "./PortfolioCharts";
-import { InvestmentGlobe } from "./InvestmentGlobe";
 import { CrmGraph } from "./CrmGraph";
 import { DecisionFlow } from "./DecisionFlow";
 import { RiskTimeline } from "./RiskTimeline";
@@ -34,6 +33,37 @@ import { OpportunitiesPanel } from "./OpportunitiesPanel";
 import { AuditPanel } from "./AuditPanel";
 import { ClientWorkspace } from "./ClientWorkspace";
 import { TransactionsView } from "./TransactionsView";
+
+function loadInvestmentGlobe() {
+  return import("./InvestmentGlobe").catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const isChunkLoad =
+      (error instanceof Error && error.name === "ChunkLoadError") ||
+      /loading chunk .* failed/i.test(message);
+    if (isChunkLoad && typeof window !== "undefined") {
+      const key = "investment-globe-chunk-reload";
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return new Promise<typeof import("./InvestmentGlobe")>(() => {});
+      }
+      sessionStorage.removeItem(key);
+    }
+    throw error;
+  });
+}
+
+const InvestmentGlobe = dynamic(
+  () => loadInvestmentGlobe().then((m) => ({ default: m.InvestmentGlobe })),
+  {
+    ssr: false,
+    loading: () => (
+      <section className="card p-5">
+        <p className="text-sm text-muted-foreground">Loading investment map…</p>
+      </section>
+    ),
+  },
+);
 
 function loadRendezvousView() {
   return import("./RendezvousView").catch((error: unknown) => {

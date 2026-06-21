@@ -146,9 +146,14 @@ def build_globe(world: World, client_id: str) -> dict:
     # alerts. Each pulse stays grounded in a real news item (§7.5 provenance).
     alert_news_ids = {m.news.id for m in matches}
     news_items: list[dict] = []
+    ambient_candidates: list[tuple[str, dict]] = []
     for n in world.news:
         if n.id in alert_news_ids:
             continue  # already shown as a bright alert signal above
+        if n.market_digest:
+            continue
+        if getattr(n, "signal_type", "news") not in (None, "news", "rss"):
+            continue
         if n.issuer_name:
             nlat, nlng, country, _city = resolve_geo(
                 n.issuer_name, None, n.issuer_isin)
@@ -166,7 +171,7 @@ def build_globe(world: World, client_id: str) -> dict:
                     else "med" if abs(score) >= 0.3 else "low")
         linked = [_holding_id(h) for h in holdings
                   if n.issuer_isin and h.isin == n.issuer_isin]
-        news_items.append({
+        item = {
             "id": f"news:{n.id}",
             "headline": n.topics[0] if n.topics else "market",
             "source": n.source,
@@ -183,7 +188,11 @@ def build_globe(world: World, client_id: str) -> dict:
             "kind": "ambient",
             "sentiment": round(score, 2),
             "provenance": n.provenance.model_dump(),
-        })
+        }
+        ambient_candidates.append((n.published_at or "", item))
+
+    for _pub, item in sorted(ambient_candidates, key=lambda x: x[0], reverse=True)[:40]:
+        news_items.append(item)
 
     violations = sum(1 for h in globe_holdings if h["verdict"] == "VIOLATION")
     watches = sum(1 for h in globe_holdings if h["verdict"] == "WATCH")

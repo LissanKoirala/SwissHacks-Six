@@ -7,6 +7,7 @@ const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN || "http://127.0.0.1:8000";
 
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["globe.gl"],
   async rewrites() {
     return [
       { source: "/clients", destination: `${BACKEND_ORIGIN}/clients` },
