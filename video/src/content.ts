@@ -111,6 +111,40 @@ export const RENDEZVOUS = {
   },
 };
 
+// The relationship loop — plan → rendezvous → log → CRM updates → (sharper plan).
+// Stage detail is grounded in the real capture of a Kronenhalle lunch with Räber.
+export const LOOP = {
+  client: "Eugen Räber",
+  stages: [
+    {
+      key: "plan",
+      label: "Plan",
+      title: "Rendezvous",
+      lines: ["Kronenhalle · Zürich", "0 kg CO₂ · fairest for all"],
+    },
+    {
+      key: "meet",
+      label: "Rendezvous",
+      title: "The meeting",
+      lines: ["Lunch · in person", "He talks; you listen"],
+    },
+    {
+      key: "log",
+      label: "Log it",
+      title: "Capture the note",
+      lines: ["voice · photo · text", "→ immutable meeting log"],
+      meta: "raeber#2026-06-21#21",
+    },
+    {
+      key: "crm",
+      label: "CRM updates",
+      title: "Living profile",
+      lines: ["+1 log · +2 facets", "risk ↓ ‘wary · steady’"],
+    },
+  ],
+  close: "The profile is now richer — so the next plan is sharper.",
+};
+
 // Client digital twin — a real "bounce then clear" loop for Julian Ammann
 // (Growth; non-negotiable stance on labour & supply-chain governance).
 export const TWIN = {
