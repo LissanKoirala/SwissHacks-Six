@@ -75,7 +75,11 @@ def create_app() -> FastAPI:
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.session_secret,
-        same_site="none",
+        # Lax by default — the session cookie is sent on same-site requests (incl. cross-subdomain
+        # frontend↔backend on the same registrable domain, e.g. billionaire.lissan.dev ↔
+        # backend.billionaire.lissan.dev) while resisting CSRF. Only override to "none" (which
+        # then requires SESSION_HTTPS_ONLY=1) if the frontend is on a *different* registrable domain.
+        same_site=settings.session_samesite,
         https_only=settings.session_https_only,
     )
     app.add_middleware(

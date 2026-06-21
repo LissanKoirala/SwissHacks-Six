@@ -114,6 +114,41 @@ def _link_href(html: str, *rels: str) -> Optional[str]:
     return None
 
 
+_MAX_REDIRECTS = 4
+
+
+def _fetch_validated(start_url: str) -> Optional[httpx.Response]:
+    """GET following redirects MANUALLY, re-validating the host on every hop so a public URL
+    cannot 3xx-redirect into an internal address (SSRF via redirect). Returns the final 2xx
+    response, or None if any hop is blocked / the chain is too long / the fetch fails.
+
+    Note: `_host_blocked` resolves the host and rejects private/loopback/link-local/reserved IPs;
+    re-running it per hop closes the redirect bypass. A narrow DNS-rebind TOCTOU window remains
+    between resolve-and-validate and httpx's own connect — acceptable for this demo; a hardened
+    deploy would pin the validated IP for the connection."""
+    current = start_url
+    with httpx.Client(
+        timeout=8.0,
+        follow_redirects=False,
+        headers={"User-Agent": _USER_AGENT, "Accept": "text/html,application/xhtml+xml"},
+    ) as client:
+        for _ in range(_MAX_REDIRECTS + 1):
+            parsed = urlparse(current)
+            if parsed.scheme not in ("http", "https") or not parsed.hostname:
+                return None
+            if _host_blocked(parsed.hostname):
+                return None
+            res = client.get(current)
+            if res.is_redirect:
+                location = res.headers.get("location")
+                if not location:
+                    return None
+                current = urljoin(current, location)  # resolve relative redirects, re-check next loop
+                continue
+            return res
+    return None  # too many redirects
+
+
 def _google_favicon(host: str) -> str:
     return f"https://www.google.com/s2/favicons?domain={host}&sz=128"
 
@@ -144,24 +179,22 @@ def unfurl_link(raw_url: str) -> LinkPreview:
 
     html = ""
     try:
-        with httpx.Client(
-            timeout=8.0,
-            follow_redirects=True,
-            headers={"User-Agent": _USER_AGENT, "Accept": "text/html,application/xhtml+xml"},
-        ) as client:
-            res = client.get(url)
-            res.raise_for_status()
-            content_type = (res.headers.get("content-type") or "").lower()
-            if "html" not in content_type and "text/" not in content_type:
-                preview = LinkPreview(
-                    url=url,
-                    favicon_url=favicon,
-                    preview_kind="favicon",
-                )
-                _write_cache(preview)
-                return preview
-            html = res.text[:250_000]
-            final_url = str(res.url)
+        res = _fetch_validated(url)
+        if res is None or res.status_code >= 400:
+            preview = LinkPreview(url=url, favicon_url=favicon, preview_kind="favicon")
+            _write_cache(preview)
+            return preview
+        content_type = (res.headers.get("content-type") or "").lower()
+        if "html" not in content_type and "text/" not in content_type:
+            preview = LinkPreview(
+                url=url,
+                favicon_url=favicon,
+                preview_kind="favicon",
+            )
+            _write_cache(preview)
+            return preview
+        html = res.text[:250_000]
+        final_url = str(res.url)
     except Exception as exc:
         log.info("[link-preview] fetch failed for %s: %s", url, exc)
         preview = LinkPreview(

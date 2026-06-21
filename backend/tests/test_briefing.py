@@ -33,7 +33,7 @@ def test_composer_is_deterministic_and_bounded():
     a, b = c.compose(overview), c.compose(overview)
     assert a == b, "composition must be deterministic"
     assert "Eugen Räber" in a
-    assert "2 tasks" in a and "3 meetings" in a
+    assert "Marius Huber" in a and "3 meetings" in a
     assert len(a) <= 480
 
 
