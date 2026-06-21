@@ -34,14 +34,21 @@ export const RiskScene: React.FC<{ dur: number }> = ({ dur }) => {
   const last = R.scores.length - 1;
 
   return (
-    <Stage dur={dur} kicker="Risk timeline">
+    <Stage dur={dur} kicker="Risk timeline · predictive">
       <Appear at={8}>
-        <Headline size={58}>
-          Specific <HL>events move the line</HL> — and the desk can show which.
+        <Headline size={52}>
+          How they reacted before tells us <HL>how they&rsquo;ll react next</HL>.
         </Headline>
       </Appear>
+      <Appear at={20} style={{ marginTop: 14 }}>
+        <div style={{ fontSize: 26, lineHeight: 1.4, color: COLORS.inkSoft, maxWidth: 1500 }}>
+          We replay each client&rsquo;s risk appetite against the events that moved it — so the desk
+          can <strong style={{ color: COLORS.ink, fontWeight: 600 }}>anticipate the next reaction</strong>,
+          not just report the last one.
+        </div>
+      </Appear>
 
-      <div style={{ marginTop: 18 }}>
+      <div style={{ marginTop: 14 }}>
         <svg width={W} height={H} style={{ display: "block", overflow: "visible" }}>
           {/* mandate band */}
           <rect
@@ -146,7 +153,7 @@ export const RiskScene: React.FC<{ dur: number }> = ({ dur }) => {
             cautious-drift
           </span>
           <span style={{ fontSize: 25, color: COLORS.inkSoft }}>
-            — each shift traces to a logged note, after his daughter&rsquo;s diagnosis.
+            — he turned defensive after each shock, so we can expect caution on the next one.
           </span>
         </div>
       </Appear>
