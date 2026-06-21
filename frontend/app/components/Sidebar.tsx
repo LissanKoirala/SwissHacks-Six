@@ -9,6 +9,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { AccountMenu } from "./AccountMenu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { DESK_BRAND_MARK_HEIGHT } from "@/lib/layout";
 
 export function Sidebar({
   clients,
@@ -54,7 +55,12 @@ export function Sidebar({
         onClick={onHome}
         className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-3.5 text-left hover:bg-accent"
       >
-        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
+        <div
+          className={cn(
+            "grid w-7 shrink-0 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground",
+            DESK_BRAND_MARK_HEIGHT,
+          )}
+        >
           AW
         </div>
         <div className="min-w-0">

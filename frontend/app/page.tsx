@@ -9,6 +9,8 @@ import { OverviewDashboard } from "./components/OverviewDashboard";
 import { TasksBoard } from "./components/TasksBoard";
 import { WorkspacePanel } from "./components/WorkspacePanel";
 import { NewsView } from "./components/NewsView";
+import { MAIN_CONTENT_TOP_PADDING } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 
 type View = "overview" | "client" | "tasks" | "workspace" | "news";
 
@@ -72,7 +74,7 @@ export default function Home() {
         onShowNews={() => setView("news")}
         newsActive={view === "news"}
       />
-      <div className="flex-1 overflow-hidden bg-background">
+      <div className={cn("flex-1 overflow-hidden bg-background", MAIN_CONTENT_TOP_PADDING)}>
         {loading ? (
           <div className="grid h-full place-items-center text-sm text-muted-foreground">
             Loading clients…
