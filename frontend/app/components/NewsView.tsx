@@ -135,6 +135,11 @@ export function NewsView() {
   const load = useCallback(async () => {
     setError(null);
     try {
+      try {
+        await api.refreshLiveNews();
+      } catch {
+        // best-effort
+      }
       const data = await api.news();
       data.sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? ""));
       setItems(data);
@@ -152,11 +157,6 @@ export function NewsView() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    try {
-      await api.ingestNews();
-    } catch {
-      // best-effort — load whatever is cached
-    }
     await load();
   }
 

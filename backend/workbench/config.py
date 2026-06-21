@@ -162,6 +162,7 @@ class Settings:
         ]),
     ).strip()
     rss_cache_minutes = int(os.getenv("RSS_CACHE_MINUTES", "15").strip() or "15")
+    news_cache_minutes = int(os.getenv("NEWS_CACHE_MINUTES", "15").strip() or "15")
 
     # Google Flights via the ``flights`` (fli) library — no API key; can be slow on first load.
     live_flights = os.getenv("USE_LIVE_FLIGHTS", "0").strip() in ("1", "true", "True")

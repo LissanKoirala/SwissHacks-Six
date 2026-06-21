@@ -276,10 +276,16 @@ export function ClientView({ clientId }: { clientId: string }) {
     setPortfolioSub("holdings");
     setClientSub("profile");
     api
-      .insights(clientId)
-      .then((d) => alive && setInsights(d))
-      .catch((e) => alive && setError(String(e)))
-      .finally(() => alive && setLoading(false));
+      .refreshLiveNews()
+      .catch(() => {})
+      .finally(() => {
+        if (!alive) return;
+        api
+          .insights(clientId)
+          .then((d) => alive && setInsights(d))
+          .catch((e) => alive && setError(String(e)))
+          .finally(() => alive && setLoading(false));
+      });
     // KPI band is best-effort enrichment; it must never block the page.
     api
       .analytics(clientId)

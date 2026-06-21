@@ -4,15 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   ChevronRight,
-  Glasses,
   Hash,
   Loader2,
   MessageSquareQuote,
   Newspaper,
-  PartyPopper,
   Sparkles,
 } from "lucide-react";
-import type { LensFraming, Match, MatchResolution, RelevanceScore, SourceType, Swap } from "@/lib/types";
+import type { Match, MatchResolution, RelevanceScore, SourceType, Swap } from "@/lib/types";
 import { api } from "@/lib/api";
 import { chf, prettyDate, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -40,52 +38,6 @@ export function groupMatchesByHeadline(matches: Match[]): Match[][] {
     groups.get(match.headline)!.push(match);
   }
   return order.map((headline) => groups.get(headline)!);
-}
-
-/**
- * The Client Lens (#1): the same generic news, rewritten through THIS client's documented
- * worldview — quoting their own prior words back to them. The hero of the card: the news adapts to
- * the reader. Both the client's quote and the news are cited (Trust, §2).
- */
-function LensHero({ lens, celebrate }: { lens: LensFraming; celebrate: boolean }) {
-  return (
-    <div
-      className={cn(
-        "rounded-lg border p-4",
-        celebrate
-          ? "border-success/30 bg-success/5"
-          : "border-primary/30 bg-primary/[0.06]"
-      )}
-    >
-      <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium tracking-wide text-primary">
-        <Glasses className="h-3.5 w-3.5" />
-        Through the client&rsquo;s lens
-        {lens.draft_source === "llm" && (
-          <span className="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary ring-1 ring-inset ring-primary/20">
-            AI-framed
-          </span>
-        )}
-      </p>
-      <h3 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
-        {lens.headline}
-      </h3>
-      <p className="mt-2 text-sm leading-relaxed text-foreground/80">
-        {lens.narrative}
-      </p>
-      {lens.provenance.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-muted-foreground">Grounded in</span>
-          {lens.provenance.map((p, i) => (
-            <ProvenanceTag
-              key={`${p.source_id}-${i}`}
-              prov={p}
-              label={p.source_type === "crm_log" ? "their words" : "the news"}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 /**
@@ -257,9 +209,15 @@ function NewsPreview({ match }: { match: Match }) {
   );
 }
 
-function AffectedHolding({ match }: { match: Match }) {
-  if (!match.affected_holding) return null;
-  const h = match.affected_holding;
+function groupAffectedHolding(matches: Match[]) {
+  for (const m of matches) {
+    if (m.affected_holding) return m.affected_holding;
+  }
+  return null;
+}
+
+function AffectedHolding({ holding }: { holding: NonNullable<Match["affected_holding"]> }) {
+  const h = holding;
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-warning/10 px-3 py-2 text-sm text-warning ring-1 ring-inset ring-warning/20">
       <IssuerLogo issuer={h.issuer} isin={h.isin} yahoo={h.yahoo} size="sm" />
@@ -275,12 +233,7 @@ function AffectedHolding({ match }: { match: Match }) {
 }
 
 function AlertStory({ match }: { match: Match }) {
-  return (
-    <div className="space-y-3">
-      <NewsPreview match={match} />
-      <AffectedHolding match={match} />
-    </div>
-  );
+  return <NewsPreview match={match} />;
 }
 
 function sortMatchesByRecency(matches: Match[]): Match[] {
@@ -595,8 +548,7 @@ export function AlertCard({ matches }: { matches: Match[] }) {
   });
   const primary = sorted[0];
   const moreStories = sortMatchesByRecency(sorted.slice(1));
-  const celebrate = !!primary.celebrate;
-  const lens = primary.lens ?? null;
+  const affectedHolding = groupAffectedHolding(sorted);
   const relevance = primary.relevance ?? null;
   const topics = Array.from(
     new Set(matches.flatMap((m) => m.news.topics))
@@ -610,18 +562,7 @@ export function AlertCard({ matches }: { matches: Match[] }) {
   );
 
   return (
-    <article
-      className={cn(
-        "card overflow-hidden",
-        celebrate && "ring-1 ring-inset ring-success/30"
-      )}
-    >
-      {celebrate && (
-        <div className="flex items-center gap-2 bg-success/10 px-5 py-2 text-sm font-semibold text-success">
-          <PartyPopper className="h-4 w-4 shrink-0" aria-hidden />
-          Call to celebrate — the good news this client asked to hear.
-        </div>
-      )}
+    <article className="card overflow-hidden">
       <div className="p-5">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <PolarityChip polarity={primary.polarity} />
@@ -643,28 +584,29 @@ export function AlertCard({ matches }: { matches: Match[] }) {
           )}
         </div>
 
-        {/* Hero: the news reframed through the client's worldview (#1) */}
-        {lens ? (
-          <LensHero lens={lens} celebrate={celebrate} />
-        ) : (
-          <div className="flex items-start gap-3">
-            {matches.length === 1 && primary.affected_holding && (
-              <IssuerLogo
-                issuer={primary.affected_holding.issuer}
-                isin={primary.affected_holding.isin}
-                yahoo={primary.affected_holding.yahoo}
-                size="lg"
-                className="mt-0.5"
-              />
-            )}
-            <h3 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
-              {primary.headline}
-            </h3>
-          </div>
-        )}
+        <div className="flex items-start gap-3">
+          {affectedHolding && (
+            <IssuerLogo
+              issuer={affectedHolding.issuer}
+              isin={affectedHolding.isin}
+              yahoo={affectedHolding.yahoo}
+              size="lg"
+              className="mt-0.5"
+            />
+          )}
+          <h3 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
+            {primary.headline}
+          </h3>
+        </div>
 
         {/* The cited score breakdown (#2) */}
         {relevance && <RelevanceBreakdown relevance={relevance} />}
+
+        {affectedHolding ? (
+          <div className="mt-3">
+            <AffectedHolding holding={affectedHolding} />
+          </div>
+        ) : null}
 
         <div className="mt-3 space-y-3">
           <AlertStory match={primary} />

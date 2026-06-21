@@ -47,14 +47,27 @@ export function compact(
 
 export function prettyDate(iso?: string | null): string {
   if (!iso) return "";
-  // Accept both date-only and full ISO timestamps.
-  const d = new Date(iso.length <= 10 ? `${iso}T00:00:00Z` : iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(d);
+  // ISO date or timestamp from the API
+  if (/^\d{4}-\d{2}-\d{2}/.test(iso)) {
+    const d = new Date(iso.length <= 10 ? `${iso}T12:00:00Z` : iso);
+    if (!Number.isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }).format(d);
+    }
+  }
+  // RFC 822 strings from legacy/bad cache rows
+  const parsed = new Date(iso);
+  if (!Number.isNaN(parsed.getTime())) {
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(parsed);
+  }
+  return "";
 }
 
 export function titleCase(s: string): string {

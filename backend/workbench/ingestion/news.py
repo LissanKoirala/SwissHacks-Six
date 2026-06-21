@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +15,65 @@ import httpx
 
 from ..config import CACHE_DIR, settings
 from .base import Record
+
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _force_refresh(query: Any) -> bool:
+    if isinstance(query, dict):
+        return bool(query.get("force_refresh"))
+    return bool(query)
+
+
+def _cache_is_fresh(path: Path, minutes: int) -> bool:
+    if not path.exists():
+        return False
+    try:
+        payload = json.loads(path.read_text())
+    except Exception:
+        return False
+    fetched_at = payload.get("fetched_at")
+    if fetched_at is None:
+        return False  # legacy cache without TTL — treat as stale
+    return (time.time() - float(fetched_at)) < minutes * 60
+
+
+def _iso_date_from_timestamp(raw: str) -> str:
+    """Normalise API timestamps (ISO or date-only) to YYYY-MM-DD."""
+    if not raw:
+        return ""
+    if _ISO_DATE.match(raw[:10]):
+        return raw[:10]
+    try:
+        normalised = raw.replace("Z", "+00:00")
+        return datetime.fromisoformat(normalised).astimezone(timezone.utc).date().isoformat()
+    except ValueError:
+        return ""
+
+
+def _iso_date_from_feed_entry(entry: Any) -> str:
+    """Parse RSS/Atom entry dates via feedparser structs or RFC 822 strings."""
+    for key in ("published_parsed", "updated_parsed", "created_parsed"):
+        st = entry.get(key)
+        if st:
+            try:
+                return datetime(*st[:6], tzinfo=timezone.utc).date().isoformat()
+            except (TypeError, ValueError):
+                continue
+    raw = entry.get("published") or entry.get("updated") or entry.get("created") or ""
+    if raw:
+        try:
+            return parsedate_to_datetime(raw).astimezone(timezone.utc).date().isoformat()
+        except (TypeError, ValueError, OSError):
+            pass
+    return _iso_date_from_timestamp(raw)
+
+
+def _entries_have_valid_dates(entries: list[dict]) -> bool:
+    if not entries:
+        return True
+    sample = entries[: min(5, len(entries))]
+    return all(_ISO_DATE.match(e.get("published_at") or "") for e in sample)
 
 
 class NewsFixtureSource:
@@ -38,18 +100,23 @@ class EventRegistrySource:
     """Live news + sentiment. Optional; only used when USE_LIVE=1 and NEWSAPI_KEY is set."""
     name = "event_registry"
 
-    def __init__(self, keyword: str):
+    def __init__(self, keyword: str, *, cache_minutes: int | None = None):
         self.keyword = keyword
+        self.cache_minutes = (
+            cache_minutes if cache_minutes is not None else settings.news_cache_minutes
+        )
 
     def fetch(self, query: Any = None) -> list[Record]:
         if not settings.news_enabled:
             return []
+        force = _force_refresh(query)
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         # stable across processes (builtin hash() is per-process salted) so the quota cache survives restarts (#9)
         key = hashlib.sha1(self.keyword.encode()).hexdigest()[:16]
         cache = CACHE_DIR / f"news_{key}.json"
-        if cache.exists():
-            data = json.loads(cache.read_text())
+        data: dict
+        if not force and _cache_is_fresh(cache, self.cache_minutes):
+            data = json.loads(cache.read_text()).get("data") or {}
         else:
             resp = httpx.post(
                 f"{settings.news_url}/article/getArticles",
@@ -67,9 +134,10 @@ class EventRegistrySource:
                 timeout=30.0,
             )
             data = resp.json()
-            cache.write_text(json.dumps(data))
+            cache.write_text(json.dumps({"fetched_at": time.time(), "data": data}))
         out: list[Record] = []
         for i, a in enumerate(((data.get("articles") or {}).get("results") or [])):
+            pub_raw = a.get("dateTimePub") or a.get("dateTime") or ""
             out.append(Record(
                 kind="news",
                 source_type="news",
@@ -81,7 +149,7 @@ class EventRegistrySource:
                     "body": (a.get("body") or "")[:1200],
                     "source": (a.get("source") or {}).get("title") or "Unknown",
                     "url": a.get("url"),
-                    "published_at": (a.get("dateTimePub") or a.get("dateTime") or "")[:10],
+                    "published_at": _iso_date_from_timestamp(pub_raw),
                     "sentiment": a.get("sentiment") or 0.0,
                     "issuer_name": None,
                     "issuer_isin": None,
@@ -105,17 +173,19 @@ class RSSFeedSource:
         except ImportError:
             return []
 
+        force = _force_refresh(query)
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         key = hashlib.sha1(self.url.encode()).hexdigest()[:16]
         cache_path = CACHE_DIR / f"rss_{key}.json"
         now = time.time()
 
         entries: list[dict] = []
-        if cache_path.exists():
+        if not force and _cache_is_fresh(cache_path, self.cache_minutes):
             try:
                 cached = json.loads(cache_path.read_text())
-                if now - cached.get("fetched_at", 0) < self.cache_minutes * 60:
-                    entries = cached.get("entries", [])
+                entries = cached.get("entries", [])
+                if not _entries_have_valid_dates(entries):
+                    entries = []  # legacy cache stored truncated RFC822 dates — refetch
             except Exception:
                 pass
 
@@ -128,7 +198,6 @@ class RSSFeedSource:
                     body = e.content[0].get("value", "")
                 elif e.get("summary"):
                     body = e.summary
-                pub = (e.get("published") or e.get("updated") or "")[:10]
                 item_id = e.get("id") or e.get("link") or e.get("title") or ""
                 entries.append({
                     "id": f"rss:{hashlib.sha1(item_id.encode()).hexdigest()[:16]}",
@@ -136,7 +205,7 @@ class RSSFeedSource:
                     "body": body[:1200],
                     "source": feed_title,
                     "url": e.get("link", ""),
-                    "published_at": pub,
+                    "published_at": _iso_date_from_feed_entry(e),
                 })
             try:
                 cache_path.write_text(json.dumps({"entries": entries, "fetched_at": now}))

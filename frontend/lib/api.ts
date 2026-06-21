@@ -222,6 +222,9 @@ export const api = {
   dismissTask: (id: string) => post<Task>(`/tasks/${id}/dismiss`, {}),
   ingestEmail: () => post<IngestResult>("/ingest/email", {}),
   ingestNews: () => post<IngestResult>("/ingest/news", {}),
+  /** Re-fetch live RSS/Event Registry feeds into world.news (not the taskboard scan). */
+  refreshLiveNews: () =>
+    post<{ new_alerts: unknown[] }>("/breaking/poll", {}),
   ocr: async (image: Blob, filename = "note.png"): Promise<{ text: string; provider: string; model?: string }> => {
     const form = new FormData();
     form.append("file", image, filename);

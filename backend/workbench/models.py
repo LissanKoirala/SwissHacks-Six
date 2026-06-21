@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 SourceType = Literal[
     "crm_log", "news", "cio_list", "portfolio", "mandate", "market_digest",
     # additional free data sources (CLAUDE.md §6) — each event signal cites its true origin
-    "sec_filing", "esg", "earnings", "analyst", "macro", "fundamentals", "insider",
+    "sec_filing", "esg", "earnings", "analyst", "macro", "fundamentals", "insider", "rss",
 ]
 Polarity = Literal["conflict", "opportunity", "neutral"]
 Rating = Literal["BUY", "HOLD", "SELL"]

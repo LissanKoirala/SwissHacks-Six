@@ -14,7 +14,8 @@ export type SourceType =
   | "analyst"
   | "macro"
   | "fundamentals"
-  | "insider";
+  | "insider"
+  | "rss";
 
 export type Polarity = "conflict" | "opportunity" | "neutral";
 

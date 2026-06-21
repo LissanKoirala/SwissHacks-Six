@@ -22,7 +22,7 @@ from .ingestion.market_signals import (
     ESGFixtureSource,
     FMPSignalLiveSource,
 )
-from .ingestion.news import EventRegistrySource, NewsFixtureSource
+from .ingestion.news import EventRegistrySource, NewsFixtureSource, RSSFeedSource
 from .ingestion.portfolio_xlsx import PortfolioWorkbookSource
 from .ingestion.sec_edgar import SecFilingFixtureSource, SecFilingLiveSource
 from .ingestion.six_mcp import enrich_listing
@@ -144,13 +144,26 @@ def build_world(use_live_news: bool = False) -> World:
     if use_live_news:
         for kw in ("palm oil deforestation", "Parkinson research", "labour supply chain", "AI infrastructure"):
             news_recs += EventRegistrySource(kw).fetch()
+    if settings.rss_enabled:
+        for url in settings.rss_feed_urls:
+            try:
+                news_recs += RSSFeedSource(url).fetch()
+            except Exception:
+                pass
     if settings.sec_enabled:
         news_recs += SecFilingLiveSource().fetch()
     if settings.fmp_enabled:
         news_recs += FMPSignalLiveSource().fetch()
     if settings.macro_enabled:
         news_recs += MacroLiveSource().fetch()
-    world.news = [to_news_item(r) for r in news_recs]
+    seen_news: set[str] = set()
+    world.news = []
+    for r in news_recs:
+        item = to_news_item(r)
+        if item.id in seen_news:
+            continue
+        seen_news.add(item.id)
+        world.news.append(item)
 
     # --- Issuer reference data: fundamentals + dividends + insider (context, never matched) ---
     for rec in FundamentalsFixtureSource().fetch():

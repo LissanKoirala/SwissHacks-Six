@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Calculator,
   UserRoundCog,
+  Rss,
   type LucideIcon,
 } from "lucide-react";
 import type { Polarity, SourceType } from "@/lib/types";
@@ -85,6 +86,7 @@ const SOURCE_META: Record<SourceType, { label: string; icon: LucideIcon }> = {
   macro: { label: "Macro/FX", icon: TrendingUp },
   fundamentals: { label: "Fundamentals", icon: Calculator },
   insider: { label: "Insider", icon: UserRoundCog },
+  rss: { label: "RSS", icon: Rss },
 };
 
 export function SourceBadge({ type }: { type: SourceType }) {

@@ -47,15 +47,16 @@ def refresh_news(world: World) -> list:
     existing = {n.id for n in world.news}
     recs = []
     if settings.news_enabled:
+        force = {"force_refresh": True}
         for kw in ("palm oil deforestation", "Parkinson research", "labour supply chain", "AI infrastructure"):
             try:
-                recs += EventRegistrySource(kw).fetch()
+                recs += EventRegistrySource(kw).fetch(force)
             except Exception:
                 pass
     if settings.rss_enabled:
         for url in settings.rss_feed_urls:
             try:
-                recs += RSSFeedSource(url).fetch()
+                recs += RSSFeedSource(url).fetch(force)
             except Exception:
                 pass
     for live in (SecFilingLiveSource, FMPSignalLiveSource, MacroLiveSource):
@@ -131,10 +132,11 @@ def poll_once(world: World, *, push: bool = True) -> list[dict]:
     Serialised so concurrent ticks (scheduled + on-demand) can't race the shared world."""
     with _poll_lock:
         fresh = refresh_news(world)
+        if fresh:
+            # New items can change matches on every client surface — don't serve stale caches.
+            world.insights_cache.clear()
+            world.twin_cache.clear()
         alerts = detect_breaking(world, fresh)
-        for a in alerts:
-            world.insights_cache.pop(a["client_id"], None)  # so /insights reflects the new match
-            world.twin_cache.pop(a["client_id"], None)       # and the twin re-reads the new proposal
         if alerts:
             world.breaking[:0] = alerts            # prepend newest
             del world.breaking[_BREAKING_CAP:]     # keep bounded

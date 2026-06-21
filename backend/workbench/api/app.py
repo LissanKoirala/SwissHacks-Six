@@ -89,6 +89,22 @@ def create_app() -> FastAPI:
     app.state.world = world
 
     @app.on_event("startup")
+    def _ingest_live_news_on_boot() -> None:
+        """Pull RSS + any fresh Event Registry items once at boot when USE_LIVE=1."""
+        if not settings.use_live:
+            return
+        import threading
+        from ..agents.news_watcher import poll_once
+
+        def _go() -> None:
+            try:
+                poll_once(world, push=False)
+            except Exception:
+                pass
+
+        threading.Thread(target=_go, daemon=True).start()
+
+    @app.on_event("startup")
     async def _start_front_door():
         # Autonomous intake. Two modes, picked by config:
         #   • INSTANT push (Gmail watch→Pub/Sub→/gmail/push): register the watch and renew it daily
