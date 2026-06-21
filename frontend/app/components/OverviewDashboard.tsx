@@ -157,6 +157,66 @@ function taskTriggerUrl(task: OverviewTask, wire: NewsWireItem[]): string | null
   return wire.find((n) => n.title === task.trigger_headline)?.url ?? null;
 }
 
+// Probe candidate URLs in parallel and return the first that has a real OG image.
+// Renders immediately with the initial guess, then swaps to the best thumbnail once
+// the (cached) previews settle — no layout shift, just a better image appearing.
+function useBestThumbnailUrl(
+  group: ClientTaskGroupData,
+  newsWire: NewsWireItem[],
+): string | null {
+  const [bestUrl, setBestUrl] = useState<string | null>(() =>
+    taskTriggerUrl(group.tasks[0], newsWire),
+  );
+
+  useEffect(() => {
+    const seen = new Set<string>();
+    const candidates: string[] = [];
+
+    // All provenance URLs across every task for this client
+    for (const task of group.tasks) {
+      for (const p of task.provenance) {
+        if (p.url && !seen.has(p.url)) {
+          seen.add(p.url);
+          candidates.push(p.url);
+        }
+      }
+    }
+    // News wire items that reference this client (the "More related stories")
+    for (const n of newsWire) {
+      const url = n.url ?? n.provenance.url ?? null;
+      if (
+        url &&
+        !seen.has(url) &&
+        n.relevant_clients.some((r) => r.client_id === group.client_id)
+      ) {
+        seen.add(url);
+        candidates.push(url);
+      }
+    }
+
+    if (candidates.length === 0) return;
+
+    let alive = true;
+    Promise.all(
+      candidates.slice(0, 8).map((url) =>
+        api.linkPreview(url)
+          .then((p) => ({ url, preview: p }))
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      if (!alive) return;
+      const hit = results.find((r) => r?.preview.preview_kind === "thumbnail");
+      if (hit) setBestUrl(hit.url);
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, [group.client_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return bestUrl;
+}
+
 interface ClientTaskGroupData {
   client_id: string;
   client_name: string;
@@ -209,7 +269,7 @@ function PriorityClientTile({
   const sev = SEVERITY[group.top_severity];
   const count = group.tasks.length;
   const extra = count - 1;
-  const triggerUrl = taskTriggerUrl(top, newsWire);
+  const triggerUrl = useBestThumbnailUrl(group, newsWire);
 
   return (
     <button
