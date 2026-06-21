@@ -111,6 +111,62 @@ export const RENDEZVOUS = {
   },
 };
 
+// Trust & explainability — the provenance chain cutting through real haystacks.
+// Each column is a full stack; only the cited item lights up, and the chain
+// points at exactly those. Data is the real Schneider/Biogen/Eli-Lilly thread.
+export const TRUST = {
+  log: {
+    title: "CRM LOG",
+    hl: 4,
+    rows: [
+      { primary: "2023-09-12", secondary: "European automotive challenges" },
+      { primary: "2024-01-18", secondary: "Long-term review · Zug residence" },
+      { primary: "2024-05-14", secondary: "Core large-cap pharma breakdown" },
+      { primary: "2025-11-06", secondary: "Reaffirmed cautious, long-term stance" },
+      { primary: "2026-01-22", secondary: "Foundation established to fund neuro research" },
+      { primary: "2026-02-18", secondary: "Audit of pharma's neuro commitments" },
+      { primary: "2026-03-24", secondary: "CHF 1M endowment into the foundation" },
+    ],
+  },
+  topics: {
+    title: "TOPICS",
+    hl: 1,
+    rows: [
+      { primary: "Deforestation & biodiversity" },
+      { primary: "Neurodegenerative research" },
+      { primary: "Labour & supply-chain governance" },
+      { primary: "US mega-cap tech / AI" },
+    ],
+  },
+  news: {
+    title: "NEWS WIRE",
+    hl: 2,
+    rows: [
+      { primary: "Unilever cuts off palm-oil suppliers" },
+      { primary: "SMI holds steady as defensives outperform" },
+      { primary: "Biogen to wind down neuro research division" },
+      { primary: "Global bond yields ease as banks signal patience" },
+      { primary: "PDD Holdings hit with forced-labour claims" },
+      { primary: "CIO tactical: rotate into mega-cap US tech" },
+      { primary: "ESG monitor: Unilever upgraded to leader" },
+    ],
+  },
+  cio: {
+    title: "CIO LIST · Health Care",
+    hl: 6,
+    rows: [
+      { primary: "Novartis AG", secondary: "BUY" },
+      { primary: "Roche Holding AG", secondary: "BUY" },
+      { primary: "AbbVie Inc.", secondary: "BUY" },
+      { primary: "Amgen Inc.", secondary: "BUY" },
+      { primary: "GSK plc", secondary: "BUY" },
+      { primary: "Gilead Sciences Inc.", secondary: "BUY" },
+      { primary: "Eli Lilly & Co.", secondary: "BUY" },
+      { primary: "Novo Nordisk A/S", secondary: "BUY" },
+    ],
+  },
+};
+
 // CRM update — the voice note from the previous slide fans into the four profile
 // facets. Each "added" line is faithful to the Kronenhalle lunch note; the
 // personality facet also nudges the risk appetite down.
