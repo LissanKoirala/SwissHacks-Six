@@ -19,16 +19,18 @@ export const TitleScene: React.FC<{ dur: number }> = ({ dur }) => (
         </Appear>
         <Appear at={30} style={{ marginTop: 40 }}>
           <Sub style={{ maxWidth: 760 }}>
-            A whole team — researcher, analyst, scribe, planner —{" "}
-            <strong style={{ color: COLORS.ink, fontWeight: 600 }}>focused on one client</strong>.
-            Now for every client.
+            Give the RM a full team — researcher, analyst, scribe, planner —{" "}
+            <strong style={{ color: COLORS.ink, fontWeight: 600 }}>on every client</strong>.
           </Sub>
         </Appear>
       </div>
 
-      {/* the dedicated team, clustered around them */}
-      <Appear at={26} style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-        <TeamCluster size={640} roles={ROLES} at={34} centerLabel="YOU" />
+      {/* a dedicated team clustered around one client */}
+      <Appear at={26} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+        <TeamCluster size={620} roles={ROLES} at={34} />
+        <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "0.12em", color: COLORS.inkSoft }}>
+          ONE CLIENT · A FULL TEAM
+        </div>
       </Appear>
     </div>
   </Stage>
