@@ -135,17 +135,30 @@ class Settings:
     rss_feeds_raw = os.getenv(
         "RSS_FEEDS",
         ",".join([
-            # General finance/business
+            # --- BBC ---
+            "http://feeds.bbci.co.uk/news/rss.xml",                      # top stories
+            "http://feeds.bbci.co.uk/news/business/rss.xml",             # business
+            "http://feeds.bbci.co.uk/news/technology/rss.xml",           # tech → Räber
+            "http://feeds.bbci.co.uk/news/science_and_environment/rss.xml",  # science/env → Schneider/Huber
+            "http://feeds.bbci.co.uk/news/world/rss.xml",                # world
+            # --- Sky News ---
+            "https://feeds.skynews.com/feeds/rss/world.xml",
+            "https://feeds.skynews.com/feeds/rss/business.xml",
+            "https://feeds.skynews.com/feeds/rss/technology.xml",
+            # --- Reuters ---
+            "https://feeds.reuters.com/reuters/topNews",
             "https://feeds.reuters.com/reuters/businessNews",
-            # Health/pharma → Schneider persona
-            "https://www.statnews.com/feed/",
-            # Environment/deforestation → Huber persona
-            "https://www.theguardian.com/environment/rss",
-            "https://news.mongabay.com/feed/",
-            # Technology/AI → Räber persona
-            "https://www.technologyreview.com/feed/",
-            # Business/ESG/labour → Ammann persona
-            "https://www.theguardian.com/business/rss",
+            "https://feeds.reuters.com/reuters/technologyNews",
+            # --- The Guardian ---
+            "https://www.theguardian.com/world/rss",
+            "https://www.theguardian.com/business/rss",                  # ESG/labour → Ammann
+            "https://www.theguardian.com/environment/rss",               # deforestation → Huber
+            "https://www.theguardian.com/science/rss",                   # pharma → Schneider
+            "https://www.theguardian.com/technology/rss",
+            # --- Specialist (persona-specific) ---
+            "https://www.statnews.com/feed/",                            # pharma/health → Schneider
+            "https://news.mongabay.com/feed/",                           # deforestation → Huber
+            "https://www.technologyreview.com/feed/",                    # AI/tech → Räber
         ]),
     ).strip()
     rss_cache_minutes = int(os.getenv("RSS_CACHE_MINUTES", "15").strip() or "15")
