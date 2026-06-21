@@ -7,7 +7,26 @@ const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN || "http://127.0.0.1:8000";
 
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["globe.gl"],
+  transpilePackages: ["globe.gl", "three"],
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // globe.gl + three must stay in the lazy-loaded map chunk — a nested async
+      // import creates a dev chunk that 404s after HMR (ChunkLoadError).
+      config.optimization = config.optimization ?? {};
+      const split = config.optimization.splitChunks;
+      if (split && typeof split === "object" && split.cacheGroups) {
+        split.cacheGroups.globeGl = {
+          test: /[\\/]node_modules[\\/](globe\.gl|three|three-globe|three-render-objects)[\\/]/,
+          name: "globe-vendor",
+          chunks: "async",
+          priority: 40,
+          enforce: true,
+          reuseExistingChunk: true,
+        };
+      }
+    }
+    return config;
+  },
   async rewrites() {
     return [
       { source: "/clients", destination: `${BACKEND_ORIGIN}/clients` },

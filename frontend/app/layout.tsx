@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-dm-sans",
-});
 
 const gtUltra = localFont({
   src: "./fonts/GT-Ultra-Median-Light.woff2",
@@ -28,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en-GB" suppressHydrationWarning className={`${dmSans.variable} ${gtUltra.variable}`}>
+    <html lang="en-GB" suppressHydrationWarning className={gtUltra.variable}>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <Providers>{children}</Providers>
       </body>

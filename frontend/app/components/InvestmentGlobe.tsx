@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import GlobeGL from "globe.gl";
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,7 +21,6 @@ import type {
 } from "@/lib/types";
 import { api } from "@/lib/api";
 import { issuerInitials, issuerLogoSources } from "@/lib/assets";
-import { loadGlobeGl } from "@/lib/loadGlobeGl";
 import { publisherLogoSources } from "@/lib/publishers";
 import { chf, prettyDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-/* The globe.gl instance is only created in the browser (dynamic import inside
+const createGlobe = GlobeGL as unknown as () => (el: HTMLElement) => GlobeInstance;
+
+/* The globe.gl instance is only created in the browser (this module is lazy-loaded
  * useEffect) — it touches WebGL/`window` and must never run at SSR. */
 type GlobeInstance = {
   (el: HTMLElement): GlobeInstance;
@@ -365,12 +367,14 @@ function buildHtmlMarkers(
 function GlobeCanvas({
   data,
   active,
+  activeStoryId,
   storyIndex,
   impactArcs,
   impactHoldingIds,
 }: {
   data: GlobeData;
   active: GlobeEvent | null;
+  activeStoryId: string | null;
   storyIndex: number;
   impactArcs: GlobeArc[];
   impactHoldingIds: string[];
@@ -414,14 +418,10 @@ function GlobeCanvas({
     if (!mount) return;
 
     let globe: GlobeInstance | null = null;
-    let disposed = false;
 
-    (async () => {
-      const Globe = (await loadGlobeGl()) as unknown as () => (el: HTMLElement) => GlobeInstance;
-      if (disposed || !mountRef.current) return;
-
-      const hasStoryReel = data.events.length + (data.news?.length ?? 0) > 0;
-      globe = Globe()(mountRef.current)
+    const Globe = createGlobe;
+    const hasStoryReel = data.events.some((e) => e.linked_holding_ids.length > 0);
+    globe = Globe()(mount)
         .width(size.w).height(size.h)
         .globeImageUrl("/textures/earth-night.jpg")
         .bumpImageUrl("/textures/earth-topology.png")
@@ -459,10 +459,10 @@ function GlobeCanvas({
       globeRef.current = globe;
       const controls = globe.controls();
       // Story rotation drives the camera; no competing auto-spin when stories exist.
-      controls.autoRotate = !reduceMotion && data.events.length + (data.news?.length ?? 0) === 0;
+      controls.autoRotate = !reduceMotion && !hasStoryReel;
       controls.autoRotateSpeed = 0.3;
 
-      const firstStory = data.events[0] ?? data.news?.[0] ?? null;
+      const firstStory = data.events.find((e) => e.linked_holding_ids.length > 0) ?? null;
       if (firstStory) {
         const linked = new Set(
           firstStory.linked_holding_ids.filter((id) =>
@@ -484,10 +484,8 @@ function GlobeCanvas({
         css2d.style.pointerEvents = "none";
       }
       setReady(true);
-    })();
 
     return () => {
-      disposed = true;
       globeRef.current = null;
       setReady(false);
       try { globe?._destructor?.(); } catch { /* noop */ }
@@ -495,16 +493,17 @@ function GlobeCanvas({
     };
   }, [data, size.w, size.h, reduceMotion]);
 
-  // React to the active story: fly to it, ring it, draw its impact arcs, refresh logo badges.
+  // Fly to each portfolio signal as the overlay advances.
   useEffect(() => {
     const g = globeRef.current;
     if (!g || !ready) return;
     const linked = new Set(impactHoldingIds);
-    activeRef.current = { id: active?.id ?? null, linked };
+    activeRef.current = { id: activeStoryId, linked };
     g.htmlElementsData(buildHtmlMarkers(data, active, linked));
     g.arcsData(active ? impactArcs : data.arcs);
     if (active) {
       g.ringsData([{ lat: active.lat, lng: active.lng, color: storyHex(active) }]);
+      g.controls().autoRotate = false;
       g.pointOfView(
         projectionCamera(data.holdings, active, linked),
         reduceMotion ? 0 : 1200,
@@ -512,7 +511,16 @@ function GlobeCanvas({
     } else {
       g.ringsData([]);
     }
-  }, [active, storyIndex, ready, impactArcs, impactHoldingIds, data, reduceMotion]);
+  }, [
+    activeStoryId,
+    storyIndex,
+    ready,
+    impactArcs,
+    impactHoldingIds,
+    data,
+    active,
+    reduceMotion,
+  ]);
 
   useEffect(() => {
     if (size.w > 0 && size.h > 0) globeRef.current?.width(size.w).height(size.h);
@@ -551,102 +559,6 @@ function GlobeCanvas({
           <span className="text-[11px] tracking-wide">Rendering globe…</span>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ------------------------------------------------- scrollable news reel --- */
-
-function NewsReel({
-  stories,
-  index,
-  onSelect,
-}: {
-  stories: GlobeEvent[];
-  index: number;
-  onSelect: (i: number) => void;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const selectingRef = useRef(false);
-
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root || stories.length === 0) return;
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (selectingRef.current) return;
-        const hit = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (!hit) return;
-        const idx = Number((hit.target as HTMLElement).dataset.index);
-        if (!Number.isNaN(idx)) onSelect(idx);
-      },
-      { root, threshold: [0.55, 0.7, 0.85] },
-    );
-
-    itemRefs.current.forEach((el) => {
-      if (el) io.observe(el);
-    });
-    return () => io.disconnect();
-  }, [stories, onSelect]);
-
-  useEffect(() => {
-    selectingRef.current = true;
-    itemRefs.current[index]?.scrollIntoView({
-      behavior: "smooth",
-      inline: "center",
-      block: "nearest",
-    });
-    const t = window.setTimeout(() => {
-      selectingRef.current = false;
-    }, 400);
-    return () => window.clearTimeout(t);
-  }, [index]);
-
-  if (stories.length === 0) return null;
-
-  return (
-    <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-[90] bg-gradient-to-t from-black/80 via-black/50 to-transparent px-4 pb-4 pt-8">
-      <div
-        ref={scrollRef}
-        className="scroll-thin flex gap-2 overflow-x-auto pb-1"
-        aria-label="News stories — scroll to change map projection"
-      >
-        {stories.map((s, i) => {
-          const tone = storyHex(s);
-          const active = i === index;
-          return (
-            <button
-              key={s.id}
-              ref={(el) => {
-                itemRefs.current[i] = el;
-              }}
-              type="button"
-              data-index={i}
-              onClick={() => onSelect(i)}
-              className={cn(
-                "min-w-[11rem] max-w-[14rem] shrink-0 rounded-lg border px-3 py-2 text-left transition-colors",
-                active
-                  ? "border-white/40 bg-white/15 text-white"
-                  : "border-white/15 bg-black/40 text-white/75 hover:border-white/25 hover:bg-white/10",
-              )}
-            >
-              <p className="line-clamp-2 text-[11px] font-semibold leading-snug">{s.summary}</p>
-              <p className="mt-1 truncate text-[10px] text-white/55">
-                {s.source} · {prettyDate(s.published_at)}
-              </p>
-              <span
-                className="mt-1.5 inline-block h-1 w-8 rounded-full"
-                style={{ background: tone }}
-                aria-hidden
-              />
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -1031,17 +943,22 @@ export function InvestmentGlobe({
     };
   }, [clientId, matches.length]);
 
-  // Impactful client signals first, then live world news (newest first).
+  // Portfolio-relevant signals only (matcher output with at least one linked holding).
   const stories = useMemo<GlobeEvent[]>(() => {
     if (!data) return [];
-    const alerts = [...data.events];
-    const ambient = [...(data.news ?? [])].sort((a, b) =>
-      (b.published_at ?? "").localeCompare(a.published_at ?? ""),
-    );
-    return [...alerts, ...ambient];
+    return data.events.filter((e) => e.linked_holding_ids.length > 0);
   }, [data]);
 
   const active = stories[index] ?? null;
+  const activeStoryId = active?.id ?? null;
+
+  useEffect(() => {
+    setIndex(0);
+  }, [clientId, stories.length]);
+
+  useEffect(() => {
+    if (stories.length > 0 && index >= stories.length) setIndex(0);
+  }, [index, stories.length]);
 
   // Holdings the active story touches → arcs + highlights.
   const holdingsById = useMemo(() => {
@@ -1167,8 +1084,7 @@ export function InvestmentGlobe({
             ) : (
               <span className="text-success">no live conflicts</span>
             )}{" "}
-            · <span className="tabular-nums">{stats.events}</span> signal{stats.events === 1 ? "" : "s"} ·{" "}
-            <span className="tabular-nums">{stats.news}</span> world-news pulse{stats.news === 1 ? "" : "s"}
+            · <span className="tabular-nums">{stats.events}</span> portfolio signal{stats.events === 1 ? "" : "s"}
           </h2>
         </header>
 
@@ -1178,25 +1094,23 @@ export function InvestmentGlobe({
               <GlobeCanvas
                 data={data}
                 active={active}
+                activeStoryId={activeStoryId}
                 storyIndex={index}
                 impactArcs={impactArcs}
                 impactHoldingIds={impactHoldingIds}
               />
               {stories.length > 0 && (
-                <>
-                  <StoryOverlay
-                    stories={stories}
-                    index={index}
-                    paused={paused}
-                    impactCount={impactHoldingIds.length}
-                    onPrev={() => advance(-1)}
-                    onNext={() => advance(1)}
-                    onSelect={setIndex}
-                    onTogglePause={() => setPaused((p) => !p)}
-                    onHoverChange={setHovering}
-                  />
-                  <NewsReel stories={stories} index={index} onSelect={setIndex} />
-                </>
+                <StoryOverlay
+                  stories={stories}
+                  index={index}
+                  paused={paused}
+                  impactCount={impactHoldingIds.length}
+                  onPrev={() => advance(-1)}
+                  onNext={() => advance(1)}
+                  onSelect={setIndex}
+                  onTogglePause={() => setPaused((p) => !p)}
+                  onHoverChange={setHovering}
+                />
               )}
             </>
           ) : (
@@ -1206,8 +1120,9 @@ export function InvestmentGlobe({
           )}
         </div>
         <p className="border-t border-border px-5 py-3 text-center text-[11px] leading-relaxed text-muted-foreground">
-          Logo badges mark holdings (size tracks weight, ring shows verdict); scroll the news
-          reel or let it rotate — the map flies to each story and highlights affected holdings.
+          Logo badges mark holdings (size tracks weight, ring shows verdict). Use the overlay
+          controls to step through portfolio signals — the map flies to each story and highlights
+          affected holdings.
         </p>
       </div>
 

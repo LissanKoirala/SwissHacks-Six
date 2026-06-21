@@ -111,6 +111,24 @@ ISSUER_HQ: dict[str, tuple[float, float, str, str]] = {
     "industrial & comm bank": (39.9080, 116.4030, "China", "Beijing"),
     "pdd holdings": (31.2210, 121.5430, "China", "Shanghai"),
     "mercadolibre": (-34.6040, -58.3960, "Argentina", "Buenos Aires"),
+    "zkb": (47.3700, 8.5400, "Switzerland", "Zürich"),
+    "ishares": (53.3498, -6.2603, "Ireland", "Dublin"),
+    "21shares": (47.3700, 8.5400, "Switzerland", "Zürich"),
+}
+
+# Sovereign / supranational issuers (workbook bond names).
+SOVEREIGN_HQ: dict[str, tuple[float, float, str, str]] = {
+    "swiss confederation": (46.9480, 7.4474, "Switzerland", "Bern"),
+    "us treasury": (38.9072, -77.0369, "United States", "Washington"),
+    "united mexican states": (19.4326, -99.1332, "Mexico", "Mexico City"),
+    "federative republic of brazil": (-15.7939, -47.8828, "Brazil", "Brasília"),
+    "republic of indonesia": (-6.2088, 106.8456, "Indonesia", "Jakarta"),
+    "republic of south africa": (-25.7479, 28.2293, "South Africa", "Pretoria"),
+    "kingdom of saudi arabia": (24.7136, 46.6753, "Saudi Arabia", "Riyadh"),
+    "kanton zurich": (47.3769, 8.5417, "Switzerland", "Zürich"),
+    "kanton zürich": (47.3769, 8.5417, "Switzerland", "Zürich"),
+    "pfandbriefbank": (47.3769, 8.5417, "Switzerland", "Zürich"),
+    "eurofima": (47.5596, 7.5886, "Switzerland", "Basel"),
 }
 
 # --- region anchors (workbook region labels) --------------------------------
@@ -121,11 +139,21 @@ REGION_ANCHOR: dict[str, tuple[float, float, str]] = {
     "Switzerland": (47.37, 8.54, "Switzerland"),
     "Europa": (50.0, 9.0, "Europe"),
     "Europe": (50.0, 9.0, "Europe"),
+    "Ireland": (53.35, -6.26, "Ireland"),
+    "Luxembourg": (49.61, 6.13, "Luxembourg"),
     "Emerging M.": (10.0, 95.0, "Emerging markets"),
     "Emerging Markets": (10.0, 95.0, "Emerging markets"),
-    "Global": (25.0, 10.0, "Global"),
+    "Global": (47.37, 8.54, "Switzerland"),
 }
-_FALLBACK_ANCHOR = (20.0, 0.0, "Global")
+# Unknown region → central Europe, not the Gulf of Guinea.
+_FALLBACK_ANCHOR = (50.0, 9.0, "Europe")
+# ISIN prefix → workbook region when the row says "Global".
+_ISIN_REGION: dict[str, str] = {
+    "CH": "Schweiz",
+    "IE": "Ireland",
+    "LU": "Luxembourg",
+    "US": "USA",
+}
 _JITTER_DEG = 2.5  # ±2.5° deterministic scatter around an anchor
 
 
@@ -165,21 +193,52 @@ def _hq_lookup(issuer: str) -> tuple[float, float, str, str] | None:
     return None
 
 
+def _sovereign_lookup(issuer: str) -> tuple[float, float, str, str] | None:
+    n = _norm(issuer)
+    if not n:
+        return None
+    for key, coords in SOVEREIGN_HQ.items():
+        if key in n:
+            return coords
+    return None
+
+
+def _region_for(issuer: str, region: str | None, isin: str | None) -> str:
+    """Pick the best workbook region label before anchor+jitter."""
+    label = (region or "").strip()
+    if label and label != "Global":
+        return label
+    prefix = (isin or "")[:2].upper()
+    if prefix in _ISIN_REGION:
+        return _ISIN_REGION[prefix]
+    n = _norm(issuer)
+    if "zkb" in n or "21shares" in n:
+        return "Schweiz"
+    return label or "Global"
+
+
 def resolve_geo(
     issuer: str, region: str | None, isin: str | None
 ) -> tuple[float, float, str, str]:
     """Resolve an issuer to (lat, lng, country, city). Always finite.
 
     1. Curated head office for prominent issuers (exact city, no jitter).
-    2. Otherwise the region anchor + deterministic name-hash jitter (±2.5°).
+    2. Sovereign / supranational names (exact city, no jitter).
+    3. Otherwise the region anchor + deterministic name-hash jitter (±2.5°).
     """
     hq = _hq_lookup(issuer)
     if hq is not None:
         lat, lng, country, city = hq
         return (_finite(lat, 0.0), _finite(lng, 0.0), country, city)
 
+    sovereign = _sovereign_lookup(issuer)
+    if sovereign is not None:
+        lat, lng, country, city = sovereign
+        return (_finite(lat, 0.0), _finite(lng, 0.0), country, city)
+
+    region_label = _region_for(issuer, region, isin)
     anchor_lat, anchor_lng, country = REGION_ANCHOR.get(
-        (region or "").strip(), _FALLBACK_ANCHOR
+        region_label, _FALLBACK_ANCHOR
     )
     seed = f"{_norm(issuer)}|{isin or ''}"
     lat = anchor_lat + _jitter(seed, "lat")

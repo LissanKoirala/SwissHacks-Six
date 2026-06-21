@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import GlobeGL from "globe.gl";
 import type { ShaderMaterial } from "three";
 import {
   boostTextureAnisotropy,
@@ -9,8 +10,9 @@ import {
   updateGlobeRotation,
   updateSunPosition,
 } from "@/lib/globeDayNight";
-import { loadGlobeGl } from "@/lib/loadGlobeGl";
 import type { RendezvousGlobeArc, RendezvousGlobeData, RendezvousGlobePoint } from "@/lib/types";
+
+const createGlobe = GlobeGL as unknown as () => (el: HTMLElement) => GlobeInstance;
 
 type GlobeInstance = {
   (el: HTMLElement): GlobeInstance;
@@ -256,9 +258,7 @@ export function RendezvousGlobe({
       const material = createDayNightMaterial(dayTexture, nightTexture);
       materialRef.current = material;
 
-      const Globe = (await loadGlobeGl()) as unknown as () => (
-        el: HTMLElement,
-      ) => GlobeInstance;
+      const Globe = createGlobe;
 
       if (disposed || !mountRef.current) return;
 

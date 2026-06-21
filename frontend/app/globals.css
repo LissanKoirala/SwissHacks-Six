@@ -1,9 +1,16 @@
+@import "@fontsource/dm-sans/400.css";
+@import "@fontsource/dm-sans/500.css";
+@import "@fontsource/dm-sans/600.css";
+@import "@fontsource/dm-sans/700.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    --font-dm-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
     --background: 0 0% 100%;
     /* Ink black #0a0a0a (neutral-950) carries body text + headlines — DESIGN-marketing on-surface */
     --foreground: 0 0% 4%;
