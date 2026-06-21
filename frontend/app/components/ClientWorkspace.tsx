@@ -1,12 +1,14 @@
 "use client";
 
 // Per-client Workspace: the RM's own Gmail + Calendar, scoped to ONE client by their email
-// address (set via WORKSPACE_TEST_BASE plus-addressing, or CLIENT_EMAIL_<ID>). Reads this
-// client's correspondence + meetings and drafts to them — drafts are NEVER sent (golden rule).
+// address (set via WORKSPACE_TEST_BASE plus-addressing, or CLIENT_EMAIL_<ID>). Read this client's
+// correspondence (click to open the full email) + meetings, and draft a reply — never sends.
 
 import { useEffect, useState } from "react";
-import { CalendarDays, Inbox, Mail, RefreshCw, ExternalLink, Loader2 } from "lucide-react";
-import type { MeUser, GmailMessage, CalendarEvent } from "@/lib/types";
+import {
+  CalendarDays, Inbox, Mail, RefreshCw, ExternalLink, Loader2, Reply,
+} from "lucide-react";
+import type { MeUser, GmailMessage, GmailMessageFull, CalendarEvent } from "@/lib/types";
 import { api } from "@/lib/api";
 import {
   Dialog,
@@ -35,11 +37,9 @@ function fmtDateTime(iso: string): string {
 export function ClientWorkspace({
   clientId,
   clientName,
-  contextBody = "",
 }: {
   clientId: string;
   clientName: string;
-  contextBody?: string;
 }) {
   const [user, setUser] = useState<MeUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,9 +48,15 @@ export function ClientWorkspace({
   const [events, setEvents] = useState<CalendarEvent[] | null>(null);
   const [inboxErr, setInboxErr] = useState<string | null>(null);
   const [calErr, setCalErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
+  // reader (full email)
+  const [readerOpen, setReaderOpen] = useState(false);
+  const [reading, setReading] = useState<GmailMessageFull | null>(null);
+  const [readErr, setReadErr] = useState<string | null>(null);
+
+  // compose / reply
   const [draftOpen, setDraftOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [subject, setSubject] = useState("");
   const [bodyText, setBodyText] = useState("");
   const [draftMsg, setDraftMsg] = useState<{ ok: boolean; text: string; url?: string } | null>(null);
@@ -91,9 +97,22 @@ export function ClientWorkspace({
     }
   }
 
-  function openDraft() {
-    setSubject(`Following up — ${clientName.split(" ").slice(-1)[0]}`);
-    setBodyText(contextBody || "");
+  async function openReader(id: string) {
+    setReaderOpen(true);
+    setReading(null);
+    setReadErr(null);
+    try {
+      setReading(await api.clientMessage(clientId, id));
+    } catch (e) {
+      setReadErr(String(e));
+    }
+  }
+
+  function replyTo(msg: GmailMessageFull) {
+    setReaderOpen(false);
+    const re = /^re:/i.test(msg.subject) ? msg.subject : `Re: ${msg.subject}`;
+    setSubject(re);
+    setBodyText("");
     setDraftMsg(null);
     setDraftOpen(true);
   }
@@ -120,14 +139,14 @@ export function ClientWorkspace({
       <div className="card grid place-items-center px-8 py-12 text-center">
         <div className="max-w-md">
           <Mail className="mx-auto h-7 w-7 text-muted-foreground" />
-          <h3 className="mt-3 text-base font-semibold text-foreground">Connect Gmail &amp; Calendar</h3>
+          <h3 className="mt-3 text-base font-semibold text-foreground">Link Gmail &amp; Calendar</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             {user
-              ? `Grant inbox + calendar access to see ${clientName}'s emails and meetings, and draft to them (never sends).`
+              ? `Link your Google account to read ${clientName}'s emails and meetings, and draft replies (never sends).`
               : "Sign in with Google to read this client's correspondence and meetings."}
           </p>
           <Button className="mt-4" onClick={() => (window.location.href = api.loginUrl())}>
-            {user ? "Grant Gmail & Calendar access" : "Sign in with Google"}
+            {user ? "Link to Google" : "Sign in with Google"}
           </Button>
         </div>
       </div>
@@ -138,18 +157,13 @@ export function ClientWorkspace({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Filtering your Gmail &amp; Calendar to{" "}
-          <span className="font-mono text-foreground">{email || "this client"}</span>.
-          Drafts are saved, never sent.
+          Your Gmail &amp; Calendar, filtered to{" "}
+          <span className="font-mono text-foreground">{email || "this client"}</span>. Click an
+          email to read it; replies are saved as Gmail drafts, never sent.
         </p>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => { loadInbox(); loadCalendar(); }}>
-            <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
-          </Button>
-          <Button size="sm" onClick={openDraft}>
-            <Mail className="mr-1 h-3.5 w-3.5" /> Draft email to {clientName.split(" ")[0]}
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={() => { loadInbox(); loadCalendar(); }}>
+          <RefreshCw className="mr-1 h-3.5 w-3.5" /> Refresh
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -174,15 +188,22 @@ export function ClientWorkspace({
           ) : (
             <ul className="space-y-2">
               {messages.map((m) => (
-                <li key={m.id} className="card p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-medium text-foreground">
-                      {nameOf(m.from)}
-                    </span>
-                    <span className="shrink-0 text-[11px] text-muted-foreground">{m.date}</span>
-                  </div>
-                  <p className="truncate text-sm text-foreground">{m.subject}</p>
-                  <p className="line-clamp-2 text-xs text-muted-foreground">{m.snippet}</p>
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    onClick={() => openReader(m.id)}
+                    className="card w-full p-3 text-left transition-colors hover:bg-accent/50"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
+                        {m.unread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                        {nameOf(m.from)}
+                      </span>
+                      <span className="shrink-0 text-[11px] text-muted-foreground">{m.date}</span>
+                    </div>
+                    <p className="truncate text-sm text-foreground">{m.subject}</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">{m.snippet}</p>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -235,10 +256,45 @@ export function ClientWorkspace({
         </section>
       </div>
 
+      {/* email reader */}
+      <Dialog open={readerOpen} onOpenChange={setReaderOpen}>
+        <DialogContent className="max-w-2xl">
+          {readErr ? (
+            <p className="text-sm text-destructive">{readErr}</p>
+          ) : !reading ? (
+            <div className="grid h-40 place-items-center text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="leading-snug">{reading.subject}</DialogTitle>
+                <DialogDescription className="space-y-0.5">
+                  <span className="block">
+                    <span className="font-medium text-foreground">{nameOf(reading.from)}</span>{" "}
+                    <span className="font-mono text-xs">&lt;{reading.from.replace(/^.*<|>.*$/g, "")}&gt;</span>
+                  </span>
+                  <span className="block text-xs">{reading.date}</span>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[55vh] overflow-y-auto whitespace-pre-wrap rounded-md bg-muted/40 px-4 py-3 text-sm leading-relaxed text-foreground">
+                {reading.body || "(no readable text body)"}
+              </div>
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => replyTo(reading)}>
+                  <Reply className="mr-1 h-3.5 w-3.5" /> Draft a reply
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* compose / reply draft */}
       <Dialog open={draftOpen} onOpenChange={setDraftOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Draft email to {clientName}</DialogTitle>
+            <DialogTitle>Draft a reply to {clientName}</DialogTitle>
             <DialogDescription>
               Saved to your Gmail drafts — never sent. To:{" "}
               <span className="font-mono">{email}</span>
@@ -256,7 +312,7 @@ export function ClientWorkspace({
                 rows={9}
                 value={bodyText}
                 onChange={(e) => setBodyText(e.target.value)}
-                placeholder="Write the note… (prefilled from the dialogue suggestion when available)"
+                placeholder="Write your reply…"
               />
             </div>
             <div className="flex items-center gap-2">

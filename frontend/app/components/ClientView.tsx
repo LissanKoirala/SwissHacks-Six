@@ -20,7 +20,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AlertCard, groupMatchesByHeadline } from "./AlertCard";
 import { StrategyPanel } from "./StrategyPanel";
 import { DialoguePanel } from "./DialoguePanel";
-import { ReactionPanel } from "./ReactionPanel";
+import { TwinPanel } from "./TwinPanel";
+import { AskTwinPanel } from "./AskTwinPanel";
 import { PortfolioView } from "./PortfolioView";
 import { ProfileView } from "./ProfileView";
 import { PortfolioCharts } from "./PortfolioCharts";
@@ -427,13 +428,19 @@ export function ClientView({ clientId }: { clientId: string }) {
                     matchId={primaryMatchId}
                     currentBuyIsin={primaryBuyIsin}
                   />
-                  <DialoguePanel dialogue={insights.dialogue_suggestion} />
+                  <DialoguePanel
+                    dialogue={insights.dialogue_suggestion}
+                    clientId={clientId}
+                    clientName={client.name}
+                  />
                 </div>
 
-                {/* the digital twin's predicted reaction to the proposal (#3) */}
-                {insights.reaction && (
-                  <ReactionPanel reaction={insights.reaction} />
-                )}
+                {/* Client Digital Twin — a cited pre-mortem on the proposal: stance + drivers,
+                    plus ask-the-twin + autoformat. Supersedes the lighter reaction panel. */}
+                <TwinPanel clientId={clientId} />
+
+                {/* ask the twin anything → autoformat into a message */}
+                <AskTwinPanel clientId={clientId} clientName={client.name} />
 
                 {/* additional proposals — collapsed by default */}
                 {insights.additional_proposals &&
@@ -503,11 +510,7 @@ export function ClientView({ clientId }: { clientId: string }) {
                 <RendezvousView clientId={clientId} />
               )}
               {clientSub === "workspace" && (
-                <ClientWorkspace
-                  clientId={clientId}
-                  clientName={client.name}
-                  contextBody={insights.dialogue_suggestion?.draft_message ?? ""}
-                />
+                <ClientWorkspace clientId={clientId} clientName={client.name} />
               )}
             </TabsContent>
           </Tabs>

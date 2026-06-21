@@ -149,3 +149,4 @@ def get_overview_insights(world: World, client_id: str) -> ClientInsights:
 def clear_cache(world: Optional[World] = None) -> None:
     if world is not None:
         world.insights_cache.clear()
+        world.twin_cache.clear()

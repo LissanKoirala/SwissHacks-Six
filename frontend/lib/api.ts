@@ -4,6 +4,10 @@
 import type {
   ClientSummary,
   Insights,
+  ClientTwin,
+  TwinAskAnswer,
+  TwinChannel,
+  TwinFormatResult,
   Portfolio,
   ClientDetail,
   Fundamentals,
@@ -43,6 +47,7 @@ import type {
   EventBody,
   AddEventResult,
   ClientInbox,
+  GmailMessageFull,
   ClientCalendar,
   ClientDraftBody,
   Task,
@@ -112,6 +117,11 @@ export const api = {
   overview: () => get<Overview>("/overview"),
   clients: () => get<ClientSummary[]>("/clients"),
   insights: (id: string) => get<Insights>(`/clients/${id}/insights`),
+  twin: (id: string) => get<ClientTwin>(`/clients/${id}/twin`),
+  twinAsk: (id: string, question: string) =>
+    post<TwinAskAnswer>(`/clients/${id}/twin/ask`, { question }),
+  twinFormat: (id: string, body: { content: string; channel: TwinChannel; tone?: string }) =>
+    post<TwinFormatResult>(`/clients/${id}/twin/format`, body),
   portfolio: (id: string) => get<Portfolio>(`/clients/${id}/portfolio`),
   fundamentals: (id: string) =>
     get<Fundamentals[]>(`/clients/${id}/fundamentals`),
@@ -120,6 +130,7 @@ export const api = {
   opportunities: (id: string) =>
     get<Opportunity[]>(`/clients/${id}/opportunities`),
   audit: (id: string) => get<PortfolioAudit>(`/clients/${id}/audit`),
+  news: () => get<import("./types").NewsItem[]>("/news"),
   breaking: () => get<BreakingFeed>("/breaking"),
   transactions: (id: string) =>
     get<TransactionsData>(`/clients/${id}/transactions`),
@@ -191,6 +202,8 @@ export const api = {
   // --- Per-client Workspace (Gmail/Calendar scoped to one client by their email) ---
   clientInbox: (id: string) =>
     get<ClientInbox>(`/clients/${id}/workspace/inbox`),
+  clientMessage: (id: string, messageId: string) =>
+    get<GmailMessageFull>(`/clients/${id}/workspace/inbox/${messageId}`),
   clientCalendar: (id: string) =>
     get<ClientCalendar>(`/clients/${id}/workspace/calendar`),
   clientDraft: (id: string, body: ClientDraftBody) =>

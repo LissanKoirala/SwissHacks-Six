@@ -129,6 +129,40 @@ class Settings:
     news_watch_enabled = os.getenv("NEWS_WATCH_ENABLED", "0").strip() in ("1", "true", "True")
     news_watch_minutes = int(os.getenv("NEWS_WATCH_MINUTES", "10").strip() or "10")
 
+    # RSS/Atom feed ingestion. Free, no API key; gated on USE_LIVE=1. Comma-separated list of feed
+    # URLs. Defaults cover all four personas (pharma, palm-oil/ESG, AI/tech, labour).
+    # Each feed is cached for RSS_CACHE_MINUTES before being re-fetched (default 15 min).
+    rss_feeds_raw = os.getenv(
+        "RSS_FEEDS",
+        ",".join([
+            # --- BBC ---
+            "http://feeds.bbci.co.uk/news/rss.xml",                      # top stories
+            "http://feeds.bbci.co.uk/news/business/rss.xml",             # business
+            "http://feeds.bbci.co.uk/news/technology/rss.xml",           # tech → Räber
+            "http://feeds.bbci.co.uk/news/science_and_environment/rss.xml",  # science/env → Schneider/Huber
+            "http://feeds.bbci.co.uk/news/world/rss.xml",                # world
+            # --- Sky News ---
+            "https://feeds.skynews.com/feeds/rss/world.xml",
+            "https://feeds.skynews.com/feeds/rss/business.xml",
+            "https://feeds.skynews.com/feeds/rss/technology.xml",
+            # --- Reuters ---
+            "https://feeds.reuters.com/reuters/topNews",
+            "https://feeds.reuters.com/reuters/businessNews",
+            "https://feeds.reuters.com/reuters/technologyNews",
+            # --- The Guardian ---
+            "https://www.theguardian.com/world/rss",
+            "https://www.theguardian.com/business/rss",                  # ESG/labour → Ammann
+            "https://www.theguardian.com/environment/rss",               # deforestation → Huber
+            "https://www.theguardian.com/science/rss",                   # pharma → Schneider
+            "https://www.theguardian.com/technology/rss",
+            # --- Specialist (persona-specific) ---
+            "https://www.statnews.com/feed/",                            # pharma/health → Schneider
+            "https://news.mongabay.com/feed/",                           # deforestation → Huber
+            "https://www.technologyreview.com/feed/",                    # AI/tech → Räber
+        ]),
+    ).strip()
+    rss_cache_minutes = int(os.getenv("RSS_CACHE_MINUTES", "15").strip() or "15")
+
     # Google Flights via the ``flights`` (fli) library — no API key; can be slow on first load.
     live_flights = os.getenv("USE_LIVE_FLIGHTS", "0").strip() in ("1", "true", "True")
 
@@ -245,6 +279,15 @@ class Settings:
     @property
     def fmp_enabled(self) -> bool:
         return self.use_live and bool(self.fmp_key)
+
+    @property
+    def rss_feed_urls(self) -> list[str]:
+        return [u.strip() for u in self.rss_feeds_raw.split(",") if u.strip()]
+
+    @property
+    def rss_enabled(self) -> bool:
+        # Free, no key; gated on USE_LIVE so the offline/seed demo stays untouched.
+        return self.use_live
 
     @property
     def macro_enabled(self) -> bool:

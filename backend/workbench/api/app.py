@@ -30,6 +30,8 @@ from ..models import (
     TaskSignoffRequest,
     TaskUpdateRequest,
     TTSRequest,
+    TwinAskRequest,
+    TwinFormatRequest,
 )
 from ..scheduler import start_scheduler
 from ..agents.news_watcher import start_news_watch
@@ -227,6 +229,27 @@ def create_app() -> FastAPI:
         if client_id not in world.clients:
             raise HTTPException(404, "unknown client")
         return get_insights(world, client_id, refresh=refresh).model_dump()
+
+    @app.get("/clients/{client_id}/twin")
+    def client_twin(client_id: str, refresh: bool = False):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.twin import build_twin
+        return build_twin(world, client_id, refresh=refresh).model_dump()
+
+    @app.post("/clients/{client_id}/twin/ask")
+    def client_twin_ask(client_id: str, req: TwinAskRequest):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.twin import ask_twin
+        return ask_twin(world, client_id, req.question).model_dump()
+
+    @app.post("/clients/{client_id}/twin/format")
+    def client_twin_format(client_id: str, req: TwinFormatRequest):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.twin import format_message
+        return format_message(world, client_id, req.content, req.channel, req.tone).model_dump()
 
     @app.get("/clients/{client_id}/portfolio")
     def client_portfolio(client_id: str):
@@ -584,6 +607,19 @@ def create_app() -> FastAPI:
         try:  # both sides of the thread: mail from the client and mail the RM sent them
             messages = list_inbox(db, row, query=f"from:{email} OR to:{email}")
             return {"email": email, "messages": messages}
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    @app.get("/clients/{client_id}/workspace/inbox/{message_id}")
+    def client_message(client_id: str, message_id: str,
+                       user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, get_message
+
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        row = _gtoken(user, db)
+        try:
+            return get_message(db, row, message_id)
         except GoogleError as e:
             raise HTTPException(502, str(e))
 

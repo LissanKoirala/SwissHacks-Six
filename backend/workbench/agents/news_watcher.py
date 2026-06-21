@@ -42,12 +42,20 @@ def refresh_news(world: World) -> list:
     from ..ingestion.market_signals import FMPSignalLiveSource
     from ..ingestion.macro import MacroLiveSource
 
+    from ..ingestion.news import RSSFeedSource
+
     existing = {n.id for n in world.news}
     recs = []
     if settings.news_enabled:
         for kw in ("palm oil deforestation", "Parkinson research", "labour supply chain", "AI infrastructure"):
             try:
                 recs += EventRegistrySource(kw).fetch()
+            except Exception:
+                pass
+    if settings.rss_enabled:
+        for url in settings.rss_feed_urls:
+            try:
+                recs += RSSFeedSource(url).fetch()
             except Exception:
                 pass
     for live in (SecFilingLiveSource, FMPSignalLiveSource, MacroLiveSource):
@@ -126,6 +134,7 @@ def poll_once(world: World, *, push: bool = True) -> list[dict]:
         alerts = detect_breaking(world, fresh)
         for a in alerts:
             world.insights_cache.pop(a["client_id"], None)  # so /insights reflects the new match
+            world.twin_cache.pop(a["client_id"], None)       # and the twin re-reads the new proposal
         if alerts:
             world.breaking[:0] = alerts            # prepend newest
             del world.breaking[_BREAKING_CAP:]     # keep bounded

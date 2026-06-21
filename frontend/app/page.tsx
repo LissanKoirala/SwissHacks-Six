@@ -8,8 +8,9 @@ import { ClientView } from "./components/ClientView";
 import { OverviewDashboard } from "./components/OverviewDashboard";
 import { TasksBoard } from "./components/TasksBoard";
 import { WorkspacePanel } from "./components/WorkspacePanel";
+import { NewsView } from "./components/NewsView";
 
-type View = "overview" | "client" | "tasks" | "workspace";
+type View = "overview" | "client" | "tasks" | "workspace" | "news";
 
 export default function Home() {
   const [clients, setClients] = useState<ClientSummary[]>([]);
@@ -68,6 +69,8 @@ export default function Home() {
         tasksActive={view === "tasks"}
         onShowWorkspace={() => setView("workspace")}
         workspaceActive={view === "workspace"}
+        onShowNews={() => setView("news")}
+        newsActive={view === "news"}
       />
       <div className="flex-1 overflow-hidden bg-background">
         {loading ? (
@@ -90,6 +93,8 @@ export default function Home() {
           <TasksBoard clients={clients} />
         ) : view === "workspace" ? (
           <WorkspacePanel />
+        ) : view === "news" ? (
+          <NewsView />
         ) : view === "client" && selectedId ? (
           <ClientView clientId={selectedId} />
         ) : (

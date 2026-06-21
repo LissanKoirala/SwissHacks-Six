@@ -473,6 +473,67 @@ class DialogueSuggestion(BaseModel):
     provenance: list[Provenance] = Field(default_factory=list)
 
 
+# --- Client Digital Twin (pre-mortem on a proposal; advisory only) ----------
+
+class TwinDriver(BaseModel):
+    """One reason the client is likely to react the way they do, grounded in a weighted
+    profile fact and citing its source. `contribution` is the signed effect on the stance
+    (negative = pushes toward objection)."""
+    label: str                      # human-readable driver, e.g. "Avoids US mega-cap software"
+    kind: str                       # value-aligned | value-conflict | risk-reassurance | risk-mismatch | framing | life-event
+    stance: str                     # supportive | opposing | neutral
+    weight: float                   # the underlying fact's RM-set importance
+    contribution: float             # signed effect on the aggregate stance
+    detail: str                     # short, plain explanation
+    provenance: Provenance
+
+
+class ClientTwin(BaseModel):
+    """Predicted client reaction to the current proposal, to help the RM prepare. Never
+    contacts the client (CLAUDE.md §2: advisory only — the agent proposes, the RM decides)."""
+    client_id: str
+    client_name: str
+    stance: str                     # receptive | mixed | likely_to_object
+    score: float                    # aggregate stance score (signed)
+    confidence: str                 # low | medium | high
+    summary: str                    # one-line read (deterministic, or LLM-polished)
+    anticipated_objection: Optional[str] = None  # "what the client might say" (LLM, optional)
+    suggested_framing: Optional[str] = None      # how to pre-empt it (LLM, optional) → feeds dialogue
+    drivers: list[TwinDriver] = Field(default_factory=list)
+    llm_used: bool = False
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
+class TwinAskRequest(BaseModel):
+    """The RM asks the twin a free-form question about the client."""
+    question: str
+
+
+class TwinAskAnswer(BaseModel):
+    """The twin's predicted answer — how the client would likely think/respond — grounded
+    in the cited profile facts. Speaks to the RM about the client; never advises the client."""
+    client_id: str
+    question: str
+    answer: str
+    confidence: str                 # low | medium | high
+    citations: list[Provenance] = Field(default_factory=list)
+    llm_used: bool = False
+
+
+class TwinFormatRequest(BaseModel):
+    """Turn drafted content into a ready-to-review message for a channel. The RM reviews
+    and sends — the agent never sends anything."""
+    content: str
+    channel: str                    # email | sms | whatsapp | talking_points | call_script
+    tone: Optional[str] = None      # optional steer, e.g. "warm", "concise", "formal"
+
+
+class TwinFormatResult(BaseModel):
+    channel: str
+    formatted: str
+    llm_used: bool = False
+
+
 # --- API contract (CLAUDE.md §7.4) -----------------------------------------
 
 class RMQueryRequest(BaseModel):

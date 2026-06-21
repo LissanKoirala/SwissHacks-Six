@@ -307,6 +307,56 @@ export interface ClientSummary {
   alert_count: number;
 }
 
+// --- Client Digital Twin (pre-mortem on the proposal; advisory only) ---
+
+export type TwinStance = "receptive" | "mixed" | "likely_to_object";
+
+export interface TwinDriver {
+  label: string;
+  kind: string; // value-aligned | value-conflict | risk-reassurance | risk-mismatch | framing | life-event
+  stance: "supportive" | "opposing" | "neutral";
+  weight: number;
+  contribution: number;
+  detail: string;
+  provenance: Provenance;
+}
+
+export interface ClientTwin {
+  client_id: string;
+  client_name: string;
+  stance: TwinStance;
+  score: number;
+  confidence: "low" | "medium" | "high";
+  summary: string;
+  anticipated_objection?: string | null;
+  suggested_framing?: string | null;
+  drivers: TwinDriver[];
+  llm_used: boolean;
+  provenance: Provenance[];
+}
+
+export interface TwinAskAnswer {
+  client_id: string;
+  question: string;
+  answer: string;
+  confidence: "low" | "medium" | "high";
+  citations: Provenance[];
+  llm_used: boolean;
+}
+
+export type TwinChannel =
+  | "email"
+  | "sms"
+  | "whatsapp"
+  | "talking_points"
+  | "call_script";
+
+export interface TwinFormatResult {
+  channel: TwinChannel;
+  formatted: string;
+  llm_used: boolean;
+}
+
 export interface Insights {
   client: ClientSummary;
   matches: Match[];
@@ -1274,6 +1324,17 @@ export interface DraftResult {
 export interface ClientInbox {
   email: string;
   messages: GmailMessage[];
+}
+
+export interface GmailMessageFull {
+  id: string;
+  thread_id: string;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  body: string;
+  unread: boolean;
 }
 
 export interface ClientCalendar {
