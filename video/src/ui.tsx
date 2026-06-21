@@ -210,6 +210,138 @@ export const Card: React.FC<{
   </div>
 );
 
+// A head-and-shoulders glyph for avatars / team members.
+export const Person: React.FC<{ size: number; color: string }> = ({ size, color }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+    <circle cx={12} cy={8} r={4.2} fill={color} />
+    <path d="M3.5 20.5c0-4.4 3.8-6.5 8.5-6.5s8.5 2.1 8.5 6.5z" fill={color} />
+  </svg>
+);
+
+// A "dedicated team" cluster: a client at the centre with role badges arrayed
+// around them, connectors drawing out. The core metaphor — a full team focused
+// on one person. Badges + connectors stagger in from `at`.
+export const TeamCluster: React.FC<{
+  size: number;
+  roles: string[];
+  at: number;
+  centerLabel?: string; // e.g. "YOU" or initials; falls back to a person glyph
+  dim?: boolean; // render greyed (for the "everyone else" contrast)
+  pillFont?: number;
+}> = ({ size, roles, at, centerLabel, dim = false, pillFont = 20 }) => {
+  const frame = useCurrentFrame();
+  const cx = size / 2;
+  const cy = size / 2;
+  const R = size * 0.4;
+  const n = roles.length;
+  const accent = dim ? COLORS.inkFaint : COLORS.primary;
+  const pos = roles.map((label, i) => {
+    const a = ((-90 + (i * 360) / n) * Math.PI) / 180;
+    return { label, x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), at: at + i * 5 };
+  });
+  const avatar = size * 0.2;
+  return (
+    <div style={{ position: "relative", width: size, height: size }}>
+      <svg width={size} height={size} style={{ position: "absolute", inset: 0, overflow: "visible" }}>
+        {pos.map((p, i) => {
+          const rev = interpolate(frame, [p.at, p.at + 12], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+          return (
+            <line
+              key={i}
+              x1={cx}
+              y1={cy}
+              x2={cx + (p.x - cx) * rev}
+              y2={cy + (p.y - cy) * rev}
+              stroke={accent}
+              strokeWidth={2}
+              opacity={dim ? 0.25 : 0.4}
+            />
+          );
+        })}
+      </svg>
+
+      {/* role badges */}
+      {pos.map((p, i) => {
+        const o = interpolate(frame, [p.at + 6, p.at + 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        const sc = interpolate(frame, [p.at + 6, p.at + 18], [0.6, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: p.x,
+              top: p.y,
+              transform: `translate(-50%,-50%) scale(${sc})`,
+              opacity: o,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "9px 16px",
+              borderRadius: 999,
+              whiteSpace: "nowrap",
+              background: dim ? "#f5f5f5" : "#fff",
+              boxShadow: `inset 0 0 0 1.5px ${dim ? COLORS.border : "#cfe2ff"}`,
+              color: dim ? COLORS.inkFaint : COLORS.ink,
+              fontSize: pillFont,
+              fontWeight: 600,
+            }}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: 999, background: accent }} />
+            {p.label}
+          </div>
+        );
+      })}
+
+      {/* the client at the centre */}
+      <div
+        style={{
+          position: "absolute",
+          left: cx,
+          top: cy,
+          transform: "translate(-50%,-50%)",
+          width: avatar,
+          height: avatar,
+          borderRadius: 999,
+          background: dim ? "#eaeaea" : COLORS.primary,
+          display: "grid",
+          placeItems: "center",
+          boxShadow: dim ? "none" : "0 12px 30px -12px rgba(0,96,223,0.6)",
+        }}
+      >
+        {centerLabel ? (
+          <span style={{ color: "#fff", fontSize: avatar * 0.3, fontWeight: 700, letterSpacing: "0.04em" }}>{centerLabel}</span>
+        ) : (
+          <Person size={avatar * 0.62} color="#fff" />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// A framed screenshot of the real app — rounded clip, hairline ring, soft
+// shadow. `src` is a public/ path (staticFile). Width drives the box; height
+// follows the image's aspect ratio.
+export const Screenshot: React.FC<{
+  src: string;
+  width: number;
+  ratio: number; // height / width of the source image
+  style?: React.CSSProperties;
+}> = ({ src, width, ratio, style }) => (
+  <div
+    style={{
+      width,
+      height: width * ratio,
+      borderRadius: 16,
+      overflow: "hidden",
+      background: COLORS.card,
+      boxShadow: `inset 0 0 0 1.5px ${COLORS.border}, 0 34px 70px -38px rgba(16,24,40,0.5)`,
+      ...style,
+    }}
+  >
+    <Img src={staticFile(src)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+  </div>
+);
+
 // A draw-in connector arrow for flows. `progress` 0..1 reveals it.
 export const FlowArrow: React.FC<{ progress: number; width?: number }> = ({
   progress,

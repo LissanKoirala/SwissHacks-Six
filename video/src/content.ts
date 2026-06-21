@@ -21,6 +21,53 @@ export const DESK: {
   { name: "Marius Huber", mandate: "Defensive", alerts: 2, polarity: "opportunity", note: "Unilever acts on deforestation — values-aligned" },
 ];
 
+// --- Workflow composition: news → classify → collide → kanban → alert → review.
+// Mirrors the real product task board (statuses backlog → started/in-progress →
+// review/"Needs sign-off"); task copy + activity trail are the actual task-0008.
+export const WORKFLOW = {
+  article: {
+    outlet: "FINANCIAL WIRE",
+    url: "ft.example/markets/biogen-neuro",
+    date: "20 June 2026",
+    headline: "Biogen to wind down its neurodegenerative research division",
+    standfirst:
+      "The biotech will halt several brain-disease programmes and pivot to higher-margin therapeutics, drawing sharp criticism from patient foundations.",
+    body: [
+      "Biogen confirmed it will shut its dedicated neurodegenerative research division, halting several early-stage programmes as it redirects capital toward higher-margin therapeutics.",
+      "Advocacy groups that have long funded brain-disease research called the move “a betrayal of patients”.",
+    ],
+  },
+  classify: {
+    sentiment: "BEARISH",
+    score: -0.62,
+    topic: "Neurodegenerative research",
+  },
+  collision: {
+    client: "Mr. Schneider",
+    stance: "His foundation funds Parkinson’s research.",
+    holding: "Held: Biogen Inc. · CHF 101,097",
+    source: "schneider#…#1",
+  },
+  task: {
+    title: "Risk review: Biogen Inc. conflicts on Neurodegenerative research",
+    client: "Schneider",
+    priority: "High",
+    activity: [
+      "Agent picked up task (investment_review).",
+      "Matched signal ‘Biogen to wind down neurodegenerative research’ (conflict).",
+      "Ran advisory engine — 1 action proposed.",
+      "Draft ready — parked in ‘Needs sign-off’ for RM.",
+    ],
+    finding: "Proposed SWAP within mandate — Biogen Inc. → Eli Lilly & Co. (CHF 101,097)",
+  },
+  alert: {
+    time: "09:00",
+    sender: "Advisory Workbench",
+    text:
+      "Good morning. 1 item needs your review: Mr. Schneider — Biogen conflicts with his neuro-research stance. A same-sector swap is ready. Open the workbench →",
+  },
+};
+
 // News & signal watch — classify-once corpus over the seed/case-study book.
 export const NEWS = {
   total: 21,
@@ -62,6 +109,105 @@ export const RENDEZVOUS = {
     modes: ["Fairest", "Greenest"],
     note: "live flight quotes · day/night globe",
   },
+};
+
+// Capture · the voice back-and-forth. The workbench asks, the RM answers aloud;
+// keywords get picked up and the sentiment shifts — feeding the next slide.
+export const CAPTURE_CHAT = {
+  turns: [
+    {
+      q: "What did you cover with Eugen today?",
+      a: "Lunch at the Kronenhalle — relaxed, proud his grandson started an engineering apprenticeship.",
+      keys: ["grandson", "engineering apprenticeship"],
+    },
+    {
+      q: "Any change in his risk appetite?",
+      a: "He wants steady, dependable dividends, and is wary of anything speculative.",
+      keys: ["steady dividends", "wary", "speculative"],
+      risk: "down" as const,
+    },
+    {
+      q: "Anything for the family?",
+      a: "Keen to set aside more for the grandchildren.",
+      keys: ["grandchildren"],
+    },
+  ],
+};
+
+// Trust & explainability — the provenance chain cutting through real haystacks.
+// Each column is a full stack; only the cited item lights up, and the chain
+// points at exactly those. Data is the real Schneider/Biogen/Eli-Lilly thread.
+export const TRUST = {
+  log: {
+    title: "CRM LOG",
+    hl: 4,
+    rows: [
+      { primary: "2023-09-12", secondary: "European automotive challenges" },
+      { primary: "2024-01-18", secondary: "Long-term review · Zug residence" },
+      { primary: "2024-05-14", secondary: "Core large-cap pharma breakdown" },
+      { primary: "2025-11-06", secondary: "Reaffirmed cautious, long-term stance" },
+      { primary: "2026-01-22", secondary: "Foundation established to fund neuro research" },
+      { primary: "2026-02-18", secondary: "Audit of pharma's neuro commitments" },
+      { primary: "2026-03-24", secondary: "CHF 1M endowment into the foundation" },
+    ],
+  },
+  topics: {
+    title: "TOPICS",
+    hl: 1,
+    rows: [
+      { primary: "Deforestation & biodiversity" },
+      { primary: "Neurodegenerative research" },
+      { primary: "Labour & supply-chain governance" },
+      { primary: "US mega-cap tech / AI" },
+    ],
+  },
+  news: {
+    title: "NEWS WIRE",
+    hl: 2,
+    rows: [
+      { primary: "Unilever cuts off palm-oil suppliers" },
+      { primary: "SMI holds steady as defensives outperform" },
+      { primary: "Biogen to wind down neuro research division" },
+      { primary: "Global bond yields ease as banks signal patience" },
+      { primary: "PDD Holdings hit with forced-labour claims" },
+      { primary: "CIO tactical: rotate into mega-cap US tech" },
+      { primary: "ESG monitor: Unilever upgraded to leader" },
+    ],
+  },
+  cio: {
+    title: "CIO LIST · Health Care",
+    hl: 6,
+    rows: [
+      { primary: "Novartis AG", secondary: "BUY" },
+      { primary: "Roche Holding AG", secondary: "BUY" },
+      { primary: "AbbVie Inc.", secondary: "BUY" },
+      { primary: "Amgen Inc.", secondary: "BUY" },
+      { primary: "GSK plc", secondary: "BUY" },
+      { primary: "Gilead Sciences Inc.", secondary: "BUY" },
+      { primary: "Eli Lilly & Co.", secondary: "BUY" },
+      { primary: "Novo Nordisk A/S", secondary: "BUY" },
+    ],
+  },
+};
+
+// CRM update — the voice note from the previous slide fans into the four profile
+// facets. Each "added" line is faithful to the Kronenhalle lunch note; the
+// personality facet also nudges the risk appetite down.
+export const CRM_UPDATE = {
+  client: "Eugen Räber",
+  source: {
+    label: "From the voice note",
+    title: "Lunch at the Kronenhalle",
+    snippet:
+      "“Proud of his grandson's engineering apprenticeship. Wants steady, dependable dividends, wary of anything speculative. Keen to set aside more for the grandchildren.”",
+  },
+  facets: [
+    { key: "Professional", existing: "Respects tangible hardware (ASML).", added: "Reaffirmed respect for real engineering." },
+    { key: "Interests", existing: "Flims & the mountains; classical tastes.", added: "Grandson started an engineering apprenticeship." },
+    { key: "Historical", existing: "Long-term holder.", added: "Wants steady, dependable dividends." },
+    { key: "Personality", existing: "Quiet, predictable.", added: "Wary of speculation — risk appetite ↓", risk: true },
+  ],
+  close: "A living record — the next plan draws on it.",
 };
 
 // Client digital twin — a real "bounce then clear" loop for Julian Ammann
