@@ -9,7 +9,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { AccountMenu } from "./AccountMenu";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { DESK_BRAND_MARK_HEIGHT } from "@/lib/layout";
+import { DESK_BRAND_MARK_HEIGHT, DESK_BRAND_STRIP_HEIGHT } from "@/lib/layout";
 
 export function Sidebar({
   clients,
@@ -53,7 +53,10 @@ export function Sidebar({
       <button
         type="button"
         onClick={onHome}
-        className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-3.5 text-left hover:bg-accent"
+        className={cn(
+          "flex shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4 text-left hover:bg-accent",
+          DESK_BRAND_STRIP_HEIGHT,
+        )}
       >
         <div
           className={cn(
