@@ -177,7 +177,7 @@ def wikipedia_page(title: str) -> tuple[str, Optional[str], bool]:
     for lang in ("en", "de"):
         img, _ = _search_image(lang, title)
         if img:
-            text, _, _ = _summary(lang, title.split("·")[0].strip())
+            text, _, _, _ = _summary(lang, title.split("·")[0].strip())
             return text or fallback_text, img, True
 
     if fallback_ok:
