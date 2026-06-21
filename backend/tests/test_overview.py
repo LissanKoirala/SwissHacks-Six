@@ -117,3 +117,5 @@ def test_news_wire_polarity_reflects_impact_not_appetite():
     for n in o["news"]:
         assert n["provenance"]["source_type"] == "news"
         assert not n.get("market_digest"), "macro digests belong in market_moves"
+    dates = [n["published_at"] for n in o["news"]]
+    assert dates == sorted(dates, reverse=True), "news wire is newest-first for the desk preview"

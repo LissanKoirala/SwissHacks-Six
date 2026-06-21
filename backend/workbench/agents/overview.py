@@ -391,6 +391,7 @@ def _build_news_wire(world: World, insights_by_client: dict) -> list[NewsWireIte
             sentiment_label=n.sentiment.label, issuer_name=n.issuer_name,
             url=n.url, relevant_clients=impact.get(n.id, []), provenance=n.provenance,
         ))
+    out.sort(key=lambda item: item.published_at, reverse=True)
     return out
 
 

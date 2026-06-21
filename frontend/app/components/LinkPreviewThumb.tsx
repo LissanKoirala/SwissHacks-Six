@@ -52,14 +52,17 @@ export function LinkPreviewThumb({
       : "h-9 w-9";
   const iconDim = faviconDim;
   const frameClass = stretched
-    ? "relative h-full min-h-[5rem] w-auto shrink-0 aspect-video rounded-none rounded-r-md ring-0"
+    ? "relative h-full min-h-0 w-auto shrink-0 aspect-video rounded-none rounded-r-md ring-0"
     : layout === "thumbnail"
-      ? "h-auto w-56 max-w-[224px] shrink-0 aspect-video rounded-md"
+      ? "relative h-auto w-56 max-w-[224px] shrink-0 aspect-video rounded-md"
       : `relative shrink-0 overflow-hidden rounded-lg bg-muted ring-1 ring-inset ring-border ${dim}`;
   const fallbackFavicon = preview?.favicon_url || faviconFromUrl(url);
-  const showThumbnail =
-    !failed && preview?.preview_kind === "thumbnail" && preview.image_url;
-  const showFavicon = !showThumbnail && fallbackFavicon && !failed;
+  const showImage = !failed && Boolean(preview?.image_url);
+  const showFavicon = !showImage && fallbackFavicon && !failed;
+  const fillClass =
+    stretched || layout === "thumbnail"
+      ? "absolute inset-0 h-full w-full object-cover"
+      : "h-full w-full object-cover";
 
   return (
     <div
@@ -70,29 +73,48 @@ export function LinkPreviewThumb({
       } ${frameClass} ${className}`}
       aria-hidden
     >
-      {showThumbnail ? (
+      {showImage ? (
         <img
-          src={preview.image_url!}
+          src={preview!.image_url!}
           alt=""
-          className={
-            stretched
-              ? "absolute inset-0 h-full w-full object-cover"
-              : "h-full w-full object-cover"
-          }
+          className={fillClass}
           onError={() => setFailed(true)}
         />
       ) : showFavicon ? (
-        <div className="grid h-full w-full place-items-center bg-muted">
-          <img
-            src={fallbackFavicon}
-            alt=""
-            className={`${faviconDim} object-contain`}
-            style={{ filter: FAVICON_FILTER }}
-            onError={() => setFailed(true)}
-          />
-        </div>
+        <>
+          {stretched || layout === "thumbnail" ? (
+            <img
+              src={fallbackFavicon}
+              alt=""
+              className="absolute inset-0 h-full w-full scale-150 object-cover opacity-50"
+              style={{ filter: FAVICON_FILTER }}
+              onError={() => setFailed(true)}
+            />
+          ) : null}
+          <div
+            className={
+              stretched || layout === "thumbnail"
+                ? "absolute inset-0 grid place-items-center bg-muted/80"
+                : "grid h-full w-full place-items-center bg-muted"
+            }
+          >
+            <img
+              src={fallbackFavicon}
+              alt=""
+              className={`${faviconDim} object-contain`}
+              style={{ filter: FAVICON_FILTER }}
+              onError={() => setFailed(true)}
+            />
+          </div>
+        </>
       ) : (
-        <div className="grid h-full w-full place-items-center bg-muted text-muted-foreground">
+        <div
+          className={
+            stretched || layout === "thumbnail"
+              ? "absolute inset-0 grid place-items-center bg-muted text-muted-foreground"
+              : "grid h-full w-full place-items-center bg-muted text-muted-foreground"
+          }
+        >
           <Globe className={iconDim} strokeWidth={1.5} />
         </div>
       )}

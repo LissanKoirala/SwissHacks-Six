@@ -772,6 +772,20 @@ def create_app() -> FastAPI:
                 continue
         raise HTTPException(404, "logo not found")
 
+    @app.get("/api/publisher-logo")
+    def publisher_logo(source: str, url: str | None = None):
+        """Proxy publisher favicon/logo — resolves source label when article URL is a placeholder."""
+        from ..publisher_logos import fetch_publisher_logo
+
+        content, ctype = fetch_publisher_logo(source, url)
+        if not content:
+            raise HTTPException(404, "publisher logo not found")
+        return Response(
+            content=content,
+            media_type=ctype or "image/png",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
     return app
 
 
