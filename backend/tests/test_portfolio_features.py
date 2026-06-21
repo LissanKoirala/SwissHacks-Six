@@ -98,6 +98,54 @@ def test_rm_query_alternative_differs_from_primary(world):
         assert r["alternative"]["buy_isin"] != buy
 
 
+def test_match_resolution_offline(world):
+    ins = get_insights(world, "schneider")
+    mid = ins.matches[0].id
+    r = client.post("/clients/schneider/matches/resolution",
+                    json={"match_id": mid}).json()
+    assert r["match_id"] == mid
+    assert r["strategy_proposal"]["swaps"]
+    assert r["summary"]
+    assert r["source"] in ("template", "llm")
+    assert r["llm_used"] == (r["source"] == "llm")
+    # cached on second call
+    r2 = client.post("/clients/schneider/matches/resolution",
+                     json={"match_id": mid}).json()
+    assert r2["generated_at"] == r["generated_at"]
+
+
+def test_match_resolution_strict_match_id(world):
+    """Unknown match_id must 404 — never silently reuse the first match."""
+    assert client.post("/clients/schneider/matches/resolution",
+                         json={"match_id": "schneider:nonexistent"}).status_code == 404
+
+
+def test_match_resolution_distinct_per_match(world):
+    ins = get_insights(world, "schneider")
+    assert len(ins.matches) >= 2
+    a, b = ins.matches[0].id, ins.matches[1].id
+    ra = client.post("/clients/schneider/matches/resolution",
+                     json={"match_id": a}).json()
+    rb = client.post("/clients/schneider/matches/resolution",
+                     json={"match_id": b}).json()
+    assert ra["match_id"] == a
+    assert rb["match_id"] == b
+
+
+def test_match_resolution_distinct_per_holding(world):
+    """Same match on many holdings must cache separately per holding_isin."""
+    ins = get_insights(world, "raeber")
+    mid = ins.matches[0].id
+    isins = sorted({h.isin for h in world.holdings_for_client("raeber")})[:2]
+    assert len(isins) >= 2
+    ra = client.post("/clients/raeber/matches/resolution",
+                     json={"match_id": mid, "holding_isin": isins[0]}).json()
+    rb = client.post("/clients/raeber/matches/resolution",
+                     json={"match_id": mid, "holding_isin": isins[1]}).json()
+    assert ra["holding_isin"] == isins[0]
+    assert rb["holding_isin"] == isins[1]
+
+
 def test_new_endpoints_respond():
     assert client.get("/clients/huber/opportunities").status_code == 200
     assert client.get("/clients/huber/transactions").status_code == 200

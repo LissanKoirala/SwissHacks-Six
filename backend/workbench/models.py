@@ -65,6 +65,10 @@ class Statement(BaseModel):
     text: str
     provenance: Provenance
     weight: float = 1.0
+    # How this fact entered the profile: "seed" (curated ground truth), "log" (auto-derived from
+    # the meeting log by the CRM agent), or "capture" (materialised from an RM note). Lets the UI
+    # show that the DNA is genuinely read from the logs, not hand-entered (CLAUDE.md §8.B).
+    origin: Literal["seed", "log", "capture"] = "seed"
 
 
 class InterestEdge(BaseModel):
@@ -77,6 +81,10 @@ class InterestEdge(BaseModel):
     polarity: Polarity
     weight: float = 1.0
     provenance: Provenance
+    origin: Literal["seed", "log", "capture"] = "seed"
+    # How many meeting-log entries independently corroborate this edge — evidence that the DNA
+    # is grounded in the conversation history (shown as "n entries" in the UI).
+    log_support: int = 1
 
 
 class Profile(BaseModel):
@@ -87,6 +95,9 @@ class Profile(BaseModel):
     headline: str
     facets: dict[str, list[Statement]] = Field(default_factory=dict)
     interest_edges: list[InterestEdge] = Field(default_factory=list)
+    # How many meeting-log entries the CRM agent read to build this DNA — surfaced as
+    # "auto-built from N CRM entries" so the read-the-logs claim is visible (CLAUDE.md §8.B).
+    log_entries_scanned: int = 0
 
 
 # --- RM Capture (multimodal note → stage → confirm) -------------------------
@@ -150,6 +161,9 @@ class CaptureConfirmRequest(BaseModel):
 class Sentiment(BaseModel):
     score: float  # [-1, 1]
     label: SentimentLabel
+    # Where the score/label came from and how it was thresholded — so an RM can audit *why* an
+    # item reads BULLISH/BEARISH, not just that it does (Trust & Explainability, CLAUDE.md §2).
+    source: Optional[str] = None  # e.g. "Event Registry · |score|>0.2" / "stock-labels · |score|>0.2"
 
 
 class NewsItem(BaseModel):
@@ -325,6 +339,42 @@ class TopicMatch(BaseModel):
     news_provenance: Provenance     # the news tag
 
 
+# --- Worldview engine -------------------------------------------------------
+# The differentiator (CLAUDE.md §1): we do NOT reduce the client to a topic set at the match
+# boundary. Each signal is scored, reframed, and reacted-to through a living model of the client's
+# worldview — their convictions (weighted, corroborated, dated edges), exposure (portfolio),
+# memory (their own past words), and predicted reaction. All deterministic and fully cited, so
+# personalisation survives offline and every number/sentence points back to a source (§2/§9).
+
+class ScoreComponent(BaseModel):
+    """One factor behind the conviction-weighted relevance score, with its contribution + a cite.
+    The breakdown is the trust surface: the RM sees *why* an item out-ranked the others."""
+    label: str                      # "Conviction" / "Exposure" / "Sentiment" / "Freshness" / "Signal"
+    detail: str                     # human-readable basis, e.g. "personality conviction · logged 2026-03-05"
+    points: float                   # points this factor added to the 0–100 score
+    max_points: float               # the cap for this factor (so the bar can be drawn)
+    provenance: Optional[Provenance] = None
+
+
+class RelevanceScore(BaseModel):
+    """A transparent 0–100 relevance for THIS (client, item) pair — every term cited (§2).
+    Replaces binary match/no-match: conviction × exposure × news strength × freshness × signal."""
+    score: int                      # 0–100
+    components: list[ScoreComponent] = Field(default_factory=list)
+    summary: str                    # one-line plain-English additive story of the score
+
+
+class LensFraming(BaseModel):
+    """The 'Client Lens' (#1): the same generic news rewritten through THIS client's documented
+    worldview — quoting their own prior words back to them. The news adapts to the reader."""
+    headline: str                   # the reframed, client-specific headline
+    narrative: str                  # 1–2 sentences tying the news to their own documented stance
+    client_quote: Optional[str] = None   # the exact prior quote being echoed
+    quote_date: Optional[str] = None
+    draft_source: Literal["llm", "template"] = "template"
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
 class Match(BaseModel):
     id: str
     client_id: str
@@ -334,6 +384,10 @@ class Match(BaseModel):
     shared_topics: list[TopicMatch] = Field(default_factory=list)
     affected_holding: Optional[Holding] = None  # the held name the news is about, if any
     why: list[Provenance] = Field(default_factory=list)
+    # --- worldview enrichment (deterministic, free — computed at match time, §9) ---
+    relevance: Optional[RelevanceScore] = None   # conviction-weighted 0–100 score + cited breakdown
+    lens: Optional[LensFraming] = None           # the item reframed through this client's worldview
+    celebrate: bool = False         # a genuine 'call to celebrate' good-news moment (#4), not a warning
 
 
 # --- Advisory outputs (CLAUDE.md §1: two things) ----------------------------
@@ -359,6 +413,9 @@ class SubstitutionMetrics(BaseModel):
     value_tags_sell: list[str] = Field(default_factory=list)
     value_tags_buy: list[str] = Field(default_factory=list)
     risk_source: Optional[str] = None       # "SIX EOD" | "sector model"
+    # Pointers behind the quantitative comparison (the sold + bought CIO rows, the risk source) so
+    # every metric in the side-by-side is clickable, not just asserted (Trust, §2/§7.5).
+    provenance: list[Provenance] = Field(default_factory=list)
 
 
 class SwapProposal(BaseModel):
@@ -409,8 +466,72 @@ class DialogueSuggestion(BaseModel):
     style: str
     talking_points: list[Statement] = Field(default_factory=list)
     draft_message: str
+    # How the draft was produced: "llm" (Phoeniqs, style-tuned) or "template" (deterministic,
+    # style-aware fallback). Surfaced to the RM so the provenance of the prose itself is honest.
+    draft_source: Literal["llm", "template"] = "template"
     market_context: list[Statement] = Field(default_factory=list)
     provenance: list[Provenance] = Field(default_factory=list)
+
+
+# --- Client Digital Twin (pre-mortem on a proposal; advisory only) ----------
+
+class TwinDriver(BaseModel):
+    """One reason the client is likely to react the way they do, grounded in a weighted
+    profile fact and citing its source. `contribution` is the signed effect on the stance
+    (negative = pushes toward objection)."""
+    label: str                      # human-readable driver, e.g. "Avoids US mega-cap software"
+    kind: str                       # value-aligned | value-conflict | risk-reassurance | risk-mismatch | framing | life-event
+    stance: str                     # supportive | opposing | neutral
+    weight: float                   # the underlying fact's RM-set importance
+    contribution: float             # signed effect on the aggregate stance
+    detail: str                     # short, plain explanation
+    provenance: Provenance
+
+
+class ClientTwin(BaseModel):
+    """Predicted client reaction to the current proposal, to help the RM prepare. Never
+    contacts the client (CLAUDE.md §2: advisory only — the agent proposes, the RM decides)."""
+    client_id: str
+    client_name: str
+    stance: str                     # receptive | mixed | likely_to_object
+    score: float                    # aggregate stance score (signed)
+    confidence: str                 # low | medium | high
+    summary: str                    # one-line read (deterministic, or LLM-polished)
+    anticipated_objection: Optional[str] = None  # "what the client might say" (LLM, optional)
+    suggested_framing: Optional[str] = None      # how to pre-empt it (LLM, optional) → feeds dialogue
+    drivers: list[TwinDriver] = Field(default_factory=list)
+    llm_used: bool = False
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
+class TwinAskRequest(BaseModel):
+    """The RM asks the twin a free-form question about the client."""
+    question: str
+
+
+class TwinAskAnswer(BaseModel):
+    """The twin's predicted answer — how the client would likely think/respond — grounded
+    in the cited profile facts. Speaks to the RM about the client; never advises the client."""
+    client_id: str
+    question: str
+    answer: str
+    confidence: str                 # low | medium | high
+    citations: list[Provenance] = Field(default_factory=list)
+    llm_used: bool = False
+
+
+class TwinFormatRequest(BaseModel):
+    """Turn drafted content into a ready-to-review message for a channel. The RM reviews
+    and sends — the agent never sends anything."""
+    content: str
+    channel: str                    # email | sms | whatsapp | talking_points | call_script
+    tone: Optional[str] = None      # optional steer, e.g. "warm", "concise", "formal"
+
+
+class TwinFormatResult(BaseModel):
+    channel: str
+    formatted: str
+    llm_used: bool = False
 
 
 # --- API contract (CLAUDE.md §7.4) -----------------------------------------
@@ -422,12 +543,45 @@ class RMQueryRequest(BaseModel):
     exclude_isin: Optional[str] = None
 
 
+class MatchResolutionRequest(BaseModel):
+    """On-demand resolution draft for a single match (map holding popover)."""
+    match_id: str
+    holding_isin: Optional[str] = None
+    refresh: bool = False
+
+
 class ClientSummary(BaseModel):
     client_id: str
     name: str
     mandate: str
     headline: str
     alert_count: int = 0
+
+
+class ReactionPrediction(BaseModel):
+    """The 'Reaction Simulator' (#3): how this client is likely to react to the proposal, predicted
+    from their personality facet + their own past words — so the RM walks in prepared, not surprised.
+    Advisory only and clearly labelled 'RM judgement required' (§2): it never speaks AS the client,
+    it forecasts FOR the RM. Strong model lazily, deterministic fallback keeps it offline (§9)."""
+    predicted_objection: str        # the pushback the RM should expect, in the client's own register
+    emotional_register: str         # a short tag, e.g. "anxious · feels betrayed" / "sceptical" / "proud"
+    suggested_rebuttal: str         # how the RM can meet it, grounded in what the client respects
+    confidence: Literal["grounded", "inferred"] = "grounded"  # grounded = anchored to a real quote
+    draft_source: Literal["llm", "template"] = "template"
+    provenance: list[Provenance] = Field(default_factory=list)
+
+
+class LifeEventSignal(BaseModel):
+    """Life-event-aware timing (#5): a dated event/belief shift that recently reshaped the client's
+    priorities. Mines the *dates* on facets/edges vs today, so the desk notices the human moment and
+    asks whether the stated mandate still reflects the revealed priorities."""
+    label: str                      # short banner label, e.g. "Recent diagnosis in the family"
+    date: str                       # ISO date of the event
+    months_ago: int
+    topic: Optional[str] = None     # the value topic it shifted, if any
+    facet: Optional[str] = None     # which DNA facet recorded it
+    implication: str                # the desk action it implies (verify mandate, anticipate, …)
+    provenance: Provenance
 
 
 class ClientInsights(BaseModel):
@@ -439,6 +593,9 @@ class ClientInsights(BaseModel):
     # Proposals for the other DISTINCT salient matches (HI5) — a client with two genuine triggers
     # (e.g. a conflict on one holding + an opportunity on another) gets a proposal for each.
     additional_proposals: list[StrategyProposal] = Field(default_factory=list)
+    # --- worldview engine outputs (per opened client, lazily; §9) ---
+    reaction: Optional[ReactionPrediction] = None          # digital-twin reaction to the primary match
+    life_events: list[LifeEventSignal] = Field(default_factory=list)  # values-shift timing signals
     generated_at: str
     llm_used: bool = False
 

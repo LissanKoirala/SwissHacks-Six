@@ -2,10 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Info, Plus } from "lucide-react";
+import { ArrowLeft, CalendarClock, Plus } from "lucide-react";
 import type {
   Insights,
   Analytics,
+  LifeEventSignal,
   StrategyProposal,
   SwapAction,
 } from "@/lib/types";
@@ -14,10 +15,13 @@ import { prettyDate, chf } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill, FigureCard, Expander, PolarityChip } from "./ui";
+import { ProvenanceTag } from "./Provenance";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AlertCard } from "./AlertCard";
+import { AlertCard, groupMatchesByHeadline } from "./AlertCard";
 import { StrategyPanel } from "./StrategyPanel";
 import { DialoguePanel } from "./DialoguePanel";
+import { TwinPanel } from "./TwinPanel";
+import { AskTwinPanel } from "./AskTwinPanel";
 import { PortfolioView } from "./PortfolioView";
 import { ProfileView } from "./ProfileView";
 import { PortfolioCharts } from "./PortfolioCharts";
@@ -27,6 +31,8 @@ import { DecisionFlow } from "./DecisionFlow";
 import { RiskTimeline } from "./RiskTimeline";
 import { CaptureNote } from "./CaptureNote";
 import { OpportunitiesPanel } from "./OpportunitiesPanel";
+import { AuditPanel } from "./AuditPanel";
+import { ClientWorkspace } from "./ClientWorkspace";
 import { TransactionsView } from "./TransactionsView";
 
 function loadRendezvousView() {
@@ -57,8 +63,8 @@ const RendezvousView = dynamic(() => loadRendezvousView(), {
 });
 
 type Area = "advisory" | "portfolio" | "client" | "capture";
-type PortfolioSub = "holdings" | "allocation" | "transactions" | "risk" | "map";
-type ClientSub = "profile" | "network" | "rendezvous";
+type PortfolioSub = "holdings" | "audit" | "allocation" | "transactions" | "risk" | "map";
+type ClientSub = "profile" | "network" | "rendezvous" | "workspace";
 
 const ACTION_CHIP: Record<SwapAction, string> = {
   SWAP: "bg-primary/10 text-primary ring-primary/30",
@@ -212,6 +218,43 @@ function RecommendationStrip({
   );
 }
 
+/* ----------------------------------------------------- life-event banner --- */
+
+/**
+ * Life-event-aware timing (#5): a documented event/belief-shift that recently reshaped this
+ * client's priorities — mined from the *dates* on their DNA vs today. Prompts the desk to check the
+ * stated mandate still matches the revealed priorities. Every line cites the log it came from (§2).
+ */
+function LifeEventBanner({ events }: { events: LifeEventSignal[] }) {
+  if (!events.length) return null;
+  return (
+    <div className="mb-6 rounded-md border border-primary/20 bg-primary/[0.06] px-4 py-3">
+      <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-primary">
+        <CalendarClock className="h-3.5 w-3.5" aria-hidden />
+        Life-event timing — verify the mandate still fits who he is now
+      </p>
+      <ul className="mt-2 space-y-2">
+        {events.map((e, i) => (
+          <li key={`${e.date}-${i}`} className="text-sm text-foreground/80">
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className="font-semibold text-foreground">{e.label}</span>
+              <span className="text-xs text-muted-foreground">
+                {e.months_ago <= 0
+                  ? "this month"
+                  : `${e.months_ago} month${e.months_ago === 1 ? "" : "s"} ago`}
+              </span>
+            </span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+              {e.implication}
+              <ProvenanceTag prov={e.provenance} label="CRM" />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------ component --- */
 
 export function ClientView({ clientId }: { clientId: string }) {
@@ -291,7 +334,7 @@ export function ClientView({ clientId }: { clientId: string }) {
               name={client.name}
               size="lg"
             />
-            <h1 className="font-display text-4xl font-light tracking-tight text-foreground">
+            <h1 className="font-display text-[2.5rem] leading-[1.1] font-light tracking-tight text-foreground">
               {client.name}
             </h1>
             <MandatePill mandate={client.mandate} />
@@ -323,15 +366,10 @@ export function ClientView({ clientId }: { clientId: string }) {
           </div>
         )}
 
-        {/* advisory-only banner — golden rule */}
-        <div className="mb-6 flex items-center gap-2 rounded-md bg-primary/10 px-4 py-2.5 text-sm text-primary ring-1 ring-inset ring-primary/20">
-          <Info className="h-4 w-4 shrink-0" aria-hidden />
-          <span>
-            <span className="font-semibold">Advisory only</span> — the RM
-            approves, the client decides. Nothing here is auto-executed or
-            auto-sent.
-          </span>
-        </div>
+        {/* life-event timing (#5) — the human moment, surfaced even with no news match */}
+        {insights.life_events && insights.life_events.length > 0 && (
+          <LifeEventBanner events={insights.life_events} />
+        )}
 
         {area === "capture" ? (
           <section>
@@ -373,8 +411,11 @@ export function ClientView({ clientId }: { clientId: string }) {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {insights.matches.map((m) => (
-                      <AlertCard key={m.id} match={m} />
+                    {groupMatchesByHeadline(insights.matches).map((group) => (
+                      <AlertCard
+                        key={group.map((m) => m.id).join(":")}
+                        matches={group}
+                      />
                     ))}
                   </div>
                 )}
@@ -387,8 +428,19 @@ export function ClientView({ clientId }: { clientId: string }) {
                     matchId={primaryMatchId}
                     currentBuyIsin={primaryBuyIsin}
                   />
-                  <DialoguePanel dialogue={insights.dialogue_suggestion} />
+                  <DialoguePanel
+                    dialogue={insights.dialogue_suggestion}
+                    clientId={clientId}
+                    clientName={client.name}
+                  />
                 </div>
+
+                {/* Client Digital Twin — a cited pre-mortem on the proposal: stance + drivers,
+                    plus ask-the-twin + autoformat. Supersedes the lighter reaction panel. */}
+                <TwinPanel clientId={clientId} />
+
+                {/* ask the twin anything → autoformat into a message */}
+                <AskTwinPanel clientId={clientId} clientName={client.name} />
 
                 {/* additional proposals — collapsed by default */}
                 {insights.additional_proposals &&
@@ -399,7 +451,7 @@ export function ClientView({ clientId }: { clientId: string }) {
                     >
                       <div className="grid gap-5 lg:grid-cols-2">
                         {insights.additional_proposals.map((p, i) => (
-                          <StrategyPanel key={`add-${i}`} proposal={p} />
+                          <StrategyPanel key={`${p.headline}-${i}`} proposal={p} />
                         ))}
                       </div>
                     </Expander>
@@ -417,6 +469,7 @@ export function ClientView({ clientId }: { clientId: string }) {
                 onChange={setPortfolioSub}
                 items={[
                   { id: "holdings", label: "Holdings" },
+                  { id: "audit", label: "Audit" },
                   { id: "allocation", label: "Allocation" },
                   { id: "transactions", label: "Transactions" },
                   { id: "risk", label: "Risk Timeline" },
@@ -426,6 +479,7 @@ export function ClientView({ clientId }: { clientId: string }) {
               {portfolioSub === "holdings" && (
                 <PortfolioView clientId={clientId} affectedIsin={affectedIsin} />
               )}
+              {portfolioSub === "audit" && <AuditPanel clientId={clientId} />}
               {portfolioSub === "allocation" && (
                 <PortfolioCharts clientId={clientId} />
               )}
@@ -433,7 +487,9 @@ export function ClientView({ clientId }: { clientId: string }) {
                 <TransactionsView clientId={clientId} />
               )}
               {portfolioSub === "risk" && <RiskTimeline clientId={clientId} />}
-              {portfolioSub === "map" && <InvestmentGlobe clientId={clientId} />}
+              {portfolioSub === "map" && (
+                <InvestmentGlobe clientId={clientId} matches={insights.matches} />
+              )}
             </TabsContent>
 
             {/* CLIENT — profile · network · rendezvous */}
@@ -445,12 +501,16 @@ export function ClientView({ clientId }: { clientId: string }) {
                   { id: "profile", label: "Profile" },
                   { id: "network", label: "CRM Network" },
                   { id: "rendezvous", label: "Rendezvous" },
+                  { id: "workspace", label: "Workspace" },
                 ]}
               />
               {clientSub === "profile" && <ProfileView clientId={clientId} />}
               {clientSub === "network" && <CrmGraph clientId={clientId} />}
               {clientSub === "rendezvous" && (
                 <RendezvousView clientId={clientId} />
+              )}
+              {clientSub === "workspace" && (
+                <ClientWorkspace clientId={clientId} clientName={client.name} />
               )}
             </TabsContent>
           </Tabs>

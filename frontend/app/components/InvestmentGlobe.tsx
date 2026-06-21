@@ -1,18 +1,43 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Globe2, MapPin, Newspaper, Radio } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Globe2,
+  MapPin,
+  Newspaper,
+  Pause,
+  Play,
+} from "lucide-react";
 import type {
   Globe as GlobeData,
   GlobeHolding,
   GlobeEvent,
   GlobeArc,
+  Insights,
+  Match,
 } from "@/lib/types";
 import { api } from "@/lib/api";
+import { issuerInitials, issuerLogoSources } from "@/lib/assets";
 import { chf, prettyDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { Collapsible } from "./ui";
-import { Provenance, ProvenanceTag } from "./Provenance";
+import { ProvenanceTag } from "./Provenance";
+import { LinkPreviewThumb } from "./LinkPreviewThumb";
+import { IssuerLogo } from "./IssuerLogo";
+import { CondensedMatchPreview, buildHoldingAdvisoryIndex } from "./AlertCard";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 /* The globe.gl instance is only created in the browser (dynamic import inside
  * useEffect) — it touches WebGL/`window` and must never run at SSR. */
@@ -26,14 +51,14 @@ type GlobeInstance = {
   showAtmosphere(b: boolean): GlobeInstance;
   atmosphereColor(c: string): GlobeInstance;
   atmosphereAltitude(a: number): GlobeInstance;
-  pointsData(d: GlobePoint[]): GlobeInstance;
-  pointLat(fn: (d: GlobePoint) => number): GlobeInstance;
-  pointLng(fn: (d: GlobePoint) => number): GlobeInstance;
-  pointColor(fn: (d: GlobePoint) => string): GlobeInstance;
-  pointAltitude(fn: (d: GlobePoint) => number): GlobeInstance;
-  pointRadius(fn: (d: GlobePoint) => number): GlobeInstance;
-  pointLabel(fn: (d: GlobePoint) => string): GlobeInstance;
-  pointsTransitionDuration(ms: number): GlobeInstance;
+  pointsData(d: unknown[]): GlobeInstance;
+  ringsData(d: GlobeRing[]): GlobeInstance;
+  ringLat(fn: (d: GlobeRing) => number): GlobeInstance;
+  ringLng(fn: (d: GlobeRing) => number): GlobeInstance;
+  ringColor(fn: (d: GlobeRing) => (t: number) => string): GlobeInstance;
+  ringMaxRadius(n: number): GlobeInstance;
+  ringPropagationSpeed(n: number): GlobeInstance;
+  ringRepeatPeriod(n: number): GlobeInstance;
   arcsData(d: GlobeArc[]): GlobeInstance;
   arcStartLat(fn: (d: GlobeArc) => number): GlobeInstance;
   arcStartLng(fn: (d: GlobeArc) => number): GlobeInstance;
@@ -47,6 +72,15 @@ type GlobeInstance = {
   arcDashGap(n: number): GlobeInstance;
   arcDashInitialGap(fn: () => number): GlobeInstance;
   arcDashAnimateTime(ms: number): GlobeInstance;
+  htmlElementsData(d: GlobeHtmlMarker[]): GlobeInstance;
+  htmlLat(fn: (d: GlobeHtmlMarker) => number): GlobeInstance;
+  htmlLng(fn: (d: GlobeHtmlMarker) => number): GlobeInstance;
+  htmlAltitude(fn: (d: GlobeHtmlMarker) => number): GlobeInstance;
+  htmlElement(fn: (d: GlobeHtmlMarker) => HTMLElement): GlobeInstance;
+  htmlTransitionDuration(ms: number): GlobeInstance;
+  htmlElementVisibilityModifier(
+    fn: (el: HTMLElement, isVisible: boolean) => void,
+  ): GlobeInstance;
   pointOfView(
     pov: { lat?: number; lng?: number; altitude?: number },
     ms?: number,
@@ -57,46 +91,36 @@ type GlobeInstance = {
   _destructor?: () => void;
 };
 
-type GlobePoint = {
-  kind: "holding" | "event" | "news";
+type GlobeHtmlMarker = {
+  id: string;
+  kind: "holding" | "story";
   lat: number;
   lng: number;
+  issuer: string;
+  isin?: string | null;
+  yahoo?: string | null;
+  verdict?: GlobeHolding["verdict"];
+  weight?: number;
+  highlighted: boolean;
+  dimmed: boolean;
+  sizePx: number;
   label: string;
-  color: string;
-  altitude: number;
-  radius: number;
+  storyTone?: string;
 };
 
-const CAPTION =
-  "Bars are holdings (height tracks weight, colour shows verdict); tall pulses are alert signals; low pulses are ambient world news (colour shows sentiment); dashed arcs link a signal to the holdings it affects. Every item is cited on the right.";
+type GlobeRing = { lat: number; lng: number; color: string };
+
+const ROTATE_MS = 6000; // dwell time per story before advancing
 
 /* ----------------------------------------------------------- verdict meta --- */
 
-// Finance-semantic verdict colouring. `hex` feeds the 3D globe markers (dark
-// surface), so the dark-theme token hex values are used: negative / warning /
-// success from the design token table.
 const VERDICT_META: Record<
   GlobeHolding["verdict"],
   { label: string; cls: string; dot: string; hex: string }
 > = {
-  VIOLATION: {
-    label: "Violation",
-    cls: "bg-negative/10 text-negative ring-negative/20",
-    dot: "bg-negative",
-    hex: "#d65c52", // negative (dark)
-  },
-  WATCH: {
-    label: "Watch",
-    cls: "bg-warning/10 text-warning ring-warning/20",
-    dot: "bg-warning",
-    hex: "#c89243", // warning (dark)
-  },
-  OK: {
-    label: "OK",
-    cls: "bg-success/10 text-success ring-success/20",
-    dot: "bg-success",
-    hex: "#38a574", // success (dark)
-  },
+  VIOLATION: { label: "Violation", cls: "bg-negative/10 text-negative ring-negative/20", dot: "bg-negative", hex: "#d65c52" },
+  WATCH: { label: "Watch", cls: "bg-warning/10 text-warning ring-warning/20", dot: "bg-warning", hex: "#c89243" },
+  OK: { label: "OK", cls: "bg-success/10 text-success ring-success/20", dot: "bg-success", hex: "#38a574" },
 };
 
 function VerdictChip({ verdict }: { verdict: GlobeHolding["verdict"] }) {
@@ -109,21 +133,16 @@ function VerdictChip({ verdict }: { verdict: GlobeHolding["verdict"] }) {
   );
 }
 
-// Alert-signal pulse colour by severity (3D marker hex). High = negative,
-// medium = warning, low = Wordsmith Blue (informational, non-urgent signal).
 const SEVERITY_HEX: Record<GlobeEvent["severity"], string> = {
-  high: "#d65c52", // negative (dark)
-  med: "#c89243", // warning (dark)
-  low: "#2f7ce6", // Wordsmith Blue — informational signal
+  high: "#d65c52",
+  med: "#c89243",
+  low: "#2f7ce6",
 };
 
-/* Ambient world-news pulse colour by sentiment (3D marker hex): negative =
- * loss-red, positive = gain-green, neutral = warm grey. Dimmer than the alert
- * pulses by design. */
 function sentimentHex(score?: number): string {
-  if (score == null) return "#9c9488"; // warm neutral
-  if (score <= -0.3) return "#d65c52"; // negative
-  if (score >= 0.3) return "#38a574"; // positive
+  if (score == null) return "#9c9488";
+  if (score <= -0.3) return "#d65c52";
+  if (score >= 0.3) return "#38a574";
   return "#9c9488";
 }
 
@@ -134,28 +153,215 @@ function sentimentLabel(score?: number): { text: string; cls: string } {
   return { text: "neutral", cls: "text-muted-foreground" };
 }
 
-/* globe.gl tooltips take an HTML string. Escape interpolated values so a stray
- * `<` in seed copy can never break out into markup (defence in depth). */
-function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+// The colour a story contributes to the map (its marker, impact arcs, ring).
+function storyHex(s: GlobeEvent): string {
+  if (s.kind === "ambient" || (s.sentiment != null && !s.severity)) {
+    return sentimentHex(s.sentiment);
+  }
+  return SEVERITY_HEX[s.severity] ?? sentimentHex(s.sentiment);
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
+/** Centre and zoom the camera on the story + holdings its arcs touch. */
+function projectionCamera(
+  holdings: GlobeHolding[],
+  story: GlobeEvent,
+  linkedIds: Set<string>,
+): { lat: number; lng: number; altitude: number } {
+  const pts = [{ lat: story.lat, lng: story.lng }];
+  for (const h of holdings) {
+    if (linkedIds.has(h.id)) pts.push({ lat: h.lat, lng: h.lng });
+  }
+
+  const lat = pts.reduce((sum, p) => sum + p.lat, 0) / pts.length;
+  const lng =
+    (Math.atan2(
+      pts.reduce((s, p) => s + Math.sin((p.lng * Math.PI) / 180), 0),
+      pts.reduce((s, p) => s + Math.cos((p.lng * Math.PI) / 180), 0),
+    ) *
+      180) /
+    Math.PI;
+
+  let maxSpread = 0;
+  for (const p of pts) {
+    const dLat = Math.abs(p.lat - lat);
+    let dLng = Math.abs(p.lng - lng);
+    if (dLng > 180) dLng = 360 - dLng;
+    const lngScale = dLng * Math.cos((lat * Math.PI) / 180);
+    maxSpread = Math.max(maxSpread, dLat, lngScale, Math.hypot(dLat, lngScale));
+  }
+
+  // Lower altitude = closer; scale with how far apart the projection spans.
+  const altitude = clamp(0.58 + maxSpread * 0.07, 0.58, 1.28);
+
+  return { lat, lng, altitude };
+}
+
+function markerRingColor(d: GlobeHtmlMarker): string {
+  if (d.kind === "story") return d.storyTone ?? "#2f7ce6";
+  if (d.verdict) return VERDICT_META[d.verdict]?.hex ?? VERDICT_META.OK.hex;
+  return "#ffffff";
+}
+
+/** Flat logo badge for holdings / story origin — readable on the dark earth texture. */
+function createGlobeMarkerEl(d: GlobeHtmlMarker): HTMLElement {
+  const el = document.createElement("div");
+  el.title = d.label;
+  el.style.pointerEvents = "auto";
+  el.style.cursor = "default";
+  el.style.boxSizing = "border-box";
+  el.style.flexShrink = "0";
+
+  const ring = markerRingColor(d);
+  const px = d.sizePx;
+  el.style.width = `${px}px`;
+  el.style.height = `${px}px`;
+  el.style.borderRadius = d.kind === "story" ? "9999px" : "9px";
+  el.style.background = "rgba(14, 12, 10, 0.88)";
+  el.style.backdropFilter = "blur(6px)";
+  el.style.boxShadow = d.highlighted
+    ? `0 2px 10px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.12) inset, 0 0 14px ${ring}55`
+    : "0 2px 8px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.1) inset";
+  el.style.border = `${d.highlighted ? 2 : 1}px solid ${
+    d.highlighted ? `${ring}cc` : "rgba(255,255,255,0.2)"
+  }`;
+  el.style.display = "grid";
+  el.style.placeItems = "center";
+  el.style.overflow = "hidden";
+  el.style.opacity = d.dimmed ? "0.3" : "1";
+  el.style.transition = "opacity 280ms ease, width 280ms ease, height 280ms ease";
+  el.dataset.baseOpacity = d.dimmed ? "0.3" : "1";
+
+  const logoSources = issuerLogoSources({
+    isin: d.isin,
+    issuer: d.issuer,
+    yahoo: d.yahoo,
+  });
+  const initials = issuerInitials(d.issuer);
+
+  const mountInitials = () => {
+    el.replaceChildren();
+    const span = document.createElement("span");
+    span.textContent = initials;
+    span.style.font = `600 ${Math.max(9, Math.round(px * 0.28))}px system-ui, sans-serif`;
+    span.style.color = "rgba(255,255,255,0.82)";
+    span.style.letterSpacing = "-0.02em";
+    el.appendChild(span);
+  };
+
+  const mountNewsPin = () => {
+    el.replaceChildren();
+    const inner = document.createElement("div");
+    inner.style.width = "100%";
+    inner.style.height = "100%";
+    inner.style.display = "grid";
+    inner.style.placeItems = "center";
+    inner.style.background = d.storyTone ?? "#2f7ce6";
+    inner.style.borderRadius = "9999px";
+    const icon = Math.round(px * 0.42);
+    inner.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${icon}" height="${icon}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>`;
+    el.appendChild(inner);
+  };
+
+  if (d.kind === "story" && logoSources.length === 0) {
+    mountNewsPin();
+    return el;
+  }
+
+  if (logoSources.length === 0) {
+    mountInitials();
+    return el;
+  }
+
+  let srcIdx = 0;
+  const img = document.createElement("img");
+  img.alt = "";
+  img.style.width = "76%";
+  img.style.height = "76%";
+  img.style.objectFit = "contain";
+  img.style.filter = "drop-shadow(0 1px 2px rgba(0,0,0,0.35))";
+  img.src = logoSources[0];
+  img.onerror = () => {
+    srcIdx += 1;
+    if (srcIdx < logoSources.length) img.src = logoSources[srcIdx];
+    else if (d.kind === "story") mountNewsPin();
+    else mountInitials();
+  };
+  el.appendChild(img);
+  return el;
+}
+
+function buildHtmlMarkers(
+  data: GlobeData,
+  active: GlobeEvent | null,
+  linkedIds: Set<string>,
+): GlobeHtmlMarker[] {
+  const hasFocus = !!active;
+  const holdingMarkers: GlobeHtmlMarker[] = data.holdings.map((h) => {
+    const highlighted = linkedIds.has(h.id);
+    return {
+      id: h.id,
+      kind: "holding",
+      lat: h.lat,
+      lng: h.lng,
+      issuer: h.issuer,
+      isin: h.isin,
+      yahoo: h.yahoo,
+      verdict: h.verdict,
+      weight: h.weight,
+      highlighted,
+      dimmed: hasFocus && !highlighted,
+      sizePx: highlighted ? 44 : Math.round(26 + h.weight * 14),
+      label: `${h.issuer} · ${h.city}, ${h.country}`,
+    };
+  });
+
+  if (!active) return holdingMarkers;
+
+  const storyIssuer = active.issuer_name ?? active.summary;
+  const storyMarkers: GlobeHtmlMarker[] = [
+    {
+      id: `story:${active.id}`,
+      kind: "story",
+      lat: active.lat,
+      lng: active.lng,
+      issuer: storyIssuer,
+      isin: active.issuer_isin,
+      highlighted: true,
+      dimmed: false,
+      sizePx: 38,
+      label: active.summary,
+      storyTone: storyHex(active),
+    },
+  ];
+
+  return [...holdingMarkers, ...storyMarkers];
 }
 
 /* --------------------------------------------------------------- globe --- */
 
-function GlobeCanvas({ data }: { data: GlobeData }) {
+function GlobeCanvas({
+  data,
+  active,
+  impactArcs,
+  impactHoldingIds,
+}: {
+  data: GlobeData;
+  active: GlobeEvent | null;
+  impactArcs: GlobeArc[];
+  impactHoldingIds: string[];
+}) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<GlobeInstance | null>(null);
-  const [dim, setDim] = useState(0);
-  // Gates the skeleton: stays true until globe.gl has mounted and the scene is built.
+  // Active selection read live by the globe.gl accessors (avoids stale closures).
+  const activeRef = useRef<{ id: string | null; linked: Set<string> }>({ id: null, linked: new Set() });
+  const [size, setSize] = useState({ w: 0, h: 0 });
   const [ready, setReady] = useState(false);
 
-  // Honour the OS "reduce motion" preference: no perpetual spin, arcs drawn
-  // static rather than continuously animated. Drag-to-rotate still works.
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
@@ -166,13 +372,14 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
     return () => mq.removeEventListener?.("change", sync);
   }, []);
 
-  // Size the square canvas to the tile width so the globe fills the rounded box.
+  // Measure the hero box (full width × tall) — globe fills it, not a square.
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const measure = () => {
       const w = Math.floor(el.clientWidth);
-      if (w > 0) setDim(w);
+      const h = Math.floor(el.clientHeight);
+      if (w > 0 && h > 0) setSize((s) => (s.w === w && s.h === h ? s : { w, h }));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -181,7 +388,7 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined" || dim <= 0) return;
+    if (typeof window === "undefined" || size.w <= 0 || size.h <= 0) return;
     const mount = mountRef.current;
     if (!mount) return;
 
@@ -189,102 +396,72 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
     let disposed = false;
 
     (async () => {
-      // Dynamic import keeps three/WebGL out of the SSR bundle.
-      const Globe = (await import("globe.gl")).default as unknown as () => (
-        el: HTMLElement,
-      ) => GlobeInstance;
+      const Globe = (await import("globe.gl")).default as unknown as () => (el: HTMLElement) => GlobeInstance;
       if (disposed || !mountRef.current) return;
 
-      const holdingPoints: GlobePoint[] = data.holdings.map((h) => ({
-        kind: "holding",
-        lat: h.lat,
-        lng: h.lng,
-        label: `<div style="font:12px system-ui;color:#1c1a17;background:#fffdf8;padding:6px 8px;border-radius:5px;border:1px solid #e4dfd3;box-shadow:0 1px 2px rgba(0,0,0,.05)">
-          <strong>${esc(h.issuer)}</strong><br/>
-          ${esc(h.city)}, ${esc(h.country)} · ${esc(chf(h.current_chf))}<br/>
-          <span style="color:#6f6a5f">${esc(h.verdict)}</span>
-        </div>`,
-        color: VERDICT_META[h.verdict]?.hex ?? VERDICT_META.OK.hex,
-        altitude: 0.01 + h.weight * 0.18,
-        radius: 0.18 + h.weight * 0.5,
-      }));
-
-      const eventPoints: GlobePoint[] = data.events.map((e) => ({
-        kind: "event",
-        lat: e.lat,
-        lng: e.lng,
-        label: `<div style="font:12px system-ui;color:#1c1a17;background:#fffdf8;padding:6px 8px;border-radius:5px;border:1px solid #e4dfd3;box-shadow:0 1px 2px rgba(0,0,0,.05)">
-          <strong>${esc(e.summary)}</strong><br/>
-          ${esc(e.source)} · ${esc(prettyDate(e.published_at))}<br/>
-          <span style="color:#6f6a5f">${esc(e.headline)}</span>
-        </div>`,
-        color: SEVERITY_HEX[e.severity] ?? SEVERITY_HEX.low,
-        altitude: 0.34,
-        radius: 0.9,
-      }));
-
-      const newsPoints: GlobePoint[] = (data.news ?? []).map((e) => ({
-        kind: "news",
-        lat: e.lat,
-        lng: e.lng,
-        label: `<div style="font:12px system-ui;color:#1c1a17;background:#fffdf8;padding:6px 8px;border-radius:5px;border:1px solid #e4dfd3;box-shadow:0 1px 2px rgba(0,0,0,.05)">
-          <strong>${esc(e.summary)}</strong><br/>
-          ${esc(e.source)} · ${esc(e.country)} · ${esc(prettyDate(e.published_at))}<br/>
-          <span style="color:#6f6a5f">world news · ${esc(e.headline)}</span>
-        </div>`,
-        color: sentimentHex(e.sentiment),
-        altitude: 0.12,
-        radius: 0.42,
-      }));
-
+      const hasStoryReel = data.events.length + (data.news?.length ?? 0) > 0;
       globe = Globe()(mountRef.current)
-        .width(dim)
-        .height(dim)
+        .width(size.w).height(size.h)
         .globeImageUrl("/textures/earth-night.jpg")
         .bumpImageUrl("/textures/earth-topology.png")
         .backgroundImageUrl("/textures/night-sky.png")
         .showAtmosphere(true)
-        .atmosphereColor("#2f7ce6") // Wordsmith Blue atmosphere
+        .atmosphereColor("#2f7ce6")
         .atmosphereAltitude(0.18)
-        .pointsData([...holdingPoints, ...eventPoints, ...newsPoints])
-        .pointLat((d: GlobePoint) => d.lat)
-        .pointLng((d: GlobePoint) => d.lng)
-        .pointColor((d: GlobePoint) => d.color)
-        .pointAltitude((d: GlobePoint) => d.altitude)
-        .pointRadius((d: GlobePoint) => d.radius)
-        .pointLabel((d: GlobePoint) => d.label)
-        .pointsTransitionDuration(0)
-        .arcsData(data.arcs)
-        .arcStartLat((d: GlobeArc) => d.from_lat)
-        .arcStartLng((d: GlobeArc) => d.from_lng)
-        .arcEndLat((d: GlobeArc) => d.to_lat)
-        .arcEndLng((d: GlobeArc) => d.to_lng)
-        .arcColor((d: GlobeArc) => d.color)
-        .arcLabel((d: GlobeArc) => d.label)
-        .arcStroke(0.6)
-        .arcAltitude(0.22)
-        .arcDashLength(0.45)
-        .arcDashGap(0.18)
+        .htmlElementsData(buildHtmlMarkers(data, null, new Set()))
+        .htmlLat((d) => d.lat)
+        .htmlLng((d) => d.lng)
+        .htmlAltitude((d) =>
+          d.kind === "holding" ? 0.008 + (d.weight ?? 0) * 0.016 : 0.032,
+        )
+        .htmlTransitionDuration(0)
+        .htmlElement((d) => createGlobeMarkerEl(d))
+        .htmlElementVisibilityModifier((el, isVisible) => {
+          el.style.opacity = isVisible ? (el.dataset.baseOpacity ?? "1") : "0";
+        })
+        .pointsData([])
+        .ringColor(() => (t: number) => `rgba(47,124,230,${1 - t})`)
+        .ringMaxRadius(5)
+        .ringPropagationSpeed(2)
+        .ringRepeatPeriod(reduceMotion ? 0 : 900)
+        .ringLat((d) => d.lat).ringLng((d) => d.lng)
+        .ringsData([])
+        .arcsData(hasStoryReel ? [] : data.arcs)
+        .arcStartLat((d) => d.from_lat).arcStartLng((d) => d.from_lng)
+        .arcEndLat((d) => d.to_lat).arcEndLng((d) => d.to_lng)
+        .arcColor((d) => d.color).arcLabel((d) => d.label)
+        .arcStroke(0.6).arcAltitude(0.22)
+        .arcDashLength(0.45).arcDashGap(0.18)
         .arcDashInitialGap(() => Math.random())
-        // Reduced motion: a 0ms dash time draws the arcs static (no marching dashes).
-        .arcDashAnimateTime(reduceMotion ? 0 : 2600);
+        .arcDashAnimateTime(reduceMotion ? 0 : 2200);
 
       globeRef.current = globe;
-
       const controls = globe.controls();
-      // Reduced motion: no perpetual auto-spin; drag-to-rotate stays enabled.
-      controls.autoRotate = !reduceMotion;
-      controls.autoRotateSpeed = 0.32;
+      // Story rotation drives the camera; no competing auto-spin when stories exist.
+      controls.autoRotate = !reduceMotion && data.events.length + (data.news?.length ?? 0) === 0;
+      controls.autoRotateSpeed = 0.3;
 
-      const focus = data.events[0] ?? data.holdings[0];
-      if (focus) {
+      const firstStory = data.events[0] ?? data.news?.[0] ?? null;
+      if (firstStory) {
+        const linked = new Set(
+          firstStory.linked_holding_ids.filter((id) =>
+            data.holdings.some((h) => h.id === id),
+          ),
+        );
         globe.pointOfView(
-          { lat: focus.lat, lng: focus.lng, altitude: 2.2 },
+          projectionCamera(data.holdings, firstStory, linked),
           0,
         );
+      } else if (data.holdings[0]) {
+        const h = data.holdings[0];
+        globe.pointOfView({ lat: h.lat, lng: h.lng, altitude: 1.05 }, 0);
       }
-
-      // Scene is built and textures are wired — drop the skeleton.
+      // Keep HTML logo layer below the news overlay (css2d defaults above sibling UI).
+      const css2d = mountRef.current?.querySelector(".css2d-renderer") as HTMLElement | null;
+      if (css2d) {
+        css2d.style.zIndex = "1";
+        css2d.style.pointerEvents = "none";
+      }
       setReady(true);
     })();
 
@@ -292,21 +469,37 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
       disposed = true;
       globeRef.current = null;
       setReady(false);
-      try {
-        globe?._destructor?.();
-      } catch {
-        /* noop */
-      }
+      try { globe?._destructor?.(); } catch { /* noop */ }
       if (mount) mount.replaceChildren();
     };
-  }, [data, dim, reduceMotion]);
+  }, [data, size.w, size.h, reduceMotion]);
+
+  // React to the active story: fly to it, ring it, draw its impact arcs, refresh logo badges.
+  useEffect(() => {
+    const g = globeRef.current;
+    if (!g || !ready) return;
+    activeRef.current = { id: active?.id ?? null, linked: new Set(impactHoldingIds) };
+    g.htmlElementsData(
+      buildHtmlMarkers(data, active, new Set(impactHoldingIds)),
+    );
+    g.arcsData(active ? impactArcs : data.arcs);
+    if (active) {
+      g.ringsData([{ lat: active.lat, lng: active.lng, color: storyHex(active) }]);
+      g.pointOfView(
+        projectionCamera(data.holdings, active, new Set(impactHoldingIds)),
+        reduceMotion ? 0 : 1200,
+      );
+    } else {
+      g.ringsData([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id, ready, impactHoldingIds, data]);
 
   useEffect(() => {
-    if (dim > 0) globeRef.current?.width(dim).height(dim);
-  }, [dim]);
+    if (size.w > 0 && size.h > 0) globeRef.current?.width(size.w).height(size.h);
+  }, [size.w, size.h]);
 
-  // Pause the WebGL render/rotation loop while the canvas is scrolled off-screen
-  // (it's a secondary panel) so an idle globe costs no GPU. Resume on re-entry.
+  // Pause the render loop while scrolled off-screen.
   useEffect(() => {
     const el = wrapRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
@@ -326,170 +519,499 @@ function GlobeCanvas({ data }: { data: GlobeData }) {
   return (
     <div
       ref={wrapRef}
-      className="w-full overflow-hidden rounded-md border border-border bg-[#14110b]"
+      className="absolute inset-0 z-0 overflow-hidden bg-[#14110b] [&_.css2d-renderer]:!z-[1] [&_.css2d-renderer]:pointer-events-none [&_.css2d-renderer_*]:pointer-events-auto"
     >
       <div
-        className="relative block w-full"
-        style={{
-          width: dim > 0 ? dim : "100%",
-          height: dim > 0 ? dim : undefined,
-          aspectRatio: dim > 0 ? undefined : "1 / 1",
-        }}
-      >
-        <div
-          ref={mountRef}
-          className="block h-full w-full [&>canvas]:!block [&>canvas]:!h-full [&>canvas]:!w-full"
-          aria-label="3D globe of portfolio holdings, news events and signal arcs"
-        />
-        {/* Skeleton placeholder: holds the panel's shape until the globe
-            library and textures are ready, so there's no blank flash. */}
-        {!ready && (
+        ref={mountRef}
+        className="block h-full w-full [&>canvas]:!block [&>canvas]:!h-full [&>canvas]:!w-full"
+        aria-label="3D globe of portfolio holdings, news events and signal arcs"
+      />
+      {!ready && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#14110b] text-[#9c9488]" aria-hidden>
+          <Globe2 className="h-6 w-6 animate-pulse motion-reduce:animate-none" />
+          <span className="text-[11px] tracking-wide">Rendering globe…</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------- rotating story overlay --- */
+
+function storyUrl(s: GlobeEvent): string | null {
+  return s.url ?? s.provenance?.url ?? null;
+}
+
+function StoryOverlay({
+  stories,
+  index,
+  paused,
+  onPrev,
+  onNext,
+  onSelect,
+  onTogglePause,
+  onHoverChange,
+  impactCount,
+}: {
+  stories: GlobeEvent[];
+  index: number;
+  paused: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+  onSelect: (i: number) => void;
+  onTogglePause: () => void;
+  onHoverChange: (hovering: boolean) => void;
+  impactCount: number;
+}) {
+  const s = stories[index];
+  if (!s) return null;
+  const senti = sentimentLabel(s.sentiment);
+  const tone = storyHex(s);
+  const articleUrl = storyUrl(s);
+  return (
+    <div
+      className="pointer-events-auto absolute right-4 top-4 z-[100] w-[min(92vw,22rem)]"
+      onMouseEnter={() => onHoverChange(true)}
+      onMouseLeave={() => onHoverChange(false)}
+    >
+      <div className="overflow-hidden rounded-xl border border-white/10 bg-black/55 text-white shadow-pop backdrop-blur-md">
+        {/* rotation progress bar */}
+        <div className="h-0.5 w-full bg-white/10">
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#14110b] text-[#9c9488]"
-            aria-hidden
-          >
-            <Globe2 className="h-6 w-6 animate-pulse motion-reduce:animate-none" />
-            <span className="text-[11px] tracking-wide">Rendering globe…</span>
+            key={`${index}-${paused}`}
+            className="h-full"
+            style={{
+              background: tone,
+              width: "100%",
+              animation: paused ? "none" : `storyProgress ${ROTATE_MS}ms linear`,
+              transformOrigin: "left",
+            }}
+          />
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-center gap-2">
+            <Newspaper className="h-3.5 w-3.5 shrink-0 text-white/60" aria-hidden />
+            <span className="text-[11px] font-medium uppercase tracking-wide text-white/60">
+              In the news
+            </span>
+            <span className="ml-auto flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full" style={{ background: tone }} />
+              <span className="text-[11px] tabular-nums text-white/60">
+                {index + 1}/{stories.length}
+              </span>
+            </span>
           </div>
-        )}
+
+          {articleUrl ? (
+            <a
+              href={articleUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 block text-[15px] font-semibold leading-snug text-white transition-colors hover:text-white/90 hover:underline"
+            >
+              {s.summary}
+            </a>
+          ) : (
+            <p className="mt-2 text-[15px] font-semibold leading-snug">{s.summary}</p>
+          )}
+
+          {articleUrl ? (
+            <a
+              href={articleUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open article: ${s.summary}`}
+              className="mt-2 block w-full overflow-hidden rounded-md ring-1 ring-inset ring-white/15 transition-opacity hover:opacity-90"
+            >
+              <LinkPreviewThumb
+                url={articleUrl}
+                layout="thumbnail"
+                className="!h-auto !w-full !max-w-full rounded-md"
+              />
+            </a>
+          ) : null}
+
+          <p className="mt-2 text-[13px] leading-relaxed text-white/70">{s.headline}</p>
+
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-white/55">
+            <span>{s.source}</span>
+            <span>· {s.country}</span>
+            <span>· {prettyDate(s.published_at)}</span>
+            <span className="font-medium" style={{ color: tone }}>· {senti.text}</span>
+          </div>
+
+          <p className="mt-2 text-[12px] text-white/80">
+            {impactCount > 0 ? (
+              <>
+                <span className="font-semibold" style={{ color: tone }}>
+                  {impactCount} holding{impactCount === 1 ? "" : "s"}
+                </span>{" "}
+                affected — highlighted on the map
+              </>
+            ) : (
+              <span className="text-white/55">No direct portfolio impact</span>
+            )}
+          </p>
+
+          {/* controls */}
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onPrev}
+              aria-label="Previous story"
+              className="grid h-7 w-7 place-items-center rounded-md text-white/70 ring-1 ring-inset ring-white/15 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onTogglePause}
+              aria-label={paused ? "Resume rotation" : "Pause rotation"}
+              className="grid h-7 w-7 place-items-center rounded-md text-white/70 ring-1 ring-inset ring-white/15 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={onNext}
+              aria-label="Next story"
+              className="grid h-7 w-7 place-items-center rounded-md text-white/70 ring-1 ring-inset ring-white/15 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <div className="ml-auto flex items-center gap-1">
+              {stories.map((st, i) => (
+                <button
+                  key={st.id}
+                  type="button"
+                  aria-label={`Story ${i + 1}`}
+                  onClick={() => onSelect(i)}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all",
+                    i === index ? "w-4 bg-white" : "w-1.5 bg-white/30 hover:bg-white/50",
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-      <p className="border-t border-white/10 px-4 py-3 text-center text-[11px] leading-relaxed text-[#9c9488]">
-        {CAPTION}
-      </p>
     </div>
   );
 }
 
 /* ----------------------------------------------------------- side lists --- */
 
-function HoldingRow({ holding }: { holding: GlobeHolding }) {
-  const flagged = holding.verdict !== "OK";
+function HoldingStoryPreview({ stories }: { stories: GlobeEvent[] }) {
+  if (stories.length === 0) return null;
   return (
+    <div className="space-y-3">
+      {stories.slice(0, 3).map((s) => {
+        const url = storyUrl(s);
+        const tone = storyHex(s);
+        return (
+          <div key={s.id} className="space-y-1.5">
+            <p className="text-sm font-semibold leading-snug text-foreground">{s.summary}</p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+              <span>{s.source}</span>
+              <span>· {prettyDate(s.published_at)}</span>
+              <span className="font-medium" style={{ color: tone }}>
+                · {sentimentLabel(s.sentiment).text}
+              </span>
+            </div>
+            {url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-xs font-medium text-primary hover:underline"
+              >
+                Read source article →
+              </a>
+            ) : null}
+          </div>
+        );
+      })}
+      {stories.length > 3 ? (
+        <p className="text-[11px] text-muted-foreground">
+          +{stories.length - 3} more related stor{stories.length - 3 === 1 ? "y" : "ies"}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function buildStoriesByHoldingId(stories: GlobeEvent[]): Map<string, GlobeEvent[]> {
+  const map = new Map<string, GlobeEvent[]>();
+  for (const story of stories) {
+    for (const hid of story.linked_holding_ids) {
+      if (!map.has(hid)) map.set(hid, []);
+      const list = map.get(hid)!;
+      if (!list.some((s) => s.id === story.id)) list.push(story);
+    }
+  }
+  return map;
+}
+
+function HoldingRow({
+  holding,
+  clientId,
+  inNews,
+  advisoryMatches = [],
+  relatedStories = [],
+}: {
+  holding: GlobeHolding;
+  clientId: string;
+  inNews: boolean;
+  advisoryMatches?: Match[];
+  relatedStories?: GlobeEvent[];
+}) {
+  const flagged = holding.verdict !== "OK";
+  const clickable =
+    inNews &&
+    (advisoryMatches.length > 0 || relatedStories.length > 0 || flagged);
+
+  const tile = (
     <div
-      className={`rounded-md border p-3 ${
+      className={cn(
+        "rounded-md border p-3 transition-shadow",
         holding.verdict === "VIOLATION"
           ? "border-negative/30 bg-negative/[0.06]"
           : holding.verdict === "WATCH"
           ? "border-warning/30 bg-warning/[0.06]"
-          : "border-border bg-card"
-      }`}
+          : "border-border bg-card",
+        inNews && "ring-2 ring-inset ring-primary",
+        clickable &&
+          "cursor-pointer hover:border-primary/30 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+      )}
     >
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-sm font-semibold text-foreground">
-          {holding.issuer}
-        </span>
-        {flagged && <VerdictChip verdict={holding.verdict} />}
-        <span className="ml-auto text-sm font-semibold tabular-nums text-foreground">
-          {chf(holding.current_chf)}
-        </span>
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
-        <span>
-          {holding.city}, {holding.country}
-        </span>
-        {holding.industry_group && <span>· {holding.industry_group}</span>}
-        <span className="font-mono text-[11px] text-muted-foreground">
-          {holding.isin}
-        </span>
-        {holding.provenance && (
-          <ProvenanceTag prov={holding.provenance} label="src" />
-        )}
+      <div className="flex gap-3">
+        <IssuerLogo
+          key={holding.isin}
+          issuer={holding.issuer}
+          isin={holding.isin}
+          yahoo={holding.yahoo}
+          size="sm"
+          className="mt-0.5 shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-sm font-semibold text-foreground">{holding.issuer}</span>
+            {flagged && <VerdictChip verdict={holding.verdict} />}
+            <span className="ml-auto text-sm font-semibold tabular-nums text-foreground">
+              {chf(holding.current_chf)}
+            </span>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+            <span>{holding.city}, {holding.country}</span>
+            {holding.industry_group && <span>· {holding.industry_group}</span>}
+            <span className="font-mono text-[11px] text-muted-foreground">{holding.isin}</span>
+            {holding.provenance && <ProvenanceTag prov={holding.provenance} label="src" />}
+          </div>
+        </div>
       </div>
     </div>
   );
-}
 
-function EventCard({ event }: { event: GlobeEvent }) {
-  return (
-    <div className="rounded-md border border-border bg-card p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold text-foreground">{event.summary}</span>
-        <span className="ml-auto text-[11px] text-muted-foreground">
-          {prettyDate(event.published_at)}
-        </span>
-      </div>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-        {event.headline}
-      </p>
-      <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
-        {event.source} · {event.country} ·{" "}
-        {event.linked_holding_ids.length} linked holding
-        {event.linked_holding_ids.length === 1 ? "" : "s"}
-        {event.provenance && (
-          <ProvenanceTag prov={event.provenance} label="source" />
-        )}
-      </p>
-    </div>
-  );
-}
+  if (!clickable) return tile;
 
-function NewsRow({ item }: { item: GlobeEvent }) {
-  const senti = sentimentLabel(item.sentiment);
   return (
-    <div className="rounded-md border border-border bg-card px-3 py-2">
-      <p className="text-sm font-medium leading-snug text-foreground">{item.summary}</p>
-      <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
-        {item.source} · {item.country} ·{" "}
-        <span className={senti.cls}>{senti.text}</span>
-        {item.provenance && (
-          <ProvenanceTag prov={item.provenance} label="source" />
+    <Popover key={holding.id}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="block w-full rounded-md text-left"
+          aria-label={`Advisory signal for ${holding.issuer}`}
+        >
+          {tile}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[min(92vw,28rem)] max-h-[min(70vh,32rem)] overflow-y-auto"
+        align="start"
+        side="top"
+      >
+        {advisoryMatches.length > 0 ? (
+          <CondensedMatchPreview
+            clientId={clientId}
+            holdingIsin={holding.isin}
+            matches={advisoryMatches}
+          />
+        ) : relatedStories.length > 0 ? (
+          <HoldingStoryPreview stories={relatedStories} />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Flagged on the map as{" "}
+            <span className="font-medium text-foreground">
+              {holding.verdict === "VIOLATION" ? "a conflict" : "watch"}
+            </span>
+            . Open the alerts panel for the full advisory draft.
+          </p>
         )}
-      </p>
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
 /* --------------------------------------------------------------- panel --- */
 
-export function InvestmentGlobe({ clientId }: { clientId: string }) {
+export function InvestmentGlobe({
+  clientId,
+  matches = [],
+}: {
+  clientId: string;
+  matches?: Match[];
+}) {
   const [data, setData] = useState<GlobeData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [hovering, setHovering] = useState(false);
+  const [countryFilter, setCountryFilter] = useState("all");
+  const [fetchedMatches, setFetchedMatches] = useState<Match[]>([]);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     setError(null);
     setData(null);
+    setIndex(0);
+    setCountryFilter("all");
+    setFetchedMatches([]);
     api
       .globe(clientId)
       .then((g) => alive && setData(g))
       .catch((e) => alive && setError(String(e)))
       .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [clientId]);
+
+  const effectiveMatches = matches.length > 0 ? matches : fetchedMatches;
+
+  useEffect(() => {
+    if (matches.length > 0) return;
+    let alive = true;
+    api
+      .insights(clientId)
+      .then((data: Insights) => alive && setFetchedMatches(data.matches))
+      .catch(() => alive && setFetchedMatches([]));
     return () => {
       alive = false;
     };
-  }, [clientId]);
+  }, [clientId, matches.length]);
 
-  // Flagged first, then by value — so the side list mirrors what the globe stresses.
+  // The rotating reel: impactful signals first, then ambient world news.
+  const stories = useMemo<GlobeEvent[]>(() => {
+    if (!data) return [];
+    return [...data.events, ...(data.news ?? [])];
+  }, [data]);
+
+  const active = stories[index] ?? null;
+
+  // Holdings the active story touches → arcs + highlights.
+  const holdingsById = useMemo(() => {
+    const m = new Map<string, GlobeHolding>();
+    data?.holdings.forEach((h) => m.set(h.id, h));
+    return m;
+  }, [data]);
+
+  const impactHoldingIds = useMemo(
+    () => (active ? active.linked_holding_ids.filter((id) => holdingsById.has(id)) : []),
+    [active, holdingsById],
+  );
+
+  const impactArcs = useMemo<GlobeArc[]>(() => {
+    if (!active) return [];
+    const tone = storyHex(active);
+    return impactHoldingIds.map((id) => {
+      const h = holdingsById.get(id)!;
+      return {
+        id: `${active.id}->${id}`,
+        from_lat: active.lat, from_lng: active.lng,
+        to_lat: h.lat, to_lng: h.lng,
+        color: tone, label: `${active.summary} → ${h.issuer}`,
+      };
+    });
+  }, [active, impactHoldingIds, holdingsById]);
+
+  const advance = useCallback(
+    (delta: number) => {
+      setIndex((i) => (stories.length ? (i + delta + stories.length) % stories.length : 0));
+    },
+    [stories.length],
+  );
+
+  // Auto-rotate the reel (pause on hover or when the user pauses).
+  useEffect(() => {
+    if (stories.length < 2 || paused || hovering) return;
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const t = setInterval(() => advance(1), ROTATE_MS);
+    return () => clearInterval(t);
+  }, [stories.length, paused, hovering, advance, index]);
+
+  // Flagged holdings first, then by value.
   const holdings = useMemo(() => {
     if (!data) return [];
-    const order: Record<GlobeHolding["verdict"], number> = {
-      VIOLATION: 0,
-      WATCH: 1,
-      OK: 2,
-    };
+    const order: Record<GlobeHolding["verdict"], number> = { VIOLATION: 0, WATCH: 1, OK: 2 };
     return [...data.holdings].sort(
-      (a, b) =>
-        order[a.verdict] - order[b.verdict] || b.current_chf - a.current_chf,
+      (a, b) => order[a.verdict] - order[b.verdict] || b.current_chf - a.current_chf,
     );
   }, [data]);
+
+  const countries = useMemo(
+    () =>
+      Array.from(new Set(holdings.map((h) => h.country).filter(Boolean))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    [holdings],
+  );
+
+  const filteredHoldings = useMemo(
+    () =>
+      countryFilter === "all"
+        ? holdings
+        : holdings.filter((h) => h.country === countryFilter),
+    [holdings, countryFilter],
+  );
+
+  const advisoryByIsin = useMemo(
+    () => buildHoldingAdvisoryIndex(holdings, effectiveMatches, stories),
+    [holdings, effectiveMatches, stories],
+  );
+
+  const storiesByHoldingId = useMemo(
+    () => buildStoriesByHoldingId(stories),
+    [stories],
+  );
+
+  const inNewsIsins = useMemo(() => {
+    const set = new Set<string>();
+    for (const h of holdings) {
+      if (
+        advisoryByIsin.has(h.isin) ||
+        h.verdict !== "OK" ||
+        (storiesByHoldingId.get(h.id)?.length ?? 0) > 0
+      ) {
+        set.add(h.isin);
+      }
+    }
+    return set;
+  }, [holdings, advisoryByIsin, storiesByHoldingId]);
 
   if (loading) {
     return (
       <section className="card p-5">
-        <p className="text-sm text-muted-foreground">
-          Mapping holdings and signals…
-        </p>
+        <p className="text-sm text-muted-foreground">Mapping holdings and signals…</p>
       </section>
     );
   }
   if (error) {
     return (
       <section className="card p-5">
-        <p className="text-sm text-destructive">
-          Could not load the investment map: {error}
-        </p>
+        <p className="text-sm text-destructive">Could not load the investment map: {error}</p>
       </section>
     );
   }
@@ -499,108 +1021,118 @@ export function InvestmentGlobe({ clientId }: { clientId: string }) {
   const flagged = stats.violations + stats.watches;
 
   return (
-    <section className="card flex flex-col">
-      <header className="border-b border-border px-5 py-4">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground">
-          Investment Map
-        </p>
-        <h2 className="mt-1 text-sm leading-snug text-foreground">
-          <span className="tabular-nums">{stats.holdings}</span> holding
-          {stats.holdings === 1 ? "" : "s"} ·{" "}
-          {flagged > 0 ? (
-            <span className="font-semibold tabular-nums text-negative">
-              {stats.violations} violation
-              {stats.violations === 1 ? "" : "s"}, {stats.watches} watch
-              {stats.watches === 1 ? "" : "es"}
-            </span>
-          ) : (
-            <span className="text-success">no live conflicts</span>
-          )}{" "}
-          · <span className="tabular-nums">{stats.events}</span> signal
-          {stats.events === 1 ? "" : "s"} ·{" "}
-          <span className="tabular-nums">{stats.news}</span> world-news pulse
-          {stats.news === 1 ? "" : "s"}
-        </h2>
-      </header>
+    <section className="space-y-5">
+      {/* full-bleed hero map */}
+      <div className="card overflow-hidden p-0">
+        <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-5 py-4">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">Investment Map</p>
+          <h2 className="text-sm leading-snug text-foreground">
+            <span className="tabular-nums">{stats.holdings}</span> holding{stats.holdings === 1 ? "" : "s"} ·{" "}
+            {flagged > 0 ? (
+              <span className="font-semibold tabular-nums text-negative">
+                {stats.violations} violation{stats.violations === 1 ? "" : "s"}, {stats.watches} watch{stats.watches === 1 ? "" : "es"}
+              </span>
+            ) : (
+              <span className="text-success">no live conflicts</span>
+            )}{" "}
+            · <span className="tabular-nums">{stats.events}</span> signal{stats.events === 1 ? "" : "s"} ·{" "}
+            <span className="tabular-nums">{stats.news}</span> world-news pulse{stats.news === 1 ? "" : "s"}
+          </h2>
+        </header>
 
-      <div className="grid gap-5 p-5 lg:grid-cols-2">
-        <div className="w-full lg:sticky lg:top-5 lg:self-start">
+        <div className="relative isolate h-[72vh] min-h-[460px] w-full">
           {data.holdings.length > 0 ? (
-            <GlobeCanvas data={data} />
+            <>
+              <GlobeCanvas
+                data={data}
+                active={active}
+                impactArcs={impactArcs}
+                impactHoldingIds={impactHoldingIds}
+              />
+              {stories.length > 0 && (
+                <StoryOverlay
+                  stories={stories}
+                  index={index}
+                  paused={paused}
+                  impactCount={impactHoldingIds.length}
+                  onPrev={() => advance(-1)}
+                  onNext={() => advance(1)}
+                  onSelect={setIndex}
+                  onTogglePause={() => setPaused((p) => !p)}
+                  onHoverChange={setHovering}
+                />
+              )}
+            </>
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center rounded-md border border-border bg-[#14110b] px-6 text-center text-sm text-[#9c9488]">
-              No mapped holdings yet — geocoded positions appear once the
-              portfolio loads.
+            <div className="flex h-full w-full items-center justify-center bg-[#14110b] px-6 text-center text-sm text-[#9c9488]">
+              No mapped holdings yet — geocoded positions appear once the portfolio loads.
             </div>
           )}
         </div>
+        <p className="border-t border-border px-5 py-3 text-center text-[11px] leading-relaxed text-muted-foreground">
+          Logo badges mark holdings (size tracks weight, ring shows verdict); the news reel flies
+          to each story, shows its origin badge, and highlights the holdings it affects.
+        </p>
+      </div>
 
-        <div className="space-y-4">
-          {data.events.length > 0 && (
-            <Collapsible
-              defaultOpen
-              trigger={(open, toggle) => (
-                <button
-                  type="button"
-                  onClick={toggle}
-                  aria-expanded={open}
-                  className="flex w-full items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+      {/* holdings, full width below the map */}
+      {data.holdings.length > 0 && (
+        <div className="card p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5" aria-hidden />
+              Holdings by Location
+            </p>
+            {countries.length > 0 && (
+              <Select value={countryFilter} onValueChange={setCountryFilter}>
+                <SelectTrigger
+                  className="h-8 w-[min(100%,11rem)] text-xs"
+                  aria-label="Filter holdings by country"
                 >
-                  <ChevronRight
-                    className={cn(
-                      "h-3.5 w-3.5 shrink-0 transition-transform",
-                      open && "rotate-90",
-                    )}
-                    aria-hidden
-                  />
-                  <Radio className="h-3.5 w-3.5" aria-hidden />
-                  Live Signals
-                  <span className="tabular-nums">· {data.events.length}</span>
-                </button>
-              )}
-            >
-              <div className="mt-2 space-y-3">
-                {data.events.map((e) => (
-                  <EventCard key={e.id} event={e} />
-                ))}
-              </div>
-            </Collapsible>
-          )}
-
-          {data.news && data.news.length > 0 && (
-            <div>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
-                <Newspaper className="h-3.5 w-3.5" aria-hidden />
-                World News
-                <span className="tabular-nums">· {data.news.length}</span>
-              </p>
-              <div className="scroll-thin max-h-[300px] space-y-2 overflow-y-auto pr-1">
-                {data.news.map((e) => (
-                  <NewsRow key={e.id} item={e} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {data.holdings.length === 0 ? (
+                  <SelectValue placeholder="All countries" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All countries</SelectItem>
+                  {countries.map((country) => (
+                    <SelectItem key={country} value={country}>
+                      {country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          {inNewsIsins.size > 0 ? (
+            <p className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="inline-block h-3.5 w-3.5 rounded-sm ring-2 ring-inset ring-primary"
+                  aria-hidden
+                />
+                In the news — click a highlighted tile for the advisory summary
+              </span>
+            </p>
+          ) : null}
+          {filteredHoldings.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No holdings to map for this client yet.
+              No holdings in {countryFilter === "all" ? "this view" : countryFilter}.
             </p>
           ) : (
-            <div>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5" aria-hidden />
-                Holdings by Location
-              </p>
-              <div className="scroll-thin max-h-[520px] space-y-2 overflow-y-auto pr-1">
-                {holdings.map((h) => (
-                  <HoldingRow key={h.id} holding={h} />
-                ))}
-              </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredHoldings.map((h) => (
+                <HoldingRow
+                  key={h.id}
+                  clientId={clientId}
+                  holding={h}
+                  inNews={inNewsIsins.has(h.isin)}
+                  advisoryMatches={advisoryByIsin.get(h.isin) ?? []}
+                  relatedStories={storiesByHoldingId.get(h.id) ?? []}
+                />
+              ))}
             </div>
           )}
         </div>
-      </div>
+      )}
     </section>
   );
 }

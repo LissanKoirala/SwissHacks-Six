@@ -1,28 +1,36 @@
 "use client";
 
 // The RM's morning landing page (docs/OVERVIEW_CONTRACT.md). One glanceable desk view
-// across all clients — priority tasks, upcoming meetings, market moves, portfolio events
-// and the news wire — every card grounded in a real source. Detail lives one click away:
-// any client name drills into ClientView. This view decides nothing; it orients the RM.
+// across all clients — priority tasks and upcoming meetings — every card grounded in a
+// real source. Detail lives one click away: any client name drills into ClientView.
+// This view decides nothing; it orients the RM.
 
 import { useEffect, useState, type ReactNode } from "react";
-import { BarChart3, ChevronRight, FileText, Rocket } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type {
   Overview,
   OverviewTask,
   OverviewMeeting,
-  MarketMove,
-  PortfolioEvent,
   NewsWireItem,
   Severity,
   Polarity,
+  MeUser,
 } from "@/lib/types";
 import { api } from "@/lib/api";
-import { chf, prettyDate, titleCase } from "@/lib/format";
+import { chf, prettyDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ClientAvatar } from "./ClientAvatar";
+import { LinkPreviewThumb } from "./LinkPreviewThumb";
 import { Collapsible, MandatePill, PolarityChip } from "./ui";
-import { ProvenanceTag } from "./Provenance";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+const PRIORITY_PREVIEW = 3;
 
 /* ---------------------------------------------------------------- tokens --- */
 
@@ -47,15 +55,6 @@ const SEVERITY: Record<
   },
 };
 
-const EVENT_KIND: Record<
-  PortfolioEvent["kind"],
-  { Icon: typeof BarChart3; label: string; cls: string }
-> = {
-  earnings: { Icon: BarChart3, label: "Earnings", cls: "bg-primary/10 text-primary ring-primary/20" },
-  filing: { Icon: FileText, label: "Filing", cls: "bg-purple/10 text-purple ring-purple/20" },
-  ipo: { Icon: Rocket, label: "IPO watch", cls: "bg-success/10 text-success ring-success/20" },
-};
-
 function greeting(): string {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -75,45 +74,21 @@ function compactChf(value: number): string {
 
 /* ------------------------------------------------------------ small bits --- */
 
-function DirectionMark({ direction }: { direction: MarketMove["direction"] }) {
-  const map = {
-    up: { glyph: "▲", cls: "text-success" },
-    down: { glyph: "▼", cls: "text-destructive" },
-    flat: { glyph: "▬", cls: "text-muted-foreground" },
-  } as const;
-  const m = map[direction];
-  return <span className={`text-xs ${m.cls}`} aria-hidden>{m.glyph}</span>;
-}
-
-function SoonButton({ label, title }: { label: string; title: string }) {
-  return (
-    <button
-      type="button"
-      disabled
-      title={`${title} — coming with the live integration`}
-      className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-dashed border-border px-2 py-1 text-[11px] font-medium text-muted-foreground"
-    >
-      {label}
-      <span className="rounded bg-muted px-1 text-[9px] uppercase tracking-wide text-muted-foreground">
-        soon
-      </span>
-    </button>
-  );
-}
-
 function SectionHeader({
   title,
   count,
   hint,
   action,
+  className,
 }: {
   title: string;
   count?: number;
   hint?: string;
   action?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="mb-3 flex items-center gap-2">
+    <div className={cn("mb-3 flex items-center gap-2", className)}>
       <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         {title}
       </h2>
@@ -130,7 +105,7 @@ function SectionHeader({
 
 /* ------------------------------------------------------------------ kpis --- */
 
-function KpiStrip({ o }: { o: Overview }) {
+function KpiStrip({ o, className }: { o: Overview; className?: string }) {
   const k = o.kpis;
   const cells: { label: string; value: string; tone?: string }[] = [
     { label: "Clients", value: String(k.clients) },
@@ -140,18 +115,24 @@ function KpiStrip({ o }: { o: Overview }) {
       tone: k.priority_tasks ? "text-destructive" : "text-ink",
     },
     { label: "Meetings", value: String(k.meetings_upcoming) },
-    { label: "Market moves", value: String(k.market_moves) },
-    { label: "Portfolio events", value: String(k.portfolio_events) },
     { label: "Assets under advice", value: compactChf(k.aum_chf) },
   ];
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+    <div className={cn("grid grid-cols-2 grid-rows-2 gap-2", className)}>
       {cells.map((c) => (
-        <div key={c.label} className="card px-4 py-3">
-          <p className={`text-2xl font-semibold ${c.tone ?? "text-ink"}`}>
+        <div
+          key={c.label}
+          className="card flex min-h-[5.25rem] flex-col justify-center px-3 py-2.5"
+        >
+          <p
+            className={cn(
+              "truncate text-2xl font-semibold leading-none",
+              c.tone ?? "text-ink",
+            )}
+          >
             {c.value}
           </p>
-          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="mt-1.5 text-[11px] font-medium uppercase leading-snug tracking-wide text-muted-foreground">
             {c.label}
           </p>
         </div>
@@ -162,61 +143,79 @@ function KpiStrip({ o }: { o: Overview }) {
 
 /* ----------------------------------------------------------- priority §1 --- */
 
-function TaskCard({
-  task,
-  onOpen,
-}: {
-  task: OverviewTask;
-  onOpen: (id: string) => void;
-}) {
-  const sev = SEVERITY[task.severity];
-  return (
-    <div className="card relative overflow-hidden p-4 pl-5">
-      <span className={`absolute inset-y-0 left-0 w-1.5 ${sev.rail}`} aria-hidden />
-      <div className="flex items-start gap-3">
-        <ClientAvatar clientId={task.client_id} name={task.client_name} size="md" />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onOpen(task.client_id)}
-              className="text-sm font-semibold text-ink hover:text-primary hover:underline"
-            >
-              {task.client_name}
-            </button>
-            <MandatePill mandate={task.mandate} />
-            <span className={`chip ring-1 ring-inset ${sev.chip}`}>{sev.label}</span>
-            <PolarityChip polarity={task.polarity} />
-          </div>
-          <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{task.reason}</p>
+const SEV_ORDER: Record<Severity, number> = { high: 0, med: 1, low: 2 };
+const POLARITY_ORDER: Record<Polarity, number> = {
+  conflict: 0,
+  opportunity: 1,
+  neutral: 2,
+};
 
-          <div className="mt-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground ring-1 ring-inset ring-border">
-            <p>
-              <span className="font-semibold text-muted-foreground">Trigger · {task.trigger_source}</span>{" "}
-              — {task.trigger_headline}
-              <ProvenanceTag prov={task.provenance[0]} label="why" />
-            </p>
-            <p className="mt-1.5 flex items-start gap-1.5">
-              <span aria-hidden>→</span>
-              <span className="font-medium text-ink-soft">{task.suggested_action}</span>
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => onOpen(task.client_id)}
-          className="btn btn-primary shrink-0 self-center text-xs"
-        >
-          Open {firstName(task.client_name)} →
-        </button>
-      </div>
-    </div>
-  );
+function taskTriggerUrl(task: OverviewTask, wire: NewsWireItem[]): string | null {
+  for (const p of task.provenance) {
+    if (p.url) return p.url;
+  }
+  return wire.find((n) => n.title === task.trigger_headline)?.url ?? null;
 }
 
-/* ------------------------------------------------- priority grouping §1 --- */
+// Probe candidate URLs in parallel and return the first that has a real OG image.
+// Renders immediately with the initial guess, then swaps to the best thumbnail once
+// the (cached) previews settle — no layout shift, just a better image appearing.
+function useBestThumbnailUrl(
+  group: ClientTaskGroupData,
+  newsWire: NewsWireItem[],
+): string | null {
+  const [bestUrl, setBestUrl] = useState<string | null>(() =>
+    taskTriggerUrl(group.tasks[0], newsWire),
+  );
 
-const SEV_ORDER: Record<Severity, number> = { high: 0, med: 1, low: 2 };
+  useEffect(() => {
+    const seen = new Set<string>();
+    const candidates: string[] = [];
+
+    // All provenance URLs across every task for this client
+    for (const task of group.tasks) {
+      for (const p of task.provenance) {
+        if (p.url && !seen.has(p.url)) {
+          seen.add(p.url);
+          candidates.push(p.url);
+        }
+      }
+    }
+    // News wire items that reference this client (the "More related stories")
+    for (const n of newsWire) {
+      const url = n.url ?? n.provenance.url ?? null;
+      if (
+        url &&
+        !seen.has(url) &&
+        n.relevant_clients.some((r) => r.client_id === group.client_id)
+      ) {
+        seen.add(url);
+        candidates.push(url);
+      }
+    }
+
+    if (candidates.length === 0) return;
+
+    let alive = true;
+    Promise.all(
+      candidates.slice(0, 8).map((url) =>
+        api.linkPreview(url)
+          .then((p) => ({ url, preview: p }))
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      if (!alive) return;
+      const hit = results.find((r) => r?.preview.preview_kind === "thumbnail");
+      if (hit) setBestUrl(hit.url);
+    });
+
+    return () => {
+      alive = false;
+    };
+  }, [group.client_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return bestUrl;
+}
 
 interface ClientTaskGroupData {
   client_id: string;
@@ -242,7 +241,11 @@ function groupTasksByClient(tasks: OverviewTask[]): ClientTaskGroupData[] {
     map.set(t.client_id, g);
   }
   for (const g of map.values()) {
-    g.tasks.sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
+    g.tasks.sort(
+      (a, b) =>
+        SEV_ORDER[a.severity] - SEV_ORDER[b.severity] ||
+        POLARITY_ORDER[a.polarity] - POLARITY_ORDER[b.polarity],
+    );
     g.top_severity = g.tasks[0].severity;
   }
   // most urgent clients first, then by how many issues they carry
@@ -253,54 +256,158 @@ function groupTasksByClient(tasks: OverviewTask[]): ClientTaskGroupData[] {
   );
 }
 
-function ClientTaskGroup({
+function PriorityClientTile({
   group,
+  newsWire,
   onOpen,
 }: {
   group: ClientTaskGroupData;
+  newsWire: NewsWireItem[];
   onOpen: (id: string) => void;
 }) {
+  const top = group.tasks[0];
   const sev = SEVERITY[group.top_severity];
+  const count = group.tasks.length;
+  const extra = count - 1;
+  const triggerUrl = useBestThumbnailUrl(group, newsWire);
+
   return (
-    <Collapsible
-      defaultOpen
-      trigger={(open, toggle) => (
+    <button
+      type="button"
+      onClick={() => onOpen(group.client_id)}
+      className="card group w-full overflow-hidden p-0 text-left transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+    >
+      <div className="flex flex-col">
+        {triggerUrl ? (
+          <LinkPreviewThumb
+            url={triggerUrl}
+            layout="thumbnail-stretch"
+            className="aspect-video h-auto w-full min-h-0 rounded-none border-b border-border/50 ring-0"
+          />
+        ) : (
+          <div className="aspect-video w-full border-b border-border/50 bg-muted/40" aria-hidden />
+        )}
+        <div className="flex min-w-0 flex-col p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <ClientAvatar clientId={group.client_id} name={group.client_name} size="sm" />
+            <span className="text-sm font-semibold text-ink">{group.client_name}</span>
+            <MandatePill mandate={group.mandate} />
+            <span className={`chip ring-1 ring-inset ${sev.chip}`}>{sev.label}</span>
+            <PolarityChip polarity={top.polarity} />
+            {extra > 0 && (
+              <span className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
+                {count} signals
+              </span>
+            )}
+          </div>
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-soft">{top.reason}</p>
+          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+            {extra > 0 ? (
+              <>
+                <span className="font-medium text-ink-soft">Lead story</span> · {top.trigger_source} —{" "}
+                {top.trigger_headline}
+              </>
+            ) : (
+              <>
+                {top.trigger_source} — {top.trigger_headline}
+              </>
+            )}
+          </p>
+          <span className="mt-2 flex items-center gap-1 text-xs font-medium text-primary">
+            Open {firstName(group.client_name)}
+            <ChevronRight
+              className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+              aria-hidden
+            />
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function PriorityClientsGrid({
+  groups,
+  newsWire,
+  onOpen,
+  className,
+}: {
+  groups: ClientTaskGroupData[];
+  newsWire: NewsWireItem[];
+  onOpen: (id: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3", className)}>
+      {groups.map((g) => (
+        <PriorityClientTile
+          key={g.client_id}
+          group={g}
+          newsWire={newsWire}
+          onOpen={onOpen}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PriorityTouchBase({
+  priorityClients,
+  newsWire,
+  onOpenClient,
+}: {
+  priorityClients: ClientTaskGroupData[];
+  newsWire: NewsWireItem[];
+  onOpenClient: (id: string) => void;
+}) {
+  const [allOpen, setAllOpen] = useState(false);
+  const preview = priorityClients.slice(0, PRIORITY_PREVIEW);
+  const hasMore = priorityClients.length > PRIORITY_PREVIEW;
+
+  const openClient = (id: string) => {
+    setAllOpen(false);
+    onOpenClient(id);
+  };
+
+  return (
+    <>
+      <PriorityClientsGrid groups={preview} newsWire={newsWire} onOpen={openClient} />
+      {hasMore && (
         <button
           type="button"
-          onClick={toggle}
-          aria-expanded={open}
-          className={cn(
-            "flex w-full items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
-            open && "rounded-b-none",
-          )}
+          onClick={() => setAllOpen(true)}
+          className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
-          <ChevronRight
-            className={cn(
-              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
-              open && "rotate-90",
-            )}
-            aria-hidden
-          />
-          <ClientAvatar clientId={group.client_id} name={group.client_name} size="sm" />
-          <span className="text-sm font-semibold text-ink">{group.client_name}</span>
-          <MandatePill mandate={group.mandate} />
-          <span className={`chip ring-1 ring-inset ${sev.chip}`}>{sev.label}</span>
-          <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
-            {group.tasks.length}
-          </span>
+          Show all {priorityClients.length} clients
+          <ChevronRight className="h-4 w-4" aria-hidden />
         </button>
       )}
-    >
-      <div className="space-y-3 rounded-b-lg border border-t-0 border-border p-3">
-        {group.tasks.map((t) => (
-          <TaskCard key={t.id} task={t} onOpen={onOpen} />
-        ))}
-      </div>
-    </Collapsible>
+      <Dialog open={allOpen} onOpenChange={setAllOpen}>
+        <DialogContent className="max-h-[85vh] max-w-5xl gap-4 overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Priority — touch base</DialogTitle>
+            <DialogDescription>
+              {priorityClients.length} client{priorityClients.length !== 1 ? "s" : ""} flagged
+              after a world event hit their profile.
+            </DialogDescription>
+          </DialogHeader>
+          <PriorityClientsGrid
+            groups={priorityClients}
+            newsWire={newsWire}
+            onOpen={openClient}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
 /* ------------------------------------------------------------ meetings §2 --- */
+
+function meetingLabel(m: OverviewMeeting): string {
+  const title = m.agenda || m.client_name;
+  return m.venue ? `${title} | ${m.venue}` : title;
+}
 
 function MeetingRow({
   m,
@@ -313,182 +420,39 @@ function MeetingRow({
     ? [m.day_label.split(" ")[1], m.day_label.split(" ")[2]]
     : ["", ""];
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-border p-3">
-      <div className="grid w-12 shrink-0 place-items-center rounded-lg bg-primary-subtle py-1.5 text-center">
-        <span className="text-base font-bold leading-none text-primary">{d}</span>
-        <span className="text-[10px] uppercase text-primary/70">{mon}</span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onOpen(m.client_id)}
-            className="text-sm font-semibold text-ink hover:text-primary hover:underline"
-          >
-            {m.client_name}
-          </button>
-          <span className="text-xs text-muted-foreground">
-            {m.time} · {m.channel}
-          </span>
-          {m.has_alert && (
-            <span className="chip bg-destructive/10 text-destructive ring-1 ring-inset ring-destructive/20">
-              has a task
-            </span>
-          )}
-        </div>
-        <p className="mt-1 text-xs text-ink-soft">
-          <span className="font-medium">{m.agenda}</span>
-          {m.venue ? ` · ${m.venue}` : ""}
-        </p>
-        {m.last_met && (
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Last met {prettyDate(m.last_met)}
-            {m.last_modality ? ` (${m.last_modality})` : ""}
-            {m.provenance[0] && <ProvenanceTag prov={m.provenance[0]} label="log" />}
-          </p>
-        )}
-        <div className="mt-2 flex items-center gap-2">
-          <SoonButton label="Draft pre-meeting email" title="AI email drafting" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------- market moves §3 --- */
-
-function MarketMoveRow({ mv }: { mv: MarketMove }) {
-  return (
-    <div className="rounded-lg border border-border p-3">
-      <div className="flex items-center gap-2">
-        <DirectionMark direction={mv.direction} />
-        <p className="flex-1 text-sm font-medium text-ink">{mv.headline}</p>
-        <span className="text-[11px] text-muted-foreground">{prettyDate(mv.published_at)}</span>
-      </div>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{mv.summary}</p>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">
-        {mv.source}
-        <ProvenanceTag prov={mv.provenance} label="source" />
-      </p>
-    </div>
-  );
-}
-
-/* ----------------------------------------------------- portfolio events §4 --- */
-
-function PortfolioEventRow({
-  e,
-  onOpen,
-}: {
-  e: PortfolioEvent;
-  onOpen: (id: string) => void;
-}) {
-  const kind = EVENT_KIND[e.kind];
-  const KindIcon = kind.Icon;
-  return (
-    <div className="rounded-lg border border-border p-3">
-      <div className="flex items-center gap-2">
-        <span className={`chip inline-flex items-center gap-1 ring-1 ring-inset ${kind.cls}`}>
-          <KindIcon className="h-3.5 w-3.5" aria-hidden /> {kind.label}
-        </span>
-        <p className="flex-1 text-sm font-medium text-ink">{e.title}</p>
-        <span className="text-[11px] text-muted-foreground">{e.day_label}</span>
-      </div>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{e.detail}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] text-muted-foreground">Held by</span>
-        {e.held_by.map((h) => (
-          <button
-            key={h.client_id}
-            type="button"
-            onClick={() => onOpen(h.client_id)}
-            title={`Open ${h.client_name}`}
-            className="flex items-center gap-1 rounded-full bg-muted py-0.5 pl-0.5 pr-2 ring-1 ring-inset ring-border hover:bg-accent"
-          >
-            <ClientAvatar clientId={h.client_id} name={h.client_name} size="sm" className="!h-5 !w-5 !ring-0" />
-            <span className="text-[11px] text-muted-foreground">{firstName(h.client_name)}</span>
-          </button>
-        ))}
-        <span className="ml-auto text-[11px] font-medium text-muted-foreground">
-          {chf(e.exposure_chf)}
-          <ProvenanceTag prov={e.provenance} label="holding" />
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------ news wire §5 --- */
-
-function ClientPolarityChip({
-  ref_,
-  onOpen,
-}: {
-  ref_: NewsWireItem["relevant_clients"][number];
-  onOpen: (id: string) => void;
-}) {
-  const dot: Record<Polarity, string> = {
-    conflict: "bg-warning",
-    opportunity: "bg-success",
-    neutral: "bg-muted-foreground",
-  };
-  return (
     <button
       type="button"
-      onClick={() => onOpen(ref_.client_id)}
-      title={`${ref_.polarity} · open ${ref_.client_name}`}
-      className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-0.5 text-[11px] text-muted-foreground ring-1 ring-inset ring-border hover:bg-muted"
+      onClick={() => onOpen(m.client_id)}
+      className="flex w-full min-w-0 items-center gap-2.5 rounded-lg border border-border p-2 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${dot[ref_.polarity]}`} />
-      {firstName(ref_.client_name)}
+      <div className="grid w-10 shrink-0 place-items-center rounded-md bg-primary-subtle py-1 text-center">
+        <span className="text-sm font-bold leading-none text-primary">{d}</span>
+        <span className="text-[9px] uppercase leading-none text-primary/70">{mon}</span>
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-ink" title={m.client_name}>
+          {meetingLabel(m)}
+        </p>
+        <p className="text-xs text-muted-foreground">{m.time}</p>
+      </div>
     </button>
   );
 }
 
-function NewsRow({
-  n,
+function MeetingsStrip({
+  meetings,
   onOpen,
+  className,
 }: {
-  n: NewsWireItem;
+  meetings: OverviewMeeting[];
   onOpen: (id: string) => void;
+  className?: string;
 }) {
-  const up = n.sentiment_score > 0.05;
-  const down = n.sentiment_score < -0.05;
   return (
-    <div className="rounded-lg border border-border p-3">
-      <div className="flex items-center gap-2">
-        <span className="text-[11px] font-medium text-muted-foreground">{n.source}</span>
-        <span className="ml-auto text-[11px] text-muted-foreground">{prettyDate(n.published_at)}</span>
-      </div>
-      <p className="mt-0.5 text-sm font-medium text-ink">{n.title}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <span
-          className={`chip ring-1 ring-inset ${
-            up
-              ? "bg-success/10 text-success ring-success/20"
-              : down
-              ? "bg-destructive/10 text-destructive ring-destructive/20"
-              : "bg-muted text-muted-foreground ring-border"
-          }`}
-        >
-          {n.sentiment_label} {n.sentiment_score >= 0 ? "+" : ""}
-          {n.sentiment_score.toFixed(2)}
-        </span>
-        {n.topics.map((t) => (
-          <span key={t} className="chip bg-muted text-muted-foreground ring-1 ring-inset ring-border">
-            {titleCase(t)}
-          </span>
-        ))}
-        <ProvenanceTag prov={n.provenance} label="source" />
-      </div>
-      {n.relevant_clients.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-muted-foreground">Affects</span>
-          {n.relevant_clients.map((r) => (
-            <ClientPolarityChip key={r.client_id} ref_={r} onOpen={onOpen} />
-          ))}
-        </div>
-      )}
+    <div className={cn("flex flex-col gap-2", className)}>
+      {meetings.map((m) => (
+        <MeetingRow key={m.id} m={m} onOpen={onOpen} />
+      ))}
     </div>
   );
 }
@@ -497,8 +461,10 @@ function NewsRow({
 
 export function OverviewDashboard({
   onOpenClient,
+  user,
 }: {
   onOpenClient: (id: string) => void;
+  user?: MeUser | null;
 }) {
   const [data, setData] = useState<Overview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -520,85 +486,66 @@ export function OverviewDashboard({
     return (
       <div className="scroll-thin h-full overflow-y-auto">
         <div className="mx-auto max-w-6xl animate-pulse px-8 py-6">
-          {/* greeting + briefing */}
+          {/* greeting */}
           <div className="mb-5">
             <div className="h-8 w-64 rounded-lg bg-muted" />
-            <div className="mt-2 h-10 rounded-lg bg-muted" />
           </div>
 
-          {/* kpi strip */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="card px-4 py-3">
-                <div className="h-7 w-12 rounded bg-muted" />
-                <div className="mt-2 h-3 w-20 rounded bg-muted" />
+          {/* kpi strip + meetings */}
+          <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[35%_65%] lg:grid-rows-[auto_1fr] lg:gap-x-4 lg:gap-y-3">
+            <SectionHeader
+              title="At a glance"
+              className="order-1 !mb-0 lg:order-none lg:col-start-1 lg:row-start-1"
+            />
+            <div className="order-2 lg:order-none lg:col-start-1 lg:row-start-2">
+              <div className="grid grid-cols-2 grid-rows-2 gap-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="card min-h-[5.25rem] px-3 py-2.5">
+                    <div className="h-5 w-10 rounded bg-muted" />
+                    <div className="mt-2 h-2.5 w-16 rounded bg-muted" />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-
-          {/* priority tasks */}
-          <div className="mt-7">
-            <div className="mb-3 h-4 w-40 rounded bg-muted" />
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="card relative overflow-hidden p-4 pl-5">
-                  <span className="absolute inset-y-0 left-0 w-1.5 rounded-l-lg bg-muted" />
-                  <div className="flex items-start gap-3">
-                    <div className="h-9 w-9 shrink-0 rounded-full bg-muted" />
-                    <div className="flex-1 space-y-2">
-                      <div className="flex gap-2">
-                        <div className="h-4 w-28 rounded bg-muted" />
-                        <div className="h-4 w-16 rounded bg-muted" />
-                      </div>
-                      <div className="h-3 w-3/4 rounded bg-muted" />
-                      <div className="h-12 rounded-lg bg-muted" />
-                    </div>
-                    <div className="h-8 w-24 shrink-0 rounded-lg bg-muted" />
+            </div>
+            <SectionHeader
+              title="Meetings coming up"
+              count={4}
+              className="order-3 !mb-0 lg:order-none lg:col-start-2 lg:row-start-1"
+            />
+            <div className="order-4 flex flex-col gap-2 lg:order-none lg:col-start-2 lg:row-start-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex gap-2 rounded-lg border border-border p-2">
+                  <div className="h-10 w-10 shrink-0 rounded-md bg-muted" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 w-full rounded bg-muted" />
+                    <div className="h-2.5 w-10 rounded bg-muted" />
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* meetings + market moves */}
-          <div className="mt-7 grid gap-6 lg:grid-cols-2">
-            {Array.from({ length: 2 }).map((_, col) => (
-              <div key={col}>
-                <div className="mb-3 h-4 w-32 rounded bg-muted" />
-                <div className="card space-y-2.5 p-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex gap-3 rounded-lg border border-border p-3">
-                      <div className="h-12 w-12 shrink-0 rounded-lg bg-muted" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-3 w-24 rounded bg-muted" />
-                        <div className="h-3 w-48 rounded bg-muted" />
-                      </div>
+          {/* priority tasks */}
+          <div className="mt-7">
+            <div className="mb-3 h-4 w-40 rounded bg-muted" />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="card overflow-hidden p-0">
+                  <div className="aspect-video w-full border-b border-border/50 bg-muted" />
+                  <div className="space-y-2 p-4">
+                    <div className="flex gap-2">
+                      <div className="h-8 w-8 shrink-0 rounded-full bg-muted" />
+                      <div className="h-4 w-28 rounded bg-muted" />
+                      <div className="h-4 w-16 rounded bg-muted" />
                     </div>
-                  ))}
+                    <div className="h-3 w-full rounded bg-muted" />
+                    <div className="h-3 w-4/5 rounded bg-muted" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* portfolio events + news wire */}
-          <div className="mt-7 grid gap-6 lg:grid-cols-2">
-            {Array.from({ length: 2 }).map((_, col) => (
-              <div key={col}>
-                <div className="mb-3 h-4 w-36 rounded bg-muted" />
-                <div className="card space-y-2.5 p-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="rounded-lg border border-border p-3 space-y-2">
-                      <div className="flex gap-2 items-center">
-                        <div className="h-5 w-16 rounded-full bg-muted" />
-                        <div className="h-3 flex-1 rounded bg-muted" />
-                      </div>
-                      <div className="h-3 w-5/6 rounded bg-muted" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     );
@@ -616,35 +563,43 @@ export function OverviewDashboard({
   }
 
   const o = data;
+  const priorityClients = groupTasksByClient(o.priority_tasks);
 
   return (
     <div className="scroll-thin h-full overflow-y-auto">
       <div className="mx-auto max-w-6xl px-8 py-6">
-        {/* greeting + briefing */}
+        {/* greeting */}
         <header className="mb-5">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h1 className="text-2xl font-semibold text-ink">
-              {greeting()}, {firstName(o.rm_name)}
+            <h1 className="font-display text-3xl font-light tracking-tight text-ink">
+              {greeting()}, {firstName(user?.name || o.rm_name)}
             </h1>
             <span className="text-sm text-muted-foreground">
               {prettyDate(o.today)} ·{" "}
               {o.use_live ? "live data" : "seed data"}
             </span>
           </div>
-          <div className="mt-2 flex items-start gap-2 rounded-lg bg-primary-subtle px-4 py-2.5 text-sm text-primary ring-1 ring-inset ring-primary/20">
-            <span className="shrink-0 rounded bg-card/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-              Briefing
-            </span>
-            <span className="leading-relaxed">{o.briefing}</span>
-            <span className="ml-auto hidden shrink-0 sm:block">
-              <SoonButton label="Send as SMS" title="Twilio morning briefing" />
-            </span>
-          </div>
         </header>
 
-        <KpiStrip o={o} />
+        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[35%_65%] lg:grid-rows-[auto_1fr] lg:gap-x-4 lg:gap-y-3">
+          <SectionHeader
+            title="At a glance"
+            className="order-1 !mb-0 lg:order-none lg:col-start-1 lg:row-start-1"
+          />
+          <KpiStrip o={o} className="order-2 lg:order-none lg:col-start-1 lg:row-start-2" />
+          <SectionHeader
+            title="Meetings coming up"
+            count={o.meetings.length}
+            className="order-3 !mb-0 lg:order-none lg:col-start-2 lg:row-start-1"
+          />
+          <MeetingsStrip
+            meetings={o.meetings}
+            onOpen={onOpenClient}
+            className="order-4 lg:order-none lg:col-start-2 lg:row-start-2"
+          />
+        </div>
 
-        {/* §1 priority tasks — collapsible section, grouped per client */}
+        {/* §1 priority tasks — one tile per client, drill in for detail */}
         <section className="mt-7">
           <Collapsible
             defaultOpen
@@ -668,10 +623,12 @@ export function OverviewDashboard({
                   </h2>
                 </button>
                 <span className="grid h-5 min-w-5 place-items-center rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted-foreground">
-                  {o.priority_tasks.length}
+                  {priorityClients.length || o.priority_tasks.length}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  a world event hit their profile
+                  {priorityClients.length > 0
+                    ? `${priorityClients.length} client${priorityClients.length !== 1 ? "s" : ""} · a world event hit their profile`
+                    : "a world event hit their profile"}
                 </span>
               </div>
             )}
@@ -681,74 +638,14 @@ export function OverviewDashboard({
                 Nothing flagged across the book this morning.
               </div>
             ) : (
-              <div className="space-y-3">
-                {groupTasksByClient(o.priority_tasks).map((g) => (
-                  <ClientTaskGroup key={g.client_id} group={g} onOpen={onOpenClient} />
-                ))}
-              </div>
+              <PriorityTouchBase
+                priorityClients={priorityClients}
+                newsWire={o.news}
+                onOpenClient={onOpenClient}
+              />
             )}
           </Collapsible>
         </section>
-
-        {/* §2 meetings + §3 market moves */}
-        <div className="mt-7 grid gap-6 lg:grid-cols-2">
-          <section>
-            <SectionHeader
-              title="Meetings coming up"
-              count={o.meetings.length}
-              action={<SoonButton label="Connect Google Calendar" title="Calendar sync" />}
-            />
-            <div className="card space-y-2.5 p-4">
-              {o.meetings.map((m) => (
-                <MeetingRow key={m.id} m={m} onOpen={onOpenClient} />
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <SectionHeader
-              title="Big market moves"
-              count={o.market_moves.length}
-              hint="macro · dialogue only"
-            />
-            <div className="card space-y-2.5 p-4">
-              {o.market_moves.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No notable macro moves.</p>
-              ) : (
-                o.market_moves.map((mv) => <MarketMoveRow key={mv.id} mv={mv} />)
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* §4 portfolio events + §5 news wire */}
-        <div className="mt-7 grid gap-6 lg:grid-cols-2">
-          <section>
-            <SectionHeader
-              title="On your holdings"
-              count={o.portfolio_events.length}
-              hint="earnings · filings · IPOs"
-            />
-            <div className="card space-y-2.5 p-4">
-              {o.portfolio_events.map((e) => (
-                <PortfolioEventRow key={e.id} e={e} onOpen={onOpenClient} />
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <SectionHeader
-              title="News wire"
-              count={o.news.length}
-              hint="tagged to who it touches"
-            />
-            <div className="card space-y-2.5 p-4">
-              {o.news.map((n) => (
-                <NewsRow key={n.id} n={n} onOpen={onOpenClient} />
-              ))}
-            </div>
-          </section>
-        </div>
 
         <p className="mt-8 text-center text-[11px] text-muted-foreground">
           Every card is grounded — click a “source”, “why”, “log” or “holding” tag to see the citation.

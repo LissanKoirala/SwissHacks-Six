@@ -5,9 +5,30 @@ import type { ClientDetail } from "@/lib/types";
 import { api } from "@/lib/api";
 import { titleCase } from "@/lib/format";
 import { ProvenanceTag } from "./Provenance";
+import { LinkPreviewThumb } from "./LinkPreviewThumb";
 import { MandatePill } from "./ui";
 
 const FACET_ORDER = ["professional", "interests", "historical", "personality"];
+
+// A tiny marker showing how a fact entered the DNA — the visible proof the agent read the logs
+// rather than having facts hand-entered. Seed facts carry no badge (they're the baseline).
+function OriginBadge({ origin }: { origin?: "seed" | "log" | "capture" }) {
+  if (origin === "log") {
+    return (
+      <span className="ml-1.5 align-middle rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary ring-1 ring-inset ring-primary/20">
+        auto-extracted
+      </span>
+    );
+  }
+  if (origin === "capture") {
+    return (
+      <span className="ml-1.5 align-middle rounded-full bg-teal/10 px-1.5 py-px text-[10px] font-medium text-teal ring-1 ring-inset ring-teal/20">
+        from note
+      </span>
+    );
+  }
+  return null;
+}
 
 export function ProfileView({ clientId }: { clientId: string }) {
   const [data, setData] = useState<ClientDetail | null>(null);
@@ -63,6 +84,7 @@ export function ProfileView({ clientId }: { clientId: string }) {
           keys.length
         } ${keys.length === 1 ? "facet" : "facets"}`
       : null;
+  const scanned = data.profile.log_entries_scanned ?? data.log_count ?? 0;
 
   return (
     <div className="space-y-5">
@@ -82,6 +104,15 @@ export function ProfileView({ clientId }: { clientId: string }) {
               {headline}
             </p>
           )}
+          {scanned > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">DNA auto-built from the CRM log</span>{" "}
+              — the agent read{" "}
+              <span className="tabular-nums">{scanned}</span> meeting{" "}
+              {scanned === 1 ? "entry" : "entries"} to map these facets; each fact links back to the
+              line that justifies it.
+            </p>
+          )}
         </header>
       )}
       <div className="grid gap-5 md:grid-cols-2">
@@ -92,13 +123,23 @@ export function ProfileView({ clientId }: { clientId: string }) {
             </h3>
             <div className="space-y-3">
               {facets[k].map((entry, i) => (
-                <p
+                <article
                   key={i}
-                  className="text-sm leading-relaxed text-foreground"
+                  className="flex gap-3 rounded-lg border border-border bg-muted/20 p-3"
                 >
-                  {entry.text}
-                  <ProvenanceTag prov={entry.provenance} />
-                </p>
+                  {entry.provenance.url ? (
+                    <LinkPreviewThumb url={entry.provenance.url} />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm leading-relaxed text-foreground">
+                      {entry.text}
+                      <OriginBadge origin={entry.origin} />
+                    </p>
+                    <div className="mt-2">
+                      <ProvenanceTag prov={entry.provenance} />
+                    </div>
+                  </div>
+                </article>
               ))}
             </div>
           </section>
@@ -106,7 +147,7 @@ export function ProfileView({ clientId }: { clientId: string }) {
       </div>
       {keys.length === 0 && (
         <div>
-          <h3 className="font-display text-4xl font-light tracking-tight text-foreground">
+          <h3 className="font-display text-[2.5rem] leading-[1.1] font-light tracking-tight text-foreground">
             No profile yet
           </h3>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">

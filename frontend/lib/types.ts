@@ -33,9 +33,20 @@ export interface Provenance {
   timestamp?: string | null;
 }
 
+export interface LinkPreview {
+  url: string;
+  image_url?: string | null;
+  favicon_url?: string | null;
+  title?: string | null;
+  site_name?: string | null;
+  preview_kind: "thumbnail" | "favicon" | "none";
+}
+
 export interface Sentiment {
   score: number;
   label: string;
+  // Where the score/label came from + the threshold that turned it into a label (Trust).
+  source?: string | null;
 }
 
 export interface NewsItem {
@@ -114,6 +125,31 @@ export interface Holding {
   provenance?: Provenance | null; // pointer to the Sample Portfolio workbook row
 }
 
+// --- Worldview engine: the client as a living model, not a topic set ---
+
+export interface ScoreComponent {
+  label: string;
+  detail: string;
+  points: number;
+  max_points: number;
+  provenance?: Provenance | null;
+}
+
+export interface RelevanceScore {
+  score: number; // 0–100
+  components: ScoreComponent[];
+  summary: string;
+}
+
+export interface LensFraming {
+  headline: string;
+  narrative: string;
+  client_quote?: string | null;
+  quote_date?: string | null;
+  draft_source: "llm" | "template";
+  provenance: Provenance[];
+}
+
 export interface Match {
   id: string;
   client_id: string;
@@ -123,6 +159,29 @@ export interface Match {
   shared_topics: SharedTopic[];
   affected_holding?: Holding | null;
   why: Provenance[];
+  // worldview enrichment (deterministic, computed at match time)
+  relevance?: RelevanceScore | null; // conviction-weighted 0–100 + cited breakdown
+  lens?: LensFraming | null; // the item reframed through this client's own words
+  celebrate: boolean; // a genuine 'call to celebrate' good-news moment, not a warning
+}
+
+export interface ReactionPrediction {
+  predicted_objection: string;
+  emotional_register: string;
+  suggested_rebuttal: string;
+  confidence: "grounded" | "inferred";
+  draft_source: "llm" | "template";
+  provenance: Provenance[];
+}
+
+export interface LifeEventSignal {
+  label: string;
+  date: string;
+  months_ago: number;
+  topic?: string | null;
+  facet?: string | null;
+  implication: string;
+  provenance: Provenance;
 }
 
 export interface SubstitutionMetrics {
@@ -144,6 +203,8 @@ export interface SubstitutionMetrics {
   value_tags_sell: string[];
   value_tags_buy: string[];
   risk_source?: string | null;
+  // Pointers behind the side-by-side comparison (sold/bought rows + risk source).
+  provenance?: Provenance[];
 }
 
 export interface Swap {
@@ -179,6 +240,17 @@ export interface StrategyProposal {
   constraints_checked: string[];
   good_news_briefing?: GoodNewsBriefing | null;
   provenance: Provenance[];
+}
+
+export interface MatchResolution {
+  client_id: string;
+  match_id: string;
+  holding_isin?: string | null;
+  summary: string;
+  source: "llm" | "template";
+  llm_used: boolean;
+  strategy_proposal: StrategyProposal;
+  generated_at: string;
 }
 
 export interface QueryAlternative {
@@ -220,6 +292,9 @@ export interface DialogueSuggestion {
   style: string;
   talking_points: TalkingPoint[];
   draft_message: string;
+  // How the draft was produced: "llm" (Phoeniqs, style-tuned) or "template" (deterministic,
+  // style-aware fallback) — surfaced so the prose's provenance is honest.
+  draft_source: "llm" | "template";
   market_context: MarketContextItem[];
   provenance: Provenance[];
 }
@@ -232,12 +307,65 @@ export interface ClientSummary {
   alert_count: number;
 }
 
+// --- Client Digital Twin (pre-mortem on the proposal; advisory only) ---
+
+export type TwinStance = "receptive" | "mixed" | "likely_to_object";
+
+export interface TwinDriver {
+  label: string;
+  kind: string; // value-aligned | value-conflict | risk-reassurance | risk-mismatch | framing | life-event
+  stance: "supportive" | "opposing" | "neutral";
+  weight: number;
+  contribution: number;
+  detail: string;
+  provenance: Provenance;
+}
+
+export interface ClientTwin {
+  client_id: string;
+  client_name: string;
+  stance: TwinStance;
+  score: number;
+  confidence: "low" | "medium" | "high";
+  summary: string;
+  anticipated_objection?: string | null;
+  suggested_framing?: string | null;
+  drivers: TwinDriver[];
+  llm_used: boolean;
+  provenance: Provenance[];
+}
+
+export interface TwinAskAnswer {
+  client_id: string;
+  question: string;
+  answer: string;
+  confidence: "low" | "medium" | "high";
+  citations: Provenance[];
+  llm_used: boolean;
+}
+
+export type TwinChannel =
+  | "email"
+  | "sms"
+  | "whatsapp"
+  | "talking_points"
+  | "call_script";
+
+export interface TwinFormatResult {
+  channel: TwinChannel;
+  formatted: string;
+  llm_used: boolean;
+}
+
 export interface Insights {
   client: ClientSummary;
   matches: Match[];
   strategy_proposal: StrategyProposal | null;
   dialogue_suggestion: DialogueSuggestion | null;
   additional_proposals?: StrategyProposal[];
+  // worldview engine outputs (per opened client, lazily)
+  reaction?: ReactionPrediction | null; // digital-twin reaction to the primary proposal
+  life_events?: LifeEventSignal[]; // recent dated values-shift signals
   generated_at: string;
   llm_used: boolean;
 }
@@ -271,6 +399,19 @@ export interface Portfolio {
 export interface FacetEntry {
   text: string;
   provenance: Provenance;
+  // How this fact entered the DNA: curated ground truth, auto-derived from the log, or captured.
+  origin?: "seed" | "log" | "capture";
+}
+
+export interface ProfileInterestEdge {
+  client_id: string;
+  topic: string;
+  facet: string;
+  polarity: Polarity;
+  weight: number;
+  provenance: Provenance;
+  origin?: "seed" | "log" | "capture";
+  log_support?: number; // # of meeting-log entries that corroborate this edge
 }
 
 export interface ClientDetail {
@@ -280,10 +421,72 @@ export interface ClientDetail {
     mandate: string;
     headline: string;
     facets: Record<string, FacetEntry[]>;
-    interest_edges?: unknown[];
+    interest_edges?: ProfileInterestEdge[];
+    log_entries_scanned?: number; // # of CRM entries the agent read to build this DNA
   };
   mandate?: string;
   log_count?: number;
+}
+
+// --- Portfolio audit (proactive standing deviations) ---------------------------------------
+
+export interface AuditValueConflict {
+  isin: string;
+  issuer: string;
+  industry_group?: string | null;
+  current_chf: number;
+  conflicting_tags: string[];
+  topics: string[];
+  severity: string;
+  reason: string;
+  provenance: Provenance[];
+}
+
+export interface AuditCioDeviation {
+  isin: string;
+  issuer: string;
+  status: string;
+  current_chf: number;
+  severity: string;
+  reason: string;
+  provenance: Provenance[];
+}
+
+export interface AuditDriftBreach {
+  sub_asset_class: string;
+  drift_pp: number;
+  target_pct: number;
+  current_pct: number;
+  severity: string;
+  reason: string;
+  provenance: Provenance[];
+}
+
+export interface PortfolioAudit {
+  client_id: string;
+  value_conflicts: AuditValueConflict[];
+  cio_deviations: AuditCioDeviation[];
+  drift_breaches: AuditDriftBreach[];
+  total_deviations: number;
+  clean: boolean;
+}
+
+// --- 24/7 news watch ----------------------------------------------------------------------
+
+export interface BreakingAlert {
+  client_id: string;
+  client_name: string;
+  polarity: Polarity;
+  headline: string;
+  news_id: string;
+  news_title: string;
+  affected_holding?: string | null;
+  detected_at: string;
+}
+
+export interface BreakingFeed {
+  alerts: BreakingAlert[];
+  watch_enabled: boolean;
 }
 
 export interface IntegrationProbe {
@@ -757,6 +960,7 @@ export interface GlobeHolding {
   city: string;
   verdict: "VIOLATION" | "WATCH" | "OK";
   weight: number;
+  yahoo?: string | null;
   provenance?: Provenance | null;
 }
 
@@ -771,6 +975,9 @@ export interface GlobeEvent {
   severity: "high" | "med" | "low";
   summary: string;
   linked_holding_ids: string[];
+  url?: string | null;
+  issuer_name?: string | null;
+  issuer_isin?: string | null;
   kind?: "alert" | "ambient";
   sentiment?: number;
   provenance?: Provenance | null;
@@ -1111,6 +1318,33 @@ export interface DraftResult {
   id: string;
   message_id?: string | null;
   url: string;
+}
+
+// Per-client Workspace: the RM's Gmail/Calendar scoped to one client by their email.
+export interface ClientInbox {
+  email: string;
+  messages: GmailMessage[];
+}
+
+export interface GmailMessageFull {
+  id: string;
+  thread_id: string;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  body: string;
+  unread: boolean;
+}
+
+export interface ClientCalendar {
+  email: string;
+  events: CalendarEvent[];
+}
+
+export interface ClientDraftBody {
+  subject?: string;
+  body?: string;
 }
 
 export interface EventBody {

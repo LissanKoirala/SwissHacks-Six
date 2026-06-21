@@ -20,6 +20,17 @@ def sentiment_label(score: float) -> str:
     return "NEUTRAL"
 
 
+def make_sentiment(score: float, origin: str) -> Sentiment:
+    """Build a Sentiment that carries *why* it reads the way it does: the upstream feed that
+    supplied the score and the ±0.2 threshold that turned it into a label. Cited once, here, so
+    no per-client re-derivation is ever needed (CLAUDE.md §9) and the RM can audit it (§2)."""
+    return Sentiment(
+        score=round(score, 3),
+        label=sentiment_label(score),
+        source=f"{origin} · |score|>{SENTIMENT_THRESHOLD}",
+    )
+
+
 def to_news_item(rec: Record) -> NewsItem:
     p = rec.payload
     title = p.get("title", "")
@@ -39,7 +50,7 @@ def to_news_item(rec: Record) -> NewsItem:
         url=p.get("url"),
         published_at=p.get("published_at", ""),
         topics=topics,
-        sentiment=Sentiment(score=round(score, 3), label=sentiment_label(score)),
+        sentiment=make_sentiment(score, p.get("source") or signal_type),
         issuer_name=p.get("issuer_name"),
         issuer_isin=p.get("issuer_isin"),
         market_digest=bool(p.get("market_digest", False)),
@@ -90,7 +101,7 @@ def label_cio(rec: Record, labels: dict) -> CIOStock:
     score = lab.get("sentiment")
     sentiment = None
     if score is not None:
-        sentiment = Sentiment(score=round(float(score), 3), label=sentiment_label(float(score)))
+        sentiment = make_sentiment(float(score), "stock-labels")
     return CIOStock(
         rating=p["rating"],
         asset_class=p.get("asset_class"),

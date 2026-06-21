@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ClientSummary, IntegrationHealth } from "@/lib/types";
+import type { ClientSummary, IntegrationHealth, MeUser } from "@/lib/types";
 import { api } from "@/lib/api";
 import { Sidebar } from "./components/Sidebar";
 import { ClientView } from "./components/ClientView";
 import { OverviewDashboard } from "./components/OverviewDashboard";
 import { TasksBoard } from "./components/TasksBoard";
 import { WorkspacePanel } from "./components/WorkspacePanel";
+import { NewsView } from "./components/NewsView";
 
-type View = "overview" | "client" | "tasks" | "workspace";
+type View = "overview" | "client" | "tasks" | "workspace" | "news";
 
 export default function Home() {
   const [clients, setClients] = useState<ClientSummary[]>([]);
@@ -18,6 +19,7 @@ export default function Home() {
   const [view, setView] = useState<View>("overview");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<MeUser | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -35,6 +37,13 @@ export default function Home() {
     api
       .integrations()
       .then((h) => alive && setHealth(h))
+      .catch(() => {});
+
+    // Sign-in is optional — fetch the RM in the background only to personalise the greeting.
+    // No gate, no redirect: the desk works logged-out on seed data.
+    api
+      .me()
+      .then((u) => alive && setUser(u))
       .catch(() => {});
 
     return () => {
@@ -60,6 +69,8 @@ export default function Home() {
         tasksActive={view === "tasks"}
         onShowWorkspace={() => setView("workspace")}
         workspaceActive={view === "workspace"}
+        onShowNews={() => setView("news")}
+        newsActive={view === "news"}
       />
       <div className="flex-1 overflow-hidden bg-background">
         {loading ? (
@@ -82,10 +93,12 @@ export default function Home() {
           <TasksBoard clients={clients} />
         ) : view === "workspace" ? (
           <WorkspacePanel />
+        ) : view === "news" ? (
+          <NewsView />
         ) : view === "client" && selectedId ? (
           <ClientView clientId={selectedId} />
         ) : (
-          <OverviewDashboard onOpenClient={openClient} />
+          <OverviewDashboard onOpenClient={openClient} user={user} />
         )}
       </div>
     </main>

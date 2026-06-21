@@ -56,6 +56,16 @@ class World:
 
     # per-world insights cache (lazy, §9) — keyed by client_id, bound to THIS world
     insights_cache: dict = field(default_factory=dict)
+    # per-world digital-twin cache (the twin's lazy strong-model polish, §9) — keyed by client_id;
+    # invalidated wherever insights_cache is, so it never serves a stale read.
+    twin_cache: dict = field(default_factory=dict)
+
+    # lazy resolution drafts for map holding popovers — keyed by (client_id, match_id)
+    resolution_cache: dict = field(default_factory=dict)
+
+    # 24/7 news watch (the News Agent's live tick): a bounded buffer of breaking alerts the poller
+    # has surfaced since boot, newest first, so the dashboard can show real-time activity.
+    breaking: list = field(default_factory=list)
 
     # --- The Front Door: inbound email + the agentic kanban board (bound to THIS world) ---
     inbox: list[EmailMessage] = field(default_factory=list)   # triaged inbound emails

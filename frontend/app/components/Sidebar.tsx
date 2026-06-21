@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Home, LayoutGrid, Briefcase, ShieldCheck } from "lucide-react";
+import { Home, LayoutGrid, Briefcase, Newspaper, ShieldCheck, ChevronRight } from "lucide-react";
 import type { ClientSummary, IntegrationHealth } from "@/lib/types";
 import { ClientAvatar } from "./ClientAvatar";
 import { MandatePill } from "./ui";
@@ -21,6 +21,8 @@ export function Sidebar({
   tasksActive,
   onShowWorkspace,
   workspaceActive,
+  onShowNews,
+  newsActive,
 }: {
   clients: ClientSummary[];
   selectedId: string | null;
@@ -32,6 +34,8 @@ export function Sidebar({
   tasksActive: boolean;
   onShowWorkspace: () => void;
   workspaceActive: boolean;
+  onShowNews: () => void;
+  newsActive: boolean;
 }) {
   const totalAlerts = clients.reduce((s, c) => s + (c.alert_count || 0), 0);
   // Triage-ordered book: the most urgent client floats to the top.
@@ -54,7 +58,7 @@ export function Sidebar({
           AW
         </div>
         <div className="min-w-0">
-          <p className="truncate font-display text-base font-light tracking-tight text-foreground">
+          <p className="truncate text-base font-semibold tracking-tight text-foreground">
             Advisory Workbench
           </p>
           <p className="truncate text-xs text-muted-foreground">
@@ -115,6 +119,20 @@ export function Sidebar({
           <Briefcase className="h-4 w-4 shrink-0" />
           Workspace
         </button>
+        <button
+          type="button"
+          onClick={onShowNews}
+          aria-current={newsActive ? "page" : undefined}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors",
+            newsActive
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <Newspaper className="h-4 w-4 shrink-0" />
+          News feed
+        </button>
       </div>
 
       {/* clients section */}
@@ -174,13 +192,14 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* integration health footer */}
+      {/* integration health footer — collapsed by default (dev diagnostics) */}
       {health && (
-        <div className="border-t border-sidebar-border px-4 py-3">
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <details className="group border-t border-sidebar-border px-4 py-3">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+            <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
             Integrations · {health.use_live ? "live" : "seed"}
-          </p>
-          <ul className="space-y-1">
+          </summary>
+          <ul className="mt-2 space-y-1">
             {health.probes.map((p) => (
               <li
                 key={p.name}
@@ -197,7 +216,7 @@ export function Sidebar({
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
 
       {/* account + morning-briefing settings */}

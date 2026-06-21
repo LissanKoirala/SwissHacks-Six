@@ -481,6 +481,18 @@ def _build_generic(world: World, client_id: str, p: Optional[Profile]) -> Rendez
                      ["Avoid leading with returns; build rapport first."])
 
 
+def build_rendezvous_suggestions(world: World, client_id: str) -> dict:
+    """CRM-grounded meeting suggestions ONLY — skips the travel optimiser and its live city
+    briefings (open-meteo weather + Wikipedia, fetched for the top candidate cities). Those are
+    only needed when the RM opens the Rendezvous view; the desk overview / morning briefing just
+    surface the suggested agenda/venue/prep, so they must not pay that ~9s/client live cost
+    (CLAUDE.md §9: live/strong work stays lazy)."""
+    profile = world.profiles.get(client_id)
+    builder = _BUILDERS.get(client_id)
+    rdv = builder(world, profile) if builder else _build_generic(world, client_id, profile)
+    return rdv.model_dump()
+
+
 def build_rendezvous(
     world: World,
     client_id: str,

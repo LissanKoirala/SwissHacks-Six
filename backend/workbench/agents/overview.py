@@ -16,8 +16,8 @@ from pydantic import BaseModel, Field
 from ..config import settings
 from ..graph.store import World
 from ..models import Provenance
-from .orchestrator import get_insights
-from .rendezvous import build_rendezvous
+from .orchestrator import get_overview_insights
+from .rendezvous import build_rendezvous_suggestions
 
 Severity = Literal["high", "med", "low"]
 Direction = Literal["up", "down", "flat"]
@@ -245,7 +245,7 @@ def _build_meetings(
         name = meta.get("name", cid)
         logs = world.meeting_logs.get(cid, [])
         last = logs[-1] if logs else None
-        rdv = build_rendezvous(world, cid)
+        rdv = build_rendezvous_suggestions(world, cid)
         sugg = (rdv.get("suggestions") or [{}])[0]
         slot = i % len(_MEETING_OFFSETS)
         d = _add_business_days(today, _MEETING_OFFSETS[slot])
@@ -391,6 +391,7 @@ def _build_news_wire(world: World, insights_by_client: dict) -> list[NewsWireIte
             sentiment_label=n.sentiment.label, issuer_name=n.issuer_name,
             url=n.url, relevant_clients=impact.get(n.id, []), provenance=n.provenance,
         ))
+    out.sort(key=lambda item: item.published_at, reverse=True)
     return out
 
 
@@ -416,7 +417,7 @@ def build_overview(world: World) -> dict:
     from concurrent.futures import ThreadPoolExecutor, as_completed
     client_ids = list(world.clients)
     with ThreadPoolExecutor(max_workers=len(client_ids) or 1) as pool:
-        futures = {pool.submit(get_insights, world, cid): cid for cid in client_ids}
+        futures = {pool.submit(get_overview_insights, world, cid): cid for cid in client_ids}
         insights_by_client = {futures[f]: f.result() for f in as_completed(futures)}
 
     tasks = _build_tasks(world, insights_by_client)

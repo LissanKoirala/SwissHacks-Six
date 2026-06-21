@@ -4,6 +4,10 @@
 import type {
   ClientSummary,
   Insights,
+  ClientTwin,
+  TwinAskAnswer,
+  TwinChannel,
+  TwinFormatResult,
   Portfolio,
   ClientDetail,
   Fundamentals,
@@ -24,9 +28,13 @@ import type {
   CaptureFollowupBody,
   Overview,
   Opportunity,
+  PortfolioAudit,
+  BreakingFeed,
   TransactionsData,
   RMQueryBody,
   RMQueryResult,
+  MatchResolution,
+  LinkPreview,
   MeUser,
   BriefingPrefsBody,
   BriefingPrefsResult,
@@ -38,6 +46,10 @@ import type {
   DraftResult,
   EventBody,
   AddEventResult,
+  ClientInbox,
+  GmailMessageFull,
+  ClientCalendar,
+  ClientDraftBody,
   Task,
   TaskCreateBody,
   TaskUpdateBody,
@@ -105,6 +117,11 @@ export const api = {
   overview: () => get<Overview>("/overview"),
   clients: () => get<ClientSummary[]>("/clients"),
   insights: (id: string) => get<Insights>(`/clients/${id}/insights`),
+  twin: (id: string) => get<ClientTwin>(`/clients/${id}/twin`),
+  twinAsk: (id: string, question: string) =>
+    post<TwinAskAnswer>(`/clients/${id}/twin/ask`, { question }),
+  twinFormat: (id: string, body: { content: string; channel: TwinChannel; tone?: string }) =>
+    post<TwinFormatResult>(`/clients/${id}/twin/format`, body),
   portfolio: (id: string) => get<Portfolio>(`/clients/${id}/portfolio`),
   fundamentals: (id: string) =>
     get<Fundamentals[]>(`/clients/${id}/fundamentals`),
@@ -112,6 +129,9 @@ export const api = {
   analytics: (id: string) => get<Analytics>(`/clients/${id}/analytics`),
   opportunities: (id: string) =>
     get<Opportunity[]>(`/clients/${id}/opportunities`),
+  audit: (id: string) => get<PortfolioAudit>(`/clients/${id}/audit`),
+  news: () => get<import("./types").NewsItem[]>("/news"),
+  breaking: () => get<BreakingFeed>("/breaking"),
   transactions: (id: string) =>
     get<TransactionsData>(`/clients/${id}/transactions`),
   graph: (id: string) => get<CrmGraph>(`/clients/${id}/graph`),
@@ -150,6 +170,14 @@ export const api = {
     post<CaptureFollowup>(`/clients/${id}/capture/followup`, body),
   query: (id: string, body: RMQueryBody) =>
     post<RMQueryResult>(`/clients/${id}/query`, body),
+  matchResolution: (id: string, matchId: string, holdingIsin?: string | null, refresh = false) =>
+    post<MatchResolution>(`/clients/${id}/matches/resolution`, {
+      match_id: matchId,
+      holding_isin: holdingIsin ?? null,
+      refresh,
+    }),
+  linkPreview: (url: string) =>
+    get<LinkPreview>(`/api/link-preview?url=${encodeURIComponent(url)}`),
   integrations: () => get<IntegrationHealth>("/api/health/integrations"),
 
   // --- auth (Google sign-in, identity only) + Twilio morning briefing ---
@@ -170,6 +198,16 @@ export const api = {
     get<{ events: CalendarEvent[] }>("/integrations/google/calendar"),
   addCalendarEvent: (body: EventBody) =>
     post<AddEventResult>("/integrations/google/calendar", body),
+
+  // --- Per-client Workspace (Gmail/Calendar scoped to one client by their email) ---
+  clientInbox: (id: string) =>
+    get<ClientInbox>(`/clients/${id}/workspace/inbox`),
+  clientMessage: (id: string, messageId: string) =>
+    get<GmailMessageFull>(`/clients/${id}/workspace/inbox/${messageId}`),
+  clientCalendar: (id: string) =>
+    get<ClientCalendar>(`/clients/${id}/workspace/calendar`),
+  clientDraft: (id: string, body: ClientDraftBody) =>
+    post<DraftResult>(`/clients/${id}/workspace/draft`, body),
 
   // --- The Front Door: inbox + agentic kanban board ---
   tasks: (clientId?: string) =>

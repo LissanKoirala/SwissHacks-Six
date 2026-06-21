@@ -2,14 +2,14 @@
 Renders the orchestrator's output; nothing here makes decisions."""
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Body, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from ..agents.orchestrator import get_insights
+from ..agents.orchestrator import get_insights, get_overview_insights
 from ..analytics import build_analytics
 from ..auth import init_oauth, require_user
 from ..auth import router as auth_router
@@ -25,30 +25,65 @@ from ..models import (
     CaptureFollowupRequest,
     EmailIngestRequest,
     RMQueryRequest,
+    MatchResolutionRequest,
     TaskCreateRequest,
     TaskSignoffRequest,
     TaskUpdateRequest,
     TTSRequest,
+    TwinAskRequest,
+    TwinFormatRequest,
 )
 from ..scheduler import start_scheduler
+from ..agents.news_watcher import start_news_watch
 from ..seed import build_world
+
+
+class BriefingPrefs(BaseModel):
+    phone_e164: str | None = None
+    briefing_hour: int | None = None
+    briefing_enabled: bool | None = None
+
+
+# Workspace request bodies. MUST be module-level: with `from __future__ import annotations`,
+# a Pydantic body model defined inside create_app() is an unresolvable forward ref and FastAPI
+# raises PydanticUserError at request time.
+class DraftBody(BaseModel):
+    to: str
+    subject: str = ""
+    body: str = ""
+
+
+class EventBody(BaseModel):
+    summary: str
+    start: str  # ISO datetime, e.g. 2026-06-22T14:00:00+02:00
+    end: str
+    attendees: list[str] = []
+    description: str = ""
+    location: str = ""
+
+
+class ClientDraftBody(BaseModel):
+    # `to` is forced server-side to the client's address — the RM can't misdirect a client draft.
+    subject: str = ""
+    body: str = ""
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Advisory Workbench", version="0.1.0")
-    app.add_middleware(
-        CORSMiddleware,
-        # any localhost port in dev — Next.js may fall back to 3001/3002 if 3000 is taken
-        allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
-        allow_credentials=True,  # session cookie travels with /auth + /briefing calls
-        allow_methods=["*"], allow_headers=["*"],
-    )
-    # Signed session cookie (holds only the user id); no Google tokens are stored.
+    # SessionMiddleware first (innermost) so CORS is outermost and always adds headers,
+    # even when the session layer throws.
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.session_secret,
-        same_site="lax",
+        same_site="none",
         https_only=settings.session_https_only,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins_list,
+        allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+        allow_credentials=True,
+        allow_methods=["*"], allow_headers=["*"],
     )
     world = build_world(use_live_news=settings.news_enabled)
     app.state.world = world
@@ -169,9 +204,11 @@ def create_app() -> FastAPI:
 
     @app.get("/clients")
     def list_clients():
+        # Summary only (name/mandate/headline/alert_count) — the LLM-free path keeps the strong
+        # model lazy (§9). The full proposal + dialogue is built on demand at /clients/{id}/insights.
         out = []
         for cid in world.clients:
-            ins = get_insights(world, cid)
+            ins = get_overview_insights(world, cid)
             out.append(ins.client.model_dump())
         return out
 
@@ -193,17 +230,45 @@ def create_app() -> FastAPI:
             raise HTTPException(404, "unknown client")
         return get_insights(world, client_id, refresh=refresh).model_dump()
 
+    @app.get("/clients/{client_id}/twin")
+    def client_twin(client_id: str, refresh: bool = False):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.twin import build_twin
+        return build_twin(world, client_id, refresh=refresh).model_dump()
+
+    @app.post("/clients/{client_id}/twin/ask")
+    def client_twin_ask(client_id: str, req: TwinAskRequest):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.twin import ask_twin
+        return ask_twin(world, client_id, req.question).model_dump()
+
+    @app.post("/clients/{client_id}/twin/format")
+    def client_twin_format(client_id: str, req: TwinFormatRequest):
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.twin import format_message
+        return format_message(world, client_id, req.content, req.channel, req.tone).model_dump()
+
     @app.get("/clients/{client_id}/portfolio")
     def client_portfolio(client_id: str):
         if client_id not in world.clients:
             raise HTTPException(404, "unknown client")
+        from ..logo_ticker import resolve_logo_ticker
+
         holdings = world.holdings_for_client(client_id)
         mandate = world.mandates.get(world.portfolio_of(client_id))
+        out_holdings = []
+        for h in holdings:
+            row = h.model_dump()
+            row["yahoo"] = resolve_logo_ticker(world, client_id, h) or h.yahoo
+            out_holdings.append(row)
         return {
             "portfolio": world.portfolio_of(client_id),
             "total_chf": round(sum(h.current_chf for h in holdings), 2),
             "mandate": mandate.model_dump() if mandate else None,
-            "holdings": [h.model_dump() for h in holdings],
+            "holdings": out_holdings,
         }
 
     @app.get("/clients/{client_id}/fundamentals")
@@ -301,6 +366,15 @@ def create_app() -> FastAPI:
         from ..agents.opportunities import build_opportunities
         return build_opportunities(world, client_id)
 
+    @app.get("/clients/{client_id}/audit")
+    def client_audit(client_id: str):
+        """Proactive, news-independent standing-deviation audit (Portfolio Agent): held names that
+        conflict with the client's DNA, CIO deviations, and mandate drift breaches — all cited."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.portfolio_audit import build_portfolio_audit
+        return build_portfolio_audit(world, client_id)
+
     @app.get("/clients/{client_id}/transactions")
     def client_transactions(client_id: str):
         """Transaction ledger + cash flows: cost basis, unrealised P&L, income yield (HI4)."""
@@ -317,6 +391,21 @@ def create_app() -> FastAPI:
         from ..agents.rm_interface import answer_query
         return answer_query(world, client_id, match_id=req.match_id,
                             question=req.question, exclude_isin=req.exclude_isin)
+
+    @app.post("/clients/{client_id}/matches/resolution")
+    def match_resolution(client_id: str, req: MatchResolutionRequest):
+        """Lazy resolution draft for one match: CIO substitution + optional small-model summary."""
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        from ..agents.resolution import suggest_resolution
+        try:
+            return suggest_resolution(
+                world, client_id, req.match_id,
+                holding_isin=req.holding_isin,
+                refresh=req.refresh,
+            )
+        except ValueError:
+            raise HTTPException(404, "unknown match")
 
     # --- RM Capture (the app's first POSTs — agent proposes, RM confirms) ---
 
@@ -398,14 +487,9 @@ def create_app() -> FastAPI:
     init_oauth()
     app.include_router(auth_router)
 
-    class BriefingPrefs(BaseModel):
-        phone_e164: str | None = None
-        briefing_hour: int | None = None
-        briefing_enabled: bool | None = None
-
     @app.put("/me/briefing")
     def update_briefing(
-        prefs: BriefingPrefs,
+        prefs: BriefingPrefs = Body(...),
         user: RmUser = Depends(require_user),
         db: Session = Depends(get_db),
     ):
@@ -435,20 +519,19 @@ def create_app() -> FastAPI:
         """The composed briefing text over the seed book — visible even logged-out."""
         return {"text": compose_for(world)}
 
+    @app.get("/breaking")
+    def breaking():
+        """Breaking alerts the 24/7 news watch has surfaced since boot (newest first)."""
+        return {"alerts": world.breaking, "watch_enabled": settings.news_watch_enabled}
+
+    @app.post("/breaking/poll")
+    def breaking_poll():
+        """Run one news-watch tick on demand (the demo trigger — no interval wait). Ingests any new
+        live news, surfaces fresh matches as breaking alerts. No-op offline."""
+        from ..agents.news_watcher import poll_once
+        return {"new_alerts": poll_once(world, push=False)}
+
     # --- Google Workspace (Gmail read/draft + Calendar read/add) -----------------
-
-    class DraftBody(BaseModel):
-        to: str
-        subject: str = ""
-        body: str = ""
-
-    class EventBody(BaseModel):
-        summary: str
-        start: str  # ISO datetime, e.g. 2026-06-22T14:00:00+02:00
-        end: str
-        attendees: list[str] = []
-        description: str = ""
-        location: str = ""
 
     def _gtoken(user: RmUser, db: Session):
         if not settings.workspace_enabled:
@@ -503,16 +586,87 @@ def create_app() -> FastAPI:
         except GoogleError as e:
             raise HTTPException(502, str(e))
 
+    # --- Per-client Workspace: the RM's Gmail/Calendar, scoped to ONE client by their email ----
+    # Read this client's correspondence + meetings, and draft to them (never sends). Advisory only.
+    def _client_email(client_id: str) -> str:
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        email = (world.clients[client_id].get("email") or "").strip()
+        if not email:
+            raise HTTPException(
+                409, "no email on file for this client — set WORKSPACE_TEST_BASE or "
+                     "CLIENT_EMAIL_<ID> (see .env.example)")
+        return email
+
+    @app.get("/clients/{client_id}/workspace/inbox")
+    def client_inbox(client_id: str, user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, list_inbox
+
+        email = _client_email(client_id)
+        row = _gtoken(user, db)
+        try:  # both sides of the thread: mail from the client and mail the RM sent them
+            messages = list_inbox(db, row, query=f"from:{email} OR to:{email}")
+            return {"email": email, "messages": messages}
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    @app.get("/clients/{client_id}/workspace/inbox/{message_id}")
+    def client_message(client_id: str, message_id: str,
+                       user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, get_message
+
+        if client_id not in world.clients:
+            raise HTTPException(404, "unknown client")
+        row = _gtoken(user, db)
+        try:
+            return get_message(db, row, message_id)
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    @app.get("/clients/{client_id}/workspace/calendar")
+    def client_calendar(client_id: str, user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, list_events
+
+        email = _client_email(client_id)
+        row = _gtoken(user, db)
+        try:
+            events = list_events(db, row, query=email)
+            # q is fuzzy free-text — keep events the client is actually invited to, but fall back to
+            # the q-matched set so a meeting that only names them in the title still shows.
+            attended = [e for e in events
+                        if email.lower() in [a.lower() for a in (e.get("attendees") or [])]]
+            return {"email": email, "events": attended or events}
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
+    @app.post("/clients/{client_id}/workspace/draft")
+    def client_draft(client_id: str, body: ClientDraftBody,
+                     user: RmUser = Depends(require_user), db: Session = Depends(get_db)):
+        from ..agents.google_workspace import GoogleError, create_draft
+
+        email = _client_email(client_id)  # `to` is forced to the client — never sends (golden rule)
+        row = _gtoken(user, db)
+        try:
+            return create_draft(db, row, email, body.subject, body.body)
+        except GoogleError as e:
+            raise HTTPException(502, str(e))
+
     start_scheduler(world)
+    start_news_watch(world)
 
     @app.on_event("startup")
     def _warm_insights_cache() -> None:
+        # Warm the LLM-FREE overview path only (matching is a free index intersection). The strong
+        # model stays lazy — it runs on first RM open of a client, never speculatively for all of
+        # them at boot (CLAUDE.md §9 token discipline). This is what keeps the morning briefing /
+        # desk overview instant instead of waiting on 4 parallel Phoeniqs calls.
         from concurrent.futures import ThreadPoolExecutor
         import threading
+        from ..agents.orchestrator import get_overview_insights
         def _warm():
             client_ids = list(world.clients)
             with ThreadPoolExecutor(max_workers=len(client_ids) or 1) as pool:
-                futures = [pool.submit(get_insights, world, cid) for cid in client_ids]
+                futures = [pool.submit(get_overview_insights, world, cid) for cid in client_ids]
                 for f in futures:
                     try:
                         f.result()
@@ -611,6 +765,62 @@ def create_app() -> FastAPI:
         from ..taskboard import ingest_news
         created = ingest_news(world)
         return {"created": [t.model_dump() for t in created], "count": len(created)}
+
+    @app.get("/api/link-preview")
+    def link_preview(url: str):
+        """OG/Twitter thumbnail or favicon fallback for provenance source cards."""
+        from ..link_unfurl import unfurl_link
+
+        try:
+            return unfurl_link(url).model_dump()
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/issuer-logo/{ticker:path}")
+    def issuer_logo(ticker: str):
+        """Proxy corporate logo images (same-origin) so the browser never blocks FMP/Parqet hotlinks."""
+        import httpx
+
+        safe = ticker.strip()
+        if not safe or len(safe) > 32:
+            raise HTTPException(400, "invalid ticker")
+        urls = [
+            f"https://assets.parqet.com/logos/symbol/{safe}",
+            f"https://financialmodelingprep.com/image-stock/{safe}.png",
+        ]
+        base = safe.split(".")[0]
+        if base != safe:
+            urls.extend([
+                f"https://assets.parqet.com/logos/symbol/{base}",
+                f"https://financialmodelingprep.com/image-stock/{base}.png",
+            ])
+        for url in urls:
+            try:
+                resp = httpx.get(url, follow_redirects=True, timeout=12.0)
+                ctype = resp.headers.get("content-type", "")
+                if resp.status_code == 200 and ctype.startswith("image"):
+                    return Response(
+                        content=resp.content,
+                        media_type=ctype.split(";")[0],
+                        headers={"Cache-Control": "public, max-age=86400"},
+                    )
+            except Exception:
+                continue
+        raise HTTPException(404, "logo not found")
+
+    @app.get("/api/publisher-logo")
+    def publisher_logo(source: str, url: str | None = None):
+        """Proxy publisher favicon/logo — resolves source label when article URL is a placeholder."""
+        from ..publisher_logos import fetch_publisher_logo
+
+        content, ctype = fetch_publisher_logo(source, url)
+        if not content:
+            raise HTTPException(404, "publisher logo not found")
+        return Response(
+            content=content,
+            media_type=ctype or "image/png",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
     return app
 

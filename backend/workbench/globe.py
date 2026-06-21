@@ -10,6 +10,7 @@ from __future__ import annotations
 from .agents.orchestrator import get_insights
 from .geo import REGION_ANCHOR, _jitter, resolve_geo
 from .graph.store import World
+from .logo_ticker import resolve_logo_ticker
 
 # Conflicts a market/thematic push attributes to (matches analytics.TOPIC_REGION).
 TOPIC_REGION = {
@@ -61,6 +62,7 @@ def build_globe(world: World, client_id: str) -> dict:
         lat, lng, country, city = resolve_geo(h.issuer, h.region, h.isin)
         hid = _holding_id(h)
         verdict = verdict_by_isin.get(h.isin, "OK")
+        logo_ticker = resolve_logo_ticker(world, client_id, h)
         globe_holdings.append({
             "id": hid,
             "issuer": h.issuer,
@@ -73,6 +75,7 @@ def build_globe(world: World, client_id: str) -> dict:
             "city": city,
             "verdict": verdict,
             "weight": round(h.current_chf / max_chf, 4),
+            "yahoo": logo_ticker or h.yahoo,
             "provenance": h.provenance.model_dump() if h.provenance else None,
         })
         holding_pos[hid] = (lat, lng)
@@ -109,6 +112,9 @@ def build_globe(world: World, client_id: str) -> dict:
             "headline": m.headline,
             "source": news.source,
             "published_at": news.published_at,
+            "url": news.url,
+            "issuer_name": news.issuer_name,
+            "issuer_isin": news.issuer_isin,
             "lat": elat,
             "lng": elng,
             "country": country,
@@ -165,6 +171,9 @@ def build_globe(world: World, client_id: str) -> dict:
             "headline": n.topics[0] if n.topics else "market",
             "source": n.source,
             "published_at": n.published_at,
+            "url": n.url,
+            "issuer_name": n.issuer_name,
+            "issuer_isin": n.issuer_isin,
             "lat": nlat,
             "lng": nlng,
             "country": country,

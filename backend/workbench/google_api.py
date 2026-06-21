@@ -77,22 +77,36 @@ def _refresh(db: Session, row: OAuthToken) -> str:
 
 
 def _access_token(db: Session, row: OAuthToken) -> str:
-    if row.expires_at and row.expires_at <= datetime.now(timezone.utc) + timedelta(seconds=30):
+    # SQLite (via SQLAlchemy DateTime) returns expires_at as a NAIVE datetime even though we stored
+    # a tz-aware one — coerce back to UTC before comparing, or it raises "can't compare offset-naive
+    # and offset-aware datetimes" and 500s the first Gmail/Calendar call.
+    exp = row.expires_at
+    if exp is not None and exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    if exp and exp <= datetime.now(timezone.utc) + timedelta(seconds=30):
         return _refresh(db, row)
     return decrypt(row.access_token_enc)
 
 
 def call(db: Session, row: OAuthToken, method: str, url: str, *, params=None, json=None) -> dict:
-    """Bearer-authenticated Google API call; refreshes once on 401."""
+    """Bearer-authenticated Google API call; refreshes once on 401.
+
+    Any unexpected failure is re-raised as GoogleError so the route turns it into a clean 502
+    (which carries CORS headers) instead of a raw 500 that the browser surfaces as a CORS wall."""
     def _do(tok: str) -> httpx.Response:
         return httpx.request(
             method, url, params=params, json=json,
             headers={"Authorization": f"Bearer {tok}"}, timeout=_TIMEOUT,
         )
 
-    resp = _do(_access_token(db, row))
-    if resp.status_code == 401:  # stale token — refresh once and retry
-        resp = _do(_refresh(db, row))
+    try:
+        resp = _do(_access_token(db, row))
+        if resp.status_code == 401:  # stale token — refresh once and retry
+            resp = _do(_refresh(db, row))
+    except GoogleError:
+        raise
+    except Exception as e:  # network/timeout/token-decode/etc. — never leak a bare 500
+        raise GoogleError(f"Google API call failed: {type(e).__name__}: {e}") from e
     if resp.status_code >= 400:
         raise GoogleError(f"Google API {method} {url.split('/')[-1]} → {resp.status_code}: {resp.text[:200]}")
     return resp.json() if resp.content else {}

@@ -1,15 +1,47 @@
 "use client";
 
-import { MessageCircle, ListChecks, Quote, Globe } from "lucide-react";
+import { useState } from "react";
+import { MessageCircle, ListChecks, Quote, Globe, Mail } from "lucide-react";
 import type { DialogueSuggestion } from "@/lib/types";
+import { api } from "@/lib/api";
 import { ProvenanceTag } from "./Provenance";
-import { ConfirmGate } from "./ConfirmGate";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function DialoguePanel({
   dialogue,
+  clientId,
+  clientName,
 }: {
   dialogue: DialogueSuggestion | null;
+  clientId: string;
+  clientName: string;
 }) {
+  const [subject, setSubject] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [draftMsg, setDraftMsg] = useState<{ ok: boolean; text: string; url?: string } | null>(null);
+
+  async function saveDraft() {
+    if (!dialogue) return;
+    setBusy(true);
+    setDraftMsg(null);
+    try {
+      const r = await api.clientDraft(clientId, {
+        subject: subject || `A note for ${clientName.split(" ").slice(-1)[0]}`,
+        body: dialogue.draft_message,
+      });
+      setDraftMsg({ ok: true, text: "Draft saved to Gmail — review & send there.", url: r.url });
+    } catch (e) {
+      const msg = String(e);
+      setDraftMsg({
+        ok: false,
+        text: /409|not connected/i.test(msg) ? "Link Gmail in the sidebar first." : msg,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="card flex flex-col">
       <header className="border-b border-border px-5 py-4">
@@ -65,6 +97,17 @@ export function DialoguePanel({
               <p className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
                 <Quote className="h-3.5 w-3.5" />
                 Draft Message
+                {/* honest provenance of the prose itself: model-written vs deterministic template */}
+                <span
+                  className="ml-1 rounded-full bg-muted px-1.5 py-px text-[10px] font-medium text-muted-foreground ring-1 ring-inset ring-border"
+                  title={
+                    dialogue.draft_source === "llm"
+                      ? "Drafted by the language model, tuned to the client's style"
+                      : "Deterministic, style-aware fallback draft (no model call)"
+                  }
+                >
+                  {dialogue.draft_source === "llm" ? "AI-drafted" : "Template draft"}
+                </span>
               </p>
               <blockquote className="rounded-md bg-muted/40 px-4 py-3 text-sm leading-relaxed text-foreground/80">
                 {dialogue.draft_message}
@@ -99,12 +142,33 @@ export function DialoguePanel({
       </div>
 
       {dialogue && (
-        <footer className="border-t border-border px-5 py-4">
-          <ConfirmGate
-            action="Send draft (RM approve)"
-            confirmQuestion="Approve sending this draft to the client?"
-            approvedLabel="Approved by RM — client decides"
-          />
+        <footer className="space-y-2 border-t border-border px-5 py-4">
+          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Mail className="h-3.5 w-3.5 shrink-0" />
+            Turn this into a Gmail draft to {clientName.split(" ")[0]} — saved, never sent. The RM
+            reviews &amp; sends.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Email subject…"
+              className="h-8 flex-1 text-sm"
+            />
+            <Button size="sm" onClick={saveDraft} disabled={busy}>
+              {busy ? "Saving…" : "Save as Gmail draft"}
+            </Button>
+          </div>
+          {draftMsg && (
+            <p className={`text-[11px] ${draftMsg.ok ? "text-muted-foreground" : "text-destructive"}`}>
+              {draftMsg.text}{" "}
+              {draftMsg.url && (
+                <a href={draftMsg.url} target="_blank" rel="noreferrer" className="underline">
+                  open in Gmail
+                </a>
+              )}
+            </p>
+          )}
         </footer>
       )}
     </section>

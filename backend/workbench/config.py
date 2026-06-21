@@ -71,7 +71,9 @@ class Settings:
     # Financial Modeling Prep (free tier): ESG controversy ratings, earnings calendar/results,
     # analyst ratings + price targets, fundamentals + dividends. One key, several adapters.
     fmp_key = _clean(os.getenv("FMP_API_KEY"))
-    fmp_url = os.getenv("FMP_API_URL", "https://financialmodelingprep.com/api/v3").strip()
+    # FMP retired the /api/v3 "legacy" endpoints (Aug 2025) for keys issued after that date;
+    # the current API lives under /stable. Override via FMP_API_URL only for legacy keys.
+    fmp_url = os.getenv("FMP_API_URL", "https://financialmodelingprep.com/stable").strip()
 
     # Macro/FX digest. Frankfurter (ECB rates) needs NO key; FRED key is optional enrichment.
     fred_key = _clean(os.getenv("FRED_API_KEY"))
@@ -86,6 +88,13 @@ class Settings:
     session_secret = os.getenv("SESSION_SECRET", "dev-insecure-change-me").strip() or "dev-insecure-change-me"
     session_https_only = os.getenv("SESSION_HTTPS_ONLY", "0").strip() in ("1", "true", "True")
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000").strip() or "http://localhost:3000"
+    # Extra allowed CORS origins for prod (comma-separated, exact scheme+host, no trailing slash),
+    # e.g. "https://billionaire.lissan.dev". Localhost is always allowed via a regex.
+    cors_origins = os.getenv("CORS_ORIGINS", "").strip()
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
     database_url = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR / 'workbench.db'}").strip()
 
     # Google Workspace (Gmail read/draft + Calendar read/add). Sensitive/restricted scopes —
@@ -99,6 +108,13 @@ class Settings:
     ).strip()
     token_enc_key = _clean(os.getenv("TOKEN_ENC_KEY"))
 
+    # Per-client email for the Workspace (filter the RM's inbox/calendar to one client, draft to
+    # them). For live testing with ONE real Gmail, set WORKSPACE_TEST_BASE=you@gmail.com and each
+    # client resolves to a plus-address you@gmail.com+<client_id> → you+<client_id>@gmail.com, all
+    # landing in that one inbox. Per-client override: CLIENT_EMAIL_<CLIENT_ID> (e.g.
+    # CLIENT_EMAIL_SCHNEIDER). Falls back to the address on file in persona_seeds.json.
+    workspace_test_base = _clean(os.getenv("WORKSPACE_TEST_BASE"))
+
     # --- Twilio SMS morning briefing (spec §6–§8) ---
     twilio_account_sid = _clean(os.getenv("TWILIO_ACCOUNT_SID"))
     twilio_auth_token = _clean(os.getenv("TWILIO_AUTH_TOKEN"))
@@ -106,6 +122,46 @@ class Settings:
     briefing_composer = (os.getenv("BRIEFING_COMPOSER", "deterministic").strip().lower() or "deterministic")
     briefing_tz = os.getenv("BRIEFING_TZ", "Europe/Zurich").strip() or "Europe/Zurich"
     scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "1").strip() in ("1", "true", "True")
+
+    # 24/7 news watch (the News Agent's live tick). Opt-in: polls the live feeds every
+    # NEWS_WATCH_MINUTES and surfaces freshly-matched items as breaking alerts. Off by default so
+    # the offline/seed demo and tests are untouched.
+    news_watch_enabled = os.getenv("NEWS_WATCH_ENABLED", "0").strip() in ("1", "true", "True")
+    news_watch_minutes = int(os.getenv("NEWS_WATCH_MINUTES", "10").strip() or "10")
+
+    # RSS/Atom feed ingestion. Free, no API key; gated on USE_LIVE=1. Comma-separated list of feed
+    # URLs. Defaults cover all four personas (pharma, palm-oil/ESG, AI/tech, labour).
+    # Each feed is cached for RSS_CACHE_MINUTES before being re-fetched (default 15 min).
+    rss_feeds_raw = os.getenv(
+        "RSS_FEEDS",
+        ",".join([
+            # --- BBC ---
+            "http://feeds.bbci.co.uk/news/rss.xml",                      # top stories
+            "http://feeds.bbci.co.uk/news/business/rss.xml",             # business
+            "http://feeds.bbci.co.uk/news/technology/rss.xml",           # tech → Räber
+            "http://feeds.bbci.co.uk/news/science_and_environment/rss.xml",  # science/env → Schneider/Huber
+            "http://feeds.bbci.co.uk/news/world/rss.xml",                # world
+            # --- Sky News ---
+            "https://feeds.skynews.com/feeds/rss/world.xml",
+            "https://feeds.skynews.com/feeds/rss/business.xml",
+            "https://feeds.skynews.com/feeds/rss/technology.xml",
+            # --- Reuters ---
+            "https://feeds.reuters.com/reuters/topNews",
+            "https://feeds.reuters.com/reuters/businessNews",
+            "https://feeds.reuters.com/reuters/technologyNews",
+            # --- The Guardian ---
+            "https://www.theguardian.com/world/rss",
+            "https://www.theguardian.com/business/rss",                  # ESG/labour → Ammann
+            "https://www.theguardian.com/environment/rss",               # deforestation → Huber
+            "https://www.theguardian.com/science/rss",                   # pharma → Schneider
+            "https://www.theguardian.com/technology/rss",
+            # --- Specialist (persona-specific) ---
+            "https://www.statnews.com/feed/",                            # pharma/health → Schneider
+            "https://news.mongabay.com/feed/",                           # deforestation → Huber
+            "https://www.technologyreview.com/feed/",                    # AI/tech → Räber
+        ]),
+    ).strip()
+    rss_cache_minutes = int(os.getenv("RSS_CACHE_MINUTES", "15").strip() or "15")
 
     # Google Flights via the ``flights`` (fli) library — no API key; can be slow on first load.
     live_flights = os.getenv("USE_LIVE_FLIGHTS", "0").strip() in ("1", "true", "True")
@@ -223,6 +279,15 @@ class Settings:
     @property
     def fmp_enabled(self) -> bool:
         return self.use_live and bool(self.fmp_key)
+
+    @property
+    def rss_feed_urls(self) -> list[str]:
+        return [u.strip() for u in self.rss_feeds_raw.split(",") if u.strip()]
+
+    @property
+    def rss_enabled(self) -> bool:
+        # Free, no key; gated on USE_LIVE so the offline/seed demo stays untouched.
+        return self.use_live
 
     @property
     def macro_enabled(self) -> bool:

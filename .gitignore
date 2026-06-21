@@ -2,16 +2,19 @@
 ~$*
 *.tmp
 
-# secrets
-.env
-backend/.env
-frontend/.env.local
+# secrets — every env file except the committed template
+**/.env
+**/.env.*
+!**/.env.example
 demo/secrets/
 *.pem
 mcp_key
 CH56655-api2026hack22.zip
 # Gmail OAuth — never commit credentials/tokens
 .gmail_token.json
+# demo_workspace.sh local artifacts (cached OAuth token is a secret)
+scripts/.demo-venv/
+scripts/.demo-token.json
 .gmail_client_secret.json
 backend/.gmail_token.json
 backend/.gmail_client_secret.json

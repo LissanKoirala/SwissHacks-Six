@@ -52,17 +52,141 @@ const ISSUER_TICKERS: Record<string, string> = {
   "Linde PLC": "LIN",
   "Infosys Ltd.": "INFY",
   "Reliance Industries": "RELIANCE.NS",
+  "The Coca-Cola Co.": "KO",
+  "Coca-Cola Co.": "KO",
+  "Johnson & Johnson": "JNJ",
+  "Walmart Inc.": "WMT",
+  "Sanofi S.A.": "SAN.PA",
+  "Siemens Fin.": "SIE.DE",
+  "Procter & Gamble Co.": "PG",
+  "PepsiCo Inc.": "PEP",
+  "Abbott Laboratories": "ABT",
+  "Medtronic PLC": "MDT",
+  "Colgate-Palmolive Co.": "CL",
+  "NextEra Energy Inc.": "NEE",
+  "Swisscom AG": "SCMN.SW",
+  "Swiss Re Ltd.": "SREN.SW",
+  "Deutsche Telekom": "DTE.DE",
+  "BASF SE": "BAS.DE",
+  "Prologis Inc.": "PLD",
+  "Equinix Inc.": "EQIX",
+  "Welltower Inc.": "WELL",
 };
 
-/** Yahoo tickers for holdings that lack `yahoo` in portfolio data. */
+/** Yahoo tickers for holdings that lack `yahoo` in portfolio data (from seed workbook). */
 const ISIN_TICKERS: Record<string, string> = {
-  CH0047533523: "ZGLD.SW",
-  CH0210483332: "CFR.SW",
-  FR0000052292: "RMS.PA",
-  ES0148396007: "ITX.MC",
+  CH0008742519: "SCMN.SW",
+  CH0010570759: "LISN.SW",
+  CH0010645932: "GIVN.SW",
+  CH0011075394: "ZURN.SW",
+  CH0011484067: "SGKN.SW",
+  CH0012005267: "NOVN.SW",
+  CH0012032048: "RO.SW",
+  CH0012214059: "HOLN.SW",
+  CH0012221716: "ABBN.SW",
+  CH0013841017: "LONN.SW",
+  CH0024608827: "PGHN.SW",
+  CH0025751329: "LOGN.SW",
+  CH0030170408: "GEBN.SW",
+  CH0038863350: "NESN.SW",
+  CH0126881561: "SREN.SW",
+  CH0130293662: "BKW.SW",
+  CH0244767585: "UBSG.SW",
+  CH0311864901: "VACN.SW",
+  CH0418792922: "SIKA.SW",
+  CH0531751755: "BCVN.SW",
+  CH1175448666: "STMN.SW",
+  CNE1000003G1: "1398.HK",
+  DE0007164600: "SAP.DE",
+  DE0007236101: "SIE.DE",
+  DE0008404005: "ALV.DE",
+  DE0008430026: "MUV2.DE",
+  DE000A1EWWW0: "ADS.DE",
+  DK0062498333: "NOVO-B.CO",
+  ES0144580Y14: "IBE.MC",
+  FR0000120321: "OR.PA",
+  FR0000120578: "SAN.PA",
+  FR0000121014: "MC.PA",
+  FR0000121972: "SU.PA",
+  GB0009895292: "AZN.L",
+  GB00B10RZP78: "ULVR.L",
+  HK0941009539: "0941.HK",
+  IE000S9YS762: "LIN",
+  IE00BTN1Y115: "MDT",
+  LU1778762911: "SPOT",
+  NL0010273215: "ASML.AS",
+  NL0011585146: "RACE.MI",
+  NL0012969182: "ADYEN.AS",
+  US0028241000: "ABT",
+  US00724F1012: "ADBE",
+  US0126531013: "ALB",
+  US02079K3059: "GOOGL",
+  US0231351067: "AMZN",
+  US0378331005: "AAPL",
+  US0382221051: "AMAT",
+  US0404131064: "ANET",
+  US0605051046: "BAC",
+  US0846701086: "BRK-B",
+  US09062X1037: "BIIB",
+  US09857L1089: "BKNG",
+  US11135F1012: "AVGO",
+  US1912161007: "KO",
+  US1941621039: "CL",
+  US22160K1051: "COST",
+  US22788C1053: "CRWD",
+  US23804L1035: "DDOG",
+  US29362U1043: "ENTG",
+  US30231G1022: "XOM",
+  US30303M1027: "META",
+  US4370761029: "HD",
+  US4567881085: "INFY",
+  US4581401001: "INTC",
+  US4612021034: "INTU",
+  US46625H1005: "JPM",
+  US4781601046: "JNJ",
+  US5324571083: "LLY",
+  US57636Q1040: "MA",
+  US58733R1023: "MELI",
+  US5949181045: "MSFT",
+  US6410694060: "NSRGY",
+  US64110L1061: "NFLX",
+  US65339F1012: "NEE",
+  US67066G1040: "NVDA",
+  US69608A1088: "PLTR",
+  US6974351057: "PANW",
+  US7134481081: "PEP",
+  US7223041028: "PDD",
   US7427181091: "PG",
+  US7475251036: "QCOM",
+  US78409V1044: "SPGI",
+  US79466L3024: "CRM",
+  US81762P1021: "NOW",
+  US8334451098: "SNOW",
+  US8740391003: "TSM",
+  US88160R1014: "TSLA",
+  US9024941034: "TSN",
+  US90353T1007: "UBER",
+  US92826C8394: "V",
+  US9311421039: "WMT",
+  US2538681030: "DLR",
+  US74340W1036: "PLD",
+  US29444U7000: "EQIX",
+  US95040Q1040: "WELL",
+  US7960502018: "005930.KS",
+  US7594701077: "RELIANCE.NS",
+  CH1112455766: "SCMN.SW",
+  US191216DP21: "KO",
+  US478160CL64: "JNJ",
+  US931142EE96: "WMT",
+  FR0013409844: "SAN.PA",
+  XS2118273601: "SIE.DE",
+  CH1194355116: "NESN.SW",
+  US037833CX61: "AAPL",
+  XS1001749289: "MSFT",
+  CH0014420878: "UBSG.SW",
   LU0196152788: "PGHN.SW",
-  IE00BK7Y2R57: "IBTM.L",
+  DE000A2TSDE2: "DTE.DE",
+  XS2595418679: "BAS.DE",
 };
 
 /** Filenames (without `.png`) that exist under `public/logos/`. */
@@ -111,8 +235,41 @@ const LOCAL_LOGO_KEYS = new Set([
   "extra_Unilever PLC",
 ]);
 
-function isCashPosition(isin?: string | null): boolean {
-  return !!isin?.startsWith("Cash-");
+function tickerLogoVariants(ticker: string): string[] {
+  const t = ticker.trim();
+  if (!t) return [];
+  const out = [t];
+  const base = t.split(".")[0];
+  if (base && base !== t) out.push(base);
+  return out;
+}
+
+function remoteLogoUrl(ticker: string): string {
+  return `https://financialmodelingprep.com/image-stock/${encodeURIComponent(ticker)}.png`;
+}
+
+function parqetLogoUrl(ticker: string): string {
+  return `https://assets.parqet.com/logos/symbol/${encodeURIComponent(ticker)}`;
+}
+
+const LOGO_API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE === undefined
+    ? "http://127.0.0.1:8000"
+    : process.env.NEXT_PUBLIC_API_BASE;
+
+function proxiedLogoUrl(ticker: string): string {
+  return `${LOGO_API_BASE}/api/issuer-logo/${encodeURIComponent(ticker)}`;
+}
+
+function issuerRoot(name: string): string {
+  let n = name.trim().toLowerCase();
+  if (n.startsWith("the ")) n = n.slice(4);
+  n = n.split("(")[0].trim();
+  n = n.replace(
+    /\b(fin\.?|co\.?|corp\.?|inc\.?|plc|ag|sa|se|ltd\.?|n\.v\.?|a\/s|etf)\b/gi,
+    "",
+  );
+  return n.replace(/\s+/g, " ").trim();
 }
 
 export function getClientAvatar(clientId: string): string | null {
@@ -142,8 +299,8 @@ function logoFileKey(isin?: string | null, issuer?: string | null): string | nul
   return null;
 }
 
-function remoteLogoUrl(ticker: string): string {
-  return `https://financialmodelingprep.com/image-stock/${encodeURIComponent(ticker)}.png`;
+function isCashPosition(isin?: string | null): boolean {
+  return !!isin?.startsWith("Cash-");
 }
 
 export function resolveIssuerTicker(input: {
@@ -157,23 +314,31 @@ export function resolveIssuerTicker(input: {
   if (isin && ISIN_TICKERS[isin]) return ISIN_TICKERS[isin];
   const issuer = input.issuer?.trim();
   if (issuer && ISSUER_TICKERS[issuer]) return ISSUER_TICKERS[issuer];
+  if (issuer) {
+    const root = issuerRoot(issuer);
+    for (const [key, tick] of Object.entries(ISSUER_TICKERS)) {
+      if (issuerRoot(key) === root) return tick;
+    }
+  }
   return null;
 }
 
-/** Local bundled logo path, only when the file exists under /public/logos. */
+/** Local bundled logo path; only returns paths we ship under `public/logos/`. */
 export function localIssuerLogo(input: {
   isin?: string | null;
   issuer?: string | null;
 }): string | null {
   if (isCashPosition(input.isin)) return null;
-  const key = logoFileKey(input.isin, input.issuer);
-  if (!key) return null;
-  const safe = key.replace(/:/g, "_");
+  const isin = input.isin?.trim();
+  if (isin && LOCAL_LOGO_KEYS.has(isin)) return `/logos/${isin}.png`;
+  const issuer = input.issuer?.trim();
+  if (!issuer) return null;
+  const safe = `extra_${issuer}`.replace(/:/g, "_");
   if (!LOCAL_LOGO_KEYS.has(safe)) return null;
   return `/logos/${safe}.png`;
 }
 
-/** Prefer local logos; fall back to FMP ticker image when online. */
+/** Prefer local logos; fall back to remote ticker images when online. */
 export function issuerLogoSources(input: {
   isin?: string | null;
   issuer?: string | null;
@@ -184,6 +349,18 @@ export function issuerLogoSources(input: {
   const local = localIssuerLogo(input);
   if (local) sources.push(local);
   const ticker = resolveIssuerTicker(input);
-  if (ticker) sources.push(remoteLogoUrl(ticker));
+  if (ticker) {
+    const seen = new Set<string>();
+    for (const variant of tickerLogoVariants(ticker)) {
+      if (seen.has(variant)) continue;
+      seen.add(variant);
+      sources.push(proxiedLogoUrl(variant));
+      sources.push(remoteLogoUrl(variant));
+      sources.push(parqetLogoUrl(variant));
+      sources.push(
+        `https://storage.googleapis.com/iexcloud-historical-data-production/images/${encodeURIComponent(variant)}.png`,
+      );
+    }
+  }
   return sources;
 }
