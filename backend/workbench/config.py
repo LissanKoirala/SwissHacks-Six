@@ -87,6 +87,9 @@ class Settings:
     ).strip()
     session_secret = os.getenv("SESSION_SECRET", "dev-insecure-change-me").strip() or "dev-insecure-change-me"
     session_https_only = os.getenv("SESSION_HTTPS_ONLY", "0").strip() in ("1", "true", "True")
+    # Session-cookie SameSite. "lax" (default) resists CSRF and still works cross-subdomain on one
+    # registrable domain. Only set "none" (requires SESSION_HTTPS_ONLY=1) for a cross-domain frontend.
+    session_samesite = (os.getenv("SESSION_SAMESITE", "lax").strip().lower() or "lax")
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000").strip() or "http://localhost:3000"
     # Extra allowed CORS origins for prod (comma-separated, exact scheme+host, no trailing slash),
     # e.g. "https://billionaire.lissan.dev". Localhost is always allowed via a regex.
