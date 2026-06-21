@@ -5,10 +5,14 @@
 #
 # It signs you in once (browser OAuth, token cached locally) and then, for each of the four
 # personas, can:
-#   • send a themed email TO their plus-address  -> shows under the client's Workspace "Correspondence"
+#   • seed an INBOUND email that appears to come FROM the client (their plus-address) to the RM
+#     -> lands in your inbox and shows under the client's Workspace "Correspondence"
 #   • create a calendar invite INVITING their plus-address -> shows under "Upcoming meetings"
 # Everything lands in the RM's one real inbox/calendar via plus-addressing
 # (ordane4@gmail.com -> ordane4+schneider@gmail.com, …), which is exactly what the app reads.
+# The From is set to the client's +tag — still your own mailbox, so Gmail accepts it — so the
+# message reads as "client → RM".  (If Gmail ever normalises that From back to your primary, set
+# USE_INSERT=1, which inserts the message directly via gmail.insert; see the note near send_email.)
 #
 # ─────────────────────────────────────────────────────────────────────────────
 # SETUP (one time)
@@ -92,11 +96,14 @@ from googleapiclient.discovery import build
 cmd, rm_email, token_path, tz, send_invites = sys.argv[1:6]
 send_invites = send_invites == "1"
 
-# Only scopes already on the web app's consent screen — gmail.compose covers sending.
+# Default scopes are already on the web app's consent screen (gmail.compose covers sending).
+# USE_INSERT swaps in gmail.insert (NOT on the consent screen by default → add it + re-auth).
+USE_INSERT = os.environ.get("USE_INSERT") == "1"
 SCOPES = [
-    "https://www.googleapis.com/auth/gmail.compose",
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/gmail.insert" if USE_INSERT
+    else "https://www.googleapis.com/auth/gmail.compose",
 ]
 DEMO_TAG = "[demo-workspace]"  # stamped on events so `clean` can find them
 
@@ -112,31 +119,33 @@ def plus(addr, tag):
 
 
 # (client_id, display name, email subject, email body, meeting agenda) — themed to each persona.
+# Bodies are written in the CLIENT's voice: an inbound note from the client to their RM.
 CLIENTS = [
     ("schneider", "Hubertus Schneider",
-     "Keeping the pharma sleeve aligned to Parkinson's research",
-     "Hi Hubertus,\n\nAhead of our review I'm double-checking that the pharma names in your "
-     "sleeve are still actively funding Parkinson's research, exactly as you asked. If any name "
-     "steps back from that commitment I'll bring a same-sector, CIO-approved alternative.\n\n"
-     "Warm regards,\nYour relationship manager",
+     "Are our pharma holdings still backing Parkinson's research?",
+     "Dear team,\n\nI read that one of the big pharma names may be winding down its "
+     "neurodegenerative research. You know how much the Parkinson's cause means to me since "
+     "Chloe's diagnosis — could you check whether any of my holdings are stepping back from it, "
+     "and what our options are? I'd rather move the money than stay invested in a company that "
+     "walks away from that work.\n\nThank you,\nHubertus Schneider",
      "Portfolio & relationship review — pharma mandate"),
     ("huber", "Marius Huber",
-     "Defensive mandate — palm-oil / deforestation check-in",
-     "Dear Marius,\n\nA quick note before we meet: I'm reviewing the consumer-goods holdings "
-     "against the deforestation policy you care about, so we can act early if any supplier is "
-     "flagged on palm-oil sourcing.\n\nBest,\nYour relationship manager",
+     "Worried about palm-oil sourcing in my portfolio",
+     "Hello,\n\nI saw a report about deforestation linked to palm-oil supply chains. Given my "
+     "defensive, values-led mandate, can you confirm none of my consumer-goods holdings are "
+     "exposed to that — and flag anything we should reconsider?\n\nKind regards,\nMarius Huber",
      "Portfolio & relationship review — sustainability screen"),
     ("raeber", "Eugen Räber",
-     "Rebalancing note — steering clear of US mega-cap AI",
-     "Dear Mr Räber,\n\nNoting your preference to stay clear of US mega-cap AI names, I've "
-     "prepared a rebalancing option that keeps the blue-chip tilt without adding that exposure. "
-     "Happy to walk you through it.\n\nKind regards,\nYour relationship manager",
+     "Please keep me clear of US big-tech AI names",
+     "Dear team,\n\nI noticed the CIO is leaning into US mega-cap AI stocks. I'm not comfortable "
+     "with that exposure. Before any rebalancing, please make sure my portfolio stays clear of "
+     "those names and let me know the alternatives.\n\nRegards,\nEugen Räber",
      "Portfolio & relationship review — rebalancing options"),
     ("ammann", "Julian Ammann",
-     "Growth mandate — labour-standards flag on a held brand",
-     "Hi Julian,\n\nHeads-up ahead of our catch-up: a consumer brand in your growth sleeve has a "
-     "labour-standards story developing. I'll bring the detail and a screened, same-sector swap "
-     "if you'd like to act.\n\nCheers,\nYour relationship manager",
+     "Concerned about a labour-rights story on one of my holdings",
+     "Hi,\n\nA labour-exploitation story just broke about one of the consumer brands I hold. "
+     "With my growth mandate I'm happy to stay invested where it makes sense, but I'd like your "
+     "read and a same-sector alternative if we should exit.\n\nBest,\nJulian Ammann",
      "Portfolio & relationship review — labour-standards flag"),
 ]
 
@@ -170,15 +179,29 @@ def get_creds():
     return creds
 
 
-def send_email(gmail, to_addr, subject, body):
+def _raw(from_name, from_addr, to_addr, subject, body):
     msg = EmailMessage()
+    msg["From"] = f'"{from_name}" <{from_addr}>'  # the client's +tag — still the RM's own mailbox
     msg["To"] = to_addr
-    msg["From"] = rm_email
     msg["Subject"] = subject
     msg.set_content(body)
-    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-    sent = gmail.users().messages().send(userId="me", body={"raw": raw}).execute()
-    return sent.get("id")
+    return base64.urlsafe_b64encode(msg.as_bytes()).decode()
+
+
+def seed_inbound(gmail, from_name, from_addr, to_addr, subject, body):
+    """Place an inbound 'client -> RM' email in the RM's inbox.
+
+    Default uses messages.send with From = the client's +tag (Gmail accepts it because the +tag
+    routes to the same mailbox). If USE_INSERT=1 it uses messages.insert instead, which writes the
+    message straight into the mailbox with full header control (needs the gmail.insert scope on the
+    consent screen + a re-auth: delete .demo-token.json first)."""
+    raw = _raw(from_name, from_addr, to_addr, subject, body)
+    if os.environ.get("USE_INSERT") == "1":
+        res = gmail.users().messages().insert(
+            userId="me", body={"raw": raw, "labelIds": ["INBOX", "UNREAD"]}).execute()
+    else:
+        res = gmail.users().messages().send(userId="me", body={"raw": raw}).execute()
+    return res.get("id")
 
 
 def make_event(cal, name, attendee, agenda, days_out):
@@ -201,11 +224,12 @@ def make_event(cal, name, attendee, agenda, days_out):
 
 def do_emails(creds):
     gmail = build("gmail", "v1", credentials=creds)
-    print("\n✉  Sending themed emails to each client's plus-address:")
+    mode = "insert" if os.environ.get("USE_INSERT") == "1" else "send"
+    print(f"\n✉  Seeding inbound client → RM emails (appear FROM the client) [{mode}]:")
     for cid, name, subj, body, _ in CLIENTS:
-        to = plus(rm_email, cid)
-        mid = send_email(gmail, to, subj, body)
-        print(f"   ✓ {name:18} → {to}   (id {mid})")
+        frm = plus(rm_email, cid)
+        mid = seed_inbound(gmail, name, frm, rm_email, subj, body)
+        print(f"   ✓ from {name:18} <{frm}>  →  {rm_email}   (id {mid})")
 
 
 def do_calendar(creds):
