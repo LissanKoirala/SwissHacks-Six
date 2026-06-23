@@ -71,7 +71,7 @@ class SecFilingLiveSource:
                     data = json.loads(cache.read_text())
                 else:
                     resp = httpx.get(f"{settings.sec_url}/submissions/CIK{cik10}.json",
-                                     headers=headers, timeout=30.0)
+                                     headers=headers, timeout=12.0)
                     data = resp.json()
                     cache.write_text(json.dumps(data))
             except Exception:

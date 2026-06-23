@@ -71,7 +71,7 @@ def _fmp_get(path: str, params: dict) -> Any:
         if cache.exists():
             return json.loads(cache.read_text())
         resp = httpx.get(f"{settings.fmp_url}/{path.lstrip('/')}",
-                         params={**params, "apikey": settings.fmp_key}, timeout=30.0)
+                         params={**params, "apikey": settings.fmp_key}, timeout=12.0)
         data = resp.json()
         cache.write_text(json.dumps(data))
         return data

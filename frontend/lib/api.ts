@@ -69,9 +69,35 @@ export const API_BASE =
     ? "http://127.0.0.1:8000"
     : process.env.NEXT_PUBLIC_API_BASE;
 
+// Every call is bounded by a client-side timeout so a stalled backend can never leave the UI
+// spinning forever — the request aborts and surfaces a clear error instead. 30s comfortably covers
+// the slowest lazy endpoint (LLM insights/twin ~18s) while still failing fast on a real hang.
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (e) {
+    if (controller.signal.aborted) {
+      throw new Error(
+        `Request timed out after ${Math.round(timeoutMs / 1000)}s — ${init.method ?? "GET"} ${url.replace(API_BASE, "")}`,
+      );
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // credentials:"include" — carry the signed session cookie on /auth + /briefing calls.
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetchWithTimeout(`${API_BASE}${path}`, {
     headers: { Accept: "application/json" },
     cache: "no-store",
     credentials: "include",
@@ -83,7 +109,7 @@ async function get<T>(path: string): Promise<T> {
 }
 
 async function send<T>(method: "POST" | "PUT", path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetchWithTimeout(`${API_BASE}${path}`, {
     method,
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     cache: "no-store",

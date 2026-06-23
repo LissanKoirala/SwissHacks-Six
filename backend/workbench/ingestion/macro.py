@@ -54,7 +54,7 @@ class MacroLiveSource:
                 data = json.loads(cache.read_text())
             else:
                 resp = httpx.get(f"{settings.macro_url}/latest",
-                                 params={"base": "EUR", "symbols": "CHF,USD"}, timeout=30.0)
+                                 params={"base": "EUR", "symbols": "CHF,USD"}, timeout=12.0)
                 data = resp.json()
                 cache.write_text(json.dumps(data))
         except Exception:

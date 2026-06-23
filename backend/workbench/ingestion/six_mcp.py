@@ -83,7 +83,7 @@ def call_tool(name: str, arguments: dict[str, Any]) -> Optional[dict]:
                 },
                 json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
                       "params": {"name": name, "arguments": arguments}},
-                timeout=30.0,
+                timeout=12.0,
             )
             payload = _parse_payload(resp.text)
             if payload.get("error") or "result" not in payload:

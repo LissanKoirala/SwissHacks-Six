@@ -93,6 +93,19 @@ def create_app() -> FastAPI:
     app.state.world = world
 
     @app.on_event("startup")
+    async def _raise_threadpool_limit() -> None:
+        """Sync route handlers (`def`) run in anyio's default worker-thread pool, which defaults to
+        only 40 tokens. The hot paths (overview/clients/news/portfolio) are fast in-memory reads, but
+        under a demo burst (~100 users) a handful of slow *lazy* calls (LLM, Google, logo proxies)
+        could saturate the pool and queue the fast reads behind them. Raise the ceiling — the work is
+        I/O-bound so idle threads are cheap — to keep the dashboard snappy under load."""
+        import anyio
+        try:
+            anyio.to_thread.current_default_thread_limiter().total_tokens = 128
+        except Exception:
+            pass
+
+    @app.on_event("startup")
     def _ingest_live_news_on_boot() -> None:
         """Pull RSS + any fresh Event Registry items once at boot when USE_LIVE=1."""
         if not settings.use_live:

@@ -131,7 +131,7 @@ class EventRegistrySource:
                     "dataType": ["news"],
                     "includeArticleSentiment": True,
                 },
-                timeout=30.0,
+                timeout=12.0,
             )
             data = resp.json()
             cache.write_text(json.dumps({"fetched_at": time.time(), "data": data}))

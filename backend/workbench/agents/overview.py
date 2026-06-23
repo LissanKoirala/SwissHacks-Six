@@ -412,7 +412,35 @@ def _briefing(tasks: list[OverviewTask], meetings: list[OverviewMeeting]) -> str
 
 # --- public entry point -----------------------------------------------------
 
+import threading as _threading
+import time as _time
+
+_OVERVIEW_TTL_SECONDS = 15.0
+_overview_lock = _threading.Lock()
+_overview_cache: dict = {"at": 0.0, "data": None}
+
+
 def build_overview(world: World) -> dict:
+    """Cached wrapper around the (CPU-bound, GIL-serialised) overview build. Every RM lands on this
+    endpoint, so under a demo burst we memoise the global payload for a few seconds: the first caller
+    computes it under a lock and the rest get the cached dict instead of stampeding the CPU. Staleness
+    is bounded to the TTL (new tasks/news still surface within ~15s). Stays LLM-free — the build never
+    calls a model — so it honours the overview token-discipline invariant."""
+    now = _time.monotonic()
+    if _overview_cache["data"] is not None and (now - _overview_cache["at"]) < _OVERVIEW_TTL_SECONDS:
+        return _overview_cache["data"]
+    with _overview_lock:
+        # Re-check inside the lock: another thread may have just refreshed it while we waited.
+        now = _time.monotonic()
+        if _overview_cache["data"] is not None and (now - _overview_cache["at"]) < _OVERVIEW_TTL_SECONDS:
+            return _overview_cache["data"]
+        data = _compute_overview(world)
+        _overview_cache["data"] = data
+        _overview_cache["at"] = _time.monotonic()
+        return data
+
+
+def _compute_overview(world: World) -> dict:
     today = date.today()
     from concurrent.futures import ThreadPoolExecutor, as_completed
     client_ids = list(world.clients)
