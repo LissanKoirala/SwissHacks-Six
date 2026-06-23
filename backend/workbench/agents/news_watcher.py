@@ -37,38 +37,45 @@ def _now() -> str:
 def refresh_news(world: World) -> list:
     """Re-fetch the live feeds and ingest any genuinely new items (dedup by id). Returns the new
     NewsItems (already classified). No-op (empty) when live feeds are off."""
-    from ..ingestion.news import EventRegistrySource
+    from concurrent.futures import ThreadPoolExecutor
+
+    from ..ingestion.news import EventRegistrySource, RSSFeedSource
     from ..ingestion.sec_edgar import SecFilingLiveSource
     from ..ingestion.market_signals import FMPSignalLiveSource
     from ..ingestion.macro import MacroLiveSource
 
-    from ..ingestion.news import RSSFeedSource
-
     existing = {n.id for n in world.news}
-    recs = []
+
+    # Respect each feed's own short cache (≤15 min) rather than force-refreshing every source on every
+    # poll — boot already warmed them, so a poll is then near-instant and never re-hammers the feeds
+    # (which would also burn Event Registry quota). Only genuinely uncached/stale feeds hit the wire.
+    # And run the tasks ALL concurrently: serially the few stalled publishers (each up to the 8s hard
+    # timeout) stacked into ~half a minute and blew past the request timeout, freezing the dashboard,
+    # since the page awaits this poll. Parallel → wall-clock is the slowest single feed (~8s).
+    tasks = []
     if settings.news_enabled:
-        force = {"force_refresh": True}
         for kw in ("palm oil deforestation", "Parkinson research", "labour supply chain", "AI infrastructure"):
-            try:
-                recs += EventRegistrySource(kw).fetch(force)
-            except Exception:
-                pass
+            tasks.append(lambda kw=kw: EventRegistrySource(kw).fetch())
     if settings.rss_enabled:
         for url in settings.rss_feed_urls:
-            try:
-                recs += RSSFeedSource(url).fetch(force)
-            except Exception:
-                pass
-    for live in (SecFilingLiveSource, FMPSignalLiveSource, MacroLiveSource):
-        flag = {"SecFilingLiveSource": settings.sec_enabled,
-                "FMPSignalLiveSource": settings.fmp_enabled,
-                "MacroLiveSource": settings.macro_enabled}[live.__name__]
-        if not flag:
-            continue
+            tasks.append(lambda url=url: RSSFeedSource(url).fetch())
+    for live, flag in ((SecFilingLiveSource, settings.sec_enabled),
+                       (FMPSignalLiveSource, settings.fmp_enabled),
+                       (MacroLiveSource, settings.macro_enabled)):
+        if flag:
+            tasks.append(lambda live=live: live().fetch())
+
+    def _run(fn) -> list:
         try:
-            recs += live().fetch()
+            return fn()
         except Exception:
-            pass
+            return []
+
+    recs: list = []
+    if tasks:
+        with ThreadPoolExecutor(max_workers=12) as pool:
+            for r in pool.map(_run, tasks):
+                recs += r
 
     fresh = []
     for r in recs:

@@ -132,14 +132,12 @@ export function NewsView() {
   const [filter, setFilter] = useState<FilterId>("all");
   const [allOpen, setAllOpen] = useState(false);
 
+  // Fetch whatever news is already in the world — instant (items were classified at boot). This
+  // never blocks on the slow live re-fetch; that runs in the background (mount) or on the explicit
+  // Refresh button, so the feed paints immediately instead of hanging on the poll.
   const load = useCallback(async () => {
     setError(null);
     try {
-      try {
-        await api.refreshLiveNews();
-      } catch {
-        // best-effort
-      }
       const data = await api.news();
       data.sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? ""));
       setItems(data);
@@ -152,11 +150,29 @@ export function NewsView() {
   }, []);
 
   useEffect(() => {
-    load();
+    let alive = true;
+    // Show cached news immediately, then poll live feeds in the background and fold in anything new.
+    load().then(() => {
+      api
+        .refreshLiveNews()
+        .then(() => {
+          if (alive) load();
+        })
+        .catch(() => {});
+    });
+    return () => {
+      alive = false;
+    };
   }, [load]);
 
   async function handleRefresh() {
+    // Explicit user action — OK to wait on the live re-fetch (the Refresh button shows a spinner).
     setRefreshing(true);
+    try {
+      await api.refreshLiveNews();
+    } catch {
+      // best-effort
+    }
     await load();
   }
 

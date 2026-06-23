@@ -145,11 +145,16 @@ def build_world(use_live_news: bool = False) -> World:
         for kw in ("palm oil deforestation", "Parkinson research", "labour supply chain", "AI infrastructure"):
             news_recs += EventRegistrySource(kw).fetch()
     if settings.rss_enabled:
-        for url in settings.rss_feed_urls:
+        # Fetch feeds concurrently: each RSSFeedSource now has an 8s hard timeout, so a few slow
+        # publishers cost ~one timeout in wall-clock instead of stacking up serially on boot.
+        def _rss(url: str) -> list[Record]:
             try:
-                news_recs += RSSFeedSource(url).fetch()
+                return RSSFeedSource(url).fetch()
             except Exception:
-                pass
+                return []
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            for recs in pool.map(_rss, list(settings.rss_feed_urls)):
+                news_recs += recs
     if settings.sec_enabled:
         news_recs += SecFilingLiveSource().fetch()
     if settings.fmp_enabled:

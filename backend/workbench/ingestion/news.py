@@ -190,27 +190,45 @@ class RSSFeedSource:
                 pass
 
         if not entries:
-            feed = feedparser.parse(self.url)
-            feed_title = feed.feed.get("title", self.url)
-            for e in feed.entries[:20]:
-                body = ""
-                if e.get("content"):
-                    body = e.content[0].get("value", "")
-                elif e.get("summary"):
-                    body = e.summary
-                item_id = e.get("id") or e.get("link") or e.get("title") or ""
-                entries.append({
-                    "id": f"rss:{hashlib.sha1(item_id.encode()).hexdigest()[:16]}",
-                    "title": e.get("title", ""),
-                    "body": body[:1200],
-                    "source": feed_title,
-                    "url": e.get("link", ""),
-                    "published_at": _iso_date_from_feed_entry(e),
-                })
+            # Fetch the feed bytes ourselves with a hard timeout. feedparser.parse(url) uses urllib
+            # with NO timeout, so a slow/stalled publisher hangs the call indefinitely — and since
+            # build_world only wraps each feed in try/except (a hang is not an exception), one dead
+            # feed would block server startup forever. Best-effort: on any failure we skip this feed
+            # and don't cache, so it simply retries next time without ever blocking boot.
+            content = None
             try:
-                cache_path.write_text(json.dumps({"entries": entries, "fetched_at": now}))
+                resp = httpx.get(
+                    self.url,
+                    timeout=8.0,
+                    follow_redirects=True,
+                    headers={"User-Agent": "Mozilla/5.0 (AdvisoryWorkbench RSS reader)"},
+                )
+                resp.raise_for_status()
+                content = resp.content
             except Exception:
-                pass
+                content = None
+            if content is not None:
+                feed = feedparser.parse(content)
+                feed_title = feed.feed.get("title", self.url)
+                for e in feed.entries[:20]:
+                    body = ""
+                    if e.get("content"):
+                        body = e.content[0].get("value", "")
+                    elif e.get("summary"):
+                        body = e.summary
+                    item_id = e.get("id") or e.get("link") or e.get("title") or ""
+                    entries.append({
+                        "id": f"rss:{hashlib.sha1(item_id.encode()).hexdigest()[:16]}",
+                        "title": e.get("title", ""),
+                        "body": body[:1200],
+                        "source": feed_title,
+                        "url": e.get("link", ""),
+                        "published_at": _iso_date_from_feed_entry(e),
+                    })
+                try:
+                    cache_path.write_text(json.dumps({"entries": entries, "fetched_at": now}))
+                except Exception:
+                    pass
 
         out: list[Record] = []
         for e in entries:

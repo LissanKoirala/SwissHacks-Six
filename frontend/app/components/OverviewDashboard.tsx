@@ -473,12 +473,9 @@ export function OverviewDashboard({
   useEffect(() => {
     let alive = true;
     (async () => {
-      try {
-        await api.refreshLiveNews();
-      } catch {
-        // best-effort — still load whatever is already in world.news
-      }
-      if (!alive) return;
+      // Paint the overview from already-classified world data first — never block first render on the
+      // slow live news poll (that froze the dashboard on a stalled feed). Refresh news in the
+      // background afterwards and re-pull the overview to fold in anything that just broke.
       try {
         const d = await api.overview();
         if (alive) setData(d);
@@ -487,6 +484,17 @@ export function OverviewDashboard({
       } finally {
         if (alive) setLoading(false);
       }
+      api
+        .refreshLiveNews()
+        .then(() => {
+          if (!alive) return;
+          return api.overview().then((d) => {
+            if (alive) setData(d);
+          });
+        })
+        .catch(() => {
+          // best-effort — the overview is already showing cached signals
+        });
     })();
     return () => {
       alive = false;
