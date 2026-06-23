@@ -918,7 +918,7 @@ export function RiskTimeline({ clientId }: { clientId: string }) {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* chart + scrubber */}
-        <section className="card flex flex-col gap-4 p-4">
+        <section className="card flex flex-col gap-4 overflow-hidden p-4">
           <ScrubberChart data={data} index={safeIndex} onScrub={scrubTo} />
           <PlayheadBar
             data={data}

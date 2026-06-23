@@ -24,6 +24,8 @@ export function Sidebar({
   workspaceActive,
   onShowNews,
   newsActive,
+  className,
+  onNavigate,
 }: {
   clients: ClientSummary[];
   selectedId: string | null;
@@ -37,8 +39,17 @@ export function Sidebar({
   workspaceActive: boolean;
   onShowNews: () => void;
   newsActive: boolean;
+  /** Extra classes on the root `aside` — used to gate desktop vs. mobile-drawer rendering. */
+  className?: string;
+  /** Fired after any navigation action — the mobile drawer uses it to close itself. */
+  onNavigate?: () => void;
 }) {
   const totalAlerts = clients.reduce((s, c) => s + (c.alert_count || 0), 0);
+  // Wrap a nav action so the mobile drawer dismisses itself once the RM picks a destination.
+  const go = (fn: () => void) => () => {
+    fn();
+    onNavigate?.();
+  };
   // Triage-ordered book: the most urgent client floats to the top.
   const sorted = useMemo(
     () =>
@@ -48,11 +59,16 @@ export function Sidebar({
     [clients]
   );
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+    <aside
+      className={cn(
+        "flex h-full w-72 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
+        className,
+      )}
+    >
       {/* workspace header */}
       <button
         type="button"
-        onClick={onHome}
+        onClick={go(onHome)}
         className={cn(
           "flex shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4 text-left hover:bg-accent",
           DESK_BRAND_STRIP_HEIGHT,
@@ -80,7 +96,7 @@ export function Sidebar({
       <div className="space-y-0.5 px-2 pt-2">
         <button
           type="button"
-          onClick={onHome}
+          onClick={go(onHome)}
           aria-current={overviewActive ? "page" : undefined}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors",
@@ -102,7 +118,7 @@ export function Sidebar({
         </button>
         <button
           type="button"
-          onClick={onShowTasks}
+          onClick={go(onShowTasks)}
           aria-current={tasksActive ? "page" : undefined}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors",
@@ -116,7 +132,7 @@ export function Sidebar({
         </button>
         <button
           type="button"
-          onClick={onShowWorkspace}
+          onClick={go(onShowWorkspace)}
           aria-current={workspaceActive ? "page" : undefined}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors",
@@ -130,7 +146,7 @@ export function Sidebar({
         </button>
         <button
           type="button"
-          onClick={onShowNews}
+          onClick={go(onShowNews)}
           aria-current={newsActive ? "page" : undefined}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm font-medium transition-colors",
@@ -158,7 +174,7 @@ export function Sidebar({
             <button
               key={c.client_id}
               type="button"
-              onClick={() => onSelect(c.client_id)}
+              onClick={go(() => onSelect(c.client_id))}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "w-full rounded-md px-2.5 py-2 text-left transition-colors",

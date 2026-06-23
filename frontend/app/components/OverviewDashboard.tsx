@@ -496,7 +496,7 @@ export function OverviewDashboard({
   if (loading) {
     return (
       <div className="scroll-thin h-full overflow-y-auto">
-        <div className="mx-auto max-w-6xl animate-pulse px-8 py-6">
+        <div className="mx-auto max-w-6xl animate-pulse px-4 py-6 sm:px-6 lg:px-8">
           {/* greeting */}
           <div className="mb-5">
             <div className="h-8 w-64 rounded-lg bg-muted" />
@@ -563,7 +563,7 @@ export function OverviewDashboard({
   }
   if (error || !data) {
     return (
-      <div className="grid h-full place-items-center px-8 text-center">
+      <div className="grid h-full place-items-center px-4 text-center sm:px-8">
         <div>
           <p className="text-sm font-medium text-destructive">Could not load the overview.</p>
           <p className="mt-1 text-xs text-muted-foreground">{error}</p>
@@ -578,11 +578,11 @@ export function OverviewDashboard({
 
   return (
     <div className="scroll-thin h-full overflow-y-auto">
-      <div className="mx-auto max-w-6xl px-8 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         {/* greeting */}
         <header className="mb-5">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h1 className="font-display text-3xl font-light tracking-tight text-ink">
+            <h1 className="font-display text-2xl font-light tracking-tight text-ink sm:text-3xl">
               {greeting()}, {firstName(user?.name || o.rm_name)}
             </h1>
             <span className="text-sm text-muted-foreground">

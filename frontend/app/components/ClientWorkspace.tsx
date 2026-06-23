@@ -136,7 +136,7 @@ export function ClientWorkspace({
 
   if (!connected) {
     return (
-      <div className="card grid place-items-center px-8 py-12 text-center">
+      <div className="card grid place-items-center px-4 py-10 text-center sm:px-8 sm:py-12">
         <div className="max-w-md">
           <Mail className="mx-auto h-7 w-7 text-muted-foreground" />
           <h3 className="mt-3 text-base font-semibold text-foreground">Link Gmail &amp; Calendar</h3>

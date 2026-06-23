@@ -256,14 +256,16 @@ export function PortfolioView({
                   label={`Show all ${targetsFiltered.length}`}
                   summary={`${targetsFiltered.length - TABLE_PREVIEW} more sleeves`}
                 >
-                  <table className="w-full table-fixed text-sm">
-                    <DriftCols />
-                    <tbody>
-                      {targetsFiltered.slice(TABLE_PREVIEW).map((t, i) => (
-                        <DriftRow key={`${t.sub_asset_class}-rest-${i}`} t={t} />
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="scroll-thin overflow-x-auto">
+                    <table className="w-full table-fixed text-sm">
+                      <DriftCols />
+                      <tbody>
+                        {targetsFiltered.slice(TABLE_PREVIEW).map((t, i) => (
+                          <DriftRow key={`${t.sub_asset_class}-rest-${i}`} t={t} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </Expander>
               </div>
             )}

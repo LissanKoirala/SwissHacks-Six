@@ -938,7 +938,7 @@ export function CrmGraph({ clientId }: { clientId: string }) {
           reads its colours from CSS tokens, so light/dark both read cleanly) */}
       <div
         ref={containerRef}
-        className="relative h-[560px] w-full select-none bg-surface-2"
+        className="relative h-[400px] w-full select-none bg-surface-2 sm:h-[560px]"
       >
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-muted-foreground">

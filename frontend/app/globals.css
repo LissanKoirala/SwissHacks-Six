@@ -98,7 +98,10 @@
 @layer base {
   * { @apply border-border; }
   html, body { height: 100%; }
-  body { @apply bg-background text-foreground antialiased; font-feature-settings: "tnum" 1; }
+  /* `overflow-x: hidden` is a defence-in-depth backstop: the page must never scroll
+     sideways on a phone. The primary guard is `<main className="h-screen overflow-hidden">`
+     in app/page.tsx; this catches anything that ever escapes it. */
+  body { @apply bg-background text-foreground antialiased; overflow-x: hidden; font-feature-settings: "tnum" 1; }
 
   /* Signature Wordsmith treatments — blue selection & focus */
   ::selection { background: hsl(var(--primary)); color: #fff; }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -13,6 +13,13 @@ export const metadata: Metadata = {
   title: "Advisory Workbench",
   description:
     "Relationship-manager workbench — living client profiles, mandate-safe strategy proposals and conversation drafts. Advisory only.",
+};
+
+// Lock the layout viewport to the device width at 1:1 zoom so the mobile
+// breakpoints actually drive the layout (without this, phones render at ~980px).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

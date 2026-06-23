@@ -14,6 +14,7 @@ import { TrustScene } from "./scenes/Trust";
 import { TwinScene } from "./scenes/Twin";
 import { RendezvousScene } from "./scenes/Rendezvous";
 import { PipelineScene } from "./scenes/Pipeline";
+import { TeamScene } from "./scenes/Team";
 import { OutroScene } from "./scenes/Outro";
 
 // Each scene owns its enter/exit fade; sequences overlap slightly so the fades
@@ -38,6 +39,7 @@ export const SCENES: SceneDef[] = [
   { C: TwinScene, dur: 240 },
   { C: RendezvousScene, dur: 235 },
   { C: PipelineScene, dur: 200 },
+  { C: TeamScene, dur: 250 },
   { C: OutroScene, dur: 150 },
 ];
 

@@ -335,7 +335,7 @@ export function ClientView({ clientId }: { clientId: string }) {
   }
   if (error) {
     return (
-      <div className="grid h-full place-items-center px-8 text-center">
+      <div className="grid h-full place-items-center px-4 text-center sm:px-8">
         <div>
           <p className="text-sm font-medium text-destructive">
             Could not reach the backend.
@@ -361,7 +361,7 @@ export function ClientView({ clientId }: { clientId: string }) {
 
   return (
     <div className="scroll-thin h-full overflow-y-auto">
-      <div className="mx-auto max-w-6xl px-8 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         {/* header */}
         <header className="mb-5">
           <div className="flex flex-wrap items-center gap-3">
@@ -370,7 +370,7 @@ export function ClientView({ clientId }: { clientId: string }) {
               name={client.name}
               size="lg"
             />
-            <h1 className="font-display text-[2.5rem] leading-[1.1] font-light tracking-tight text-foreground">
+            <h1 className="font-display text-3xl leading-[1.1] font-light tracking-tight text-foreground sm:text-[2.5rem]">
               {client.name}
             </h1>
             <MandatePill mandate={client.mandate} />

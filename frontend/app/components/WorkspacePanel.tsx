@@ -145,7 +145,7 @@ export function WorkspacePanel() {
   // not signed in, or signed in without the workspace scopes granted
   if (!connected) {
     return (
-      <div className="grid h-full place-items-center px-8 text-center">
+      <div className="grid h-full place-items-center px-4 text-center sm:px-8">
         <div className="max-w-md">
           <Mail className="mx-auto h-8 w-8 text-muted-foreground" />
           <h2 className="mt-3 text-lg font-semibold text-foreground">Connect Gmail &amp; Calendar</h2>
@@ -164,7 +164,7 @@ export function WorkspacePanel() {
 
   return (
     <div className="scroll-thin h-full overflow-y-auto">
-      <div className="mx-auto max-w-6xl px-8 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="mb-5">
           <h1 className="text-2xl font-semibold text-ink">Workspace</h1>
           <p className="mt-1 text-sm text-muted-foreground">
